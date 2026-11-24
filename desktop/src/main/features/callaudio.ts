@@ -156,8 +156,22 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     const spk = await virtualSpeaker()
     const callCaps = 'audio/x-raw,rate=16000,channels=1'
     if (spk !== null) startBridge(['pipewiresrc', `path=${spk}`, 'stream-properties=props,stream.capture.sink=true,node.name=dconnect-call-speaker-reader,node.latency=320/16000', 'do-timestamp=true', '!', 'audioconvert', '!', 'audioresample', '!', callCaps, '!', 'queue', 'max-size-time=200000000', 'leaky=downstream', '!', 'pulsesink', ...out, 'client-name=D-Connect call', 'latency-time=20000', 'buffer-time=120000', 'provide-clock=false'])
-    startBridge(['pulsesrc', ...inp, 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=120000', '!', 'audioconvert', '!', 'audioresample', '!', callCaps, '!', 'queue', 'max-size-time=200000000', 'leaky=downstream', '!', 'pipewiresink', 'mode=provide', 'stream-properties=props,media.class=Audio/Source,node.name=dconnect-call-mic,audio.position=[ MONO ],node.latency=320/16000'])
+    // the mic as it worked on a live call: stereo, so WirePlumber links both of the phone's
+    // call inputs (FL/FR); a mono source didn't get linked and the caller heard nothing
+    startBridge(['pulsesrc', ...inp, 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=120000', '!', 'audioconvert', '!', 'audioresample', '!', 'queue', 'max-size-time=200000000', 'leaky=downstream', '!', 'pipewiresink', 'mode=provide', 'stream-properties=props,media.class=Audio/Source,node.name=dconnect-call-mic'])
+    // and check it really is linked; if not, link it by hand
+    setTimeout(() => ensureMicLinked(), 2500)
     if (muted) setTimeout(() => applyMute(), 800)
+  }
+
+  const ensureMicLinked = async (): Promise<void> => {
+    const links = await sh('pw-link', ['-l'])
+    if (/dconnect-call-mic:\S+\s*\n\s*\|->\s*bluez_output/.test(links)) return
+    const outs = (await sh('pw-link', ['-o'])).split('\n').filter((l) => l.startsWith('dconnect-call-mic:'))
+    const ins = (await sh('pw-link', ['-i'])).split('\n').filter((l) => l.startsWith('bluez_output.'))
+    if (!outs.length || !ins.length) return
+    // pair ports in order; a mono end feeds every port on the other side
+    for (let i = 0; i < Math.max(outs.length, ins.length); i++) await sh('pw-link', [outs[Math.min(i, outs.length - 1)].trim(), ins[Math.min(i, ins.length - 1)].trim()])
   }
 
   const toPhone = async (speaker = false): Promise<void> => {
