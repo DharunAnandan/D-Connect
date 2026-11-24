@@ -33,8 +33,8 @@ async function pwDump(): Promise<PwObject[]> {
   }
 }
 
-export function callAudio(ctx: Ctx): { answeredHere: () => void } {
-  if (process.platform !== 'linux') return { answeredHere: () => {} }
+export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: boolean) => void } {
+  if (process.platform !== 'linux') return { answeredHere: () => {}, setMuted: () => {} }
 
   let here = false
   let route: CallRoute | null = null
@@ -97,8 +97,10 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void } {
       }
     }
     await setPwProfile('audio-gateway')
+    // if the call was moved to the phone earlier, Android won't move it back on its own: ask it
+    ctx.hub.send('call.route.bt', {})
     let n: { source?: PwObject; sink?: PwObject } = {}
-    for (let i = 0; i < 24 && !(n.source && n.sink); i++) {
+    for (let i = 0; i < 40 && !(n.source && n.sink); i++) {
       n = await pwPhone()
       if (!(n.source && n.sink)) await wait(250)
     }
@@ -168,5 +170,25 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void } {
   ctx.handle('callRoute', () => route)
   ctx.handle('setCallRoute', (r: CallRoute) => setRoute(r))
 
-  return { answeredHere: () => (here = true) }
+  // Mute while the call is on the laptop: silence the laptop-mic stream that feeds the call.
+  let muted = false
+  const applyMute = async (): Promise<void> => {
+    const out = await sh('pactl', ['list', 'source-outputs'])
+    for (const block of out.split('Source Output #').slice(1)) {
+      if (!/D-Connect call mic/.test(block)) continue
+      const id = block.split('\n')[0].trim()
+      await sh('pactl', ['set-source-output-mute', id, muted ? '1' : '0'])
+    }
+  }
+  const setMuted = (m: boolean): void => {
+    muted = m
+    applyMute()
+  }
+  // a new call (or a fresh bridge) starts unmuted unless the user muted it
+  ctx.hub.on('message', (type, data) => {
+    if (type === 'call.state' && (data as CallState).state === 'idle') muted = false
+  })
+  setInterval(() => route === 'pc' && muted && applyMute(), 2000)
+
+  return { answeredHere: () => (here = true), setMuted }
 }

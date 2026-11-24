@@ -33,8 +33,11 @@ const WP_05 = path.join(os.homedir(), '.config/wireplumber/wireplumber.conf.d/51
 export async function callLinkUp(address: string): Promise<boolean> {
   try {
     const all = JSON.parse((await sh('pw-dump', [], 8000)) || '[]')
+    // PipeWire has a device for the phone only while it holds the hands-free link. (Its
+    // "api.bluez5.connection" flag stays "disconnected" because the phone's music link lives in
+    // PulseAudio, so it can't be used here.)
     const dev = all.find((o: any) => o.type === 'PipeWire:Interface:Device' && o.info?.props?.['api.bluez5.address'] === address)
-    return dev?.info?.props?.['api.bluez5.connection'] === 'connected'
+    return !!dev && (dev.info?.params?.EnumProfile || []).some((p: any) => p.name === 'audio-gateway')
   } catch {
     return false
   }
@@ -168,6 +171,7 @@ monitor.bluez.properties = {
   await sh('systemctl', ['--user', 'daemon-reload'], 15000)
   await sh('systemctl', ['--user', 'enable', '--now', 'pipewire.socket', 'pipewire', 'wireplumber'], 15000)
   await sh('systemctl', ['--user', 'restart', 'wireplumber'], 15000)
+  await quietPhonesInPulse()
   return 'Done. Call audio is ready, and PulseAudio stays your sound system.'
 }
 
@@ -175,6 +179,33 @@ export const PIPEWIRE_STEPS = [
   'sudo apt install pipewire wireplumber libspa-0.2-bluetooth gstreamer1.0-pipewire gstreamer1.0-pulseaudio',
   'Then press "Set up call audio": PulseAudio stays your sound system; PipeWire only carries phone calls.'
 ]
+
+// PulseAudio must never auto-play a phone's own audio through the laptop: when it did, its
+// cork rule paused/ducked Spotify and Teams for a moment every time the phone made a sound.
+async function quietPhonesInPulse(): Promise<void> {
+  const file = path.join(os.homedir(), '.config/pulse/default.pa')
+  if (!fs.existsSync(file)) {
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(
+      file,
+      `# Your normal PulseAudio setup...
+.include /etc/pulse/default.pa
+
+# D-Connect: never auto-play a phone's own audio (music/notifications, or its call audio as an
+# old-style headset) through the laptop; earbuds and headsets are unaffected.
+.ifexists module-bluetooth-policy.so
+unload-module module-bluetooth-policy
+load-module module-bluetooth-policy a2dp_source=false ag=false
+.endif
+`
+    )
+  }
+  const mods = await sh('pactl', ['list', 'modules'])
+  if (/Name: module-bluetooth-policy\s+Argument: \n/.test(mods) || !/a2dp_source=false/.test(mods)) {
+    await sh('pactl', ['unload-module', 'module-bluetooth-policy'])
+    await sh('pactl', ['load-module', 'module-bluetooth-policy', 'a2dp_source=false', 'ag=false'])
+  }
+}
 
 export async function fixCallLink(ctx: Ctx, phoneNames: string[]): Promise<{ ok: boolean; message: string }> {
   const s = await status(phoneNames)
@@ -194,7 +225,7 @@ export async function fixCallLink(ctx: Ctx, phoneNames: string[]): Promise<{ ok:
   }
   return {
     ok: false,
-    message: `${s.phone.name} isn't letting this PC handle calls. On the phone: Settings → Bluetooth → ⚙ next to “${os.hostname()}” → turn on “Phone calls”. If there's no such switch, tap Forget there, then press Pair here.`
+    message: `Couldn't open the call link to ${s.phone.name}. Check the phone's Bluetooth is on and near the laptop, and that “Phone calls” is on for “${os.hostname()}” in its Bluetooth settings.`
   }
 }
 

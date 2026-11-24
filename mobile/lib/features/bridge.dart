@@ -53,6 +53,8 @@ class Bridge {
         case 'call.control':
           final ok = await Native.call<bool>('callControl', {'action': d['action']});
           if (m.id != null) link.reply(m, 'call.control', {'ok': ok == true});
+        case 'call.route.bt':
+          Native.call('callRouteBt');
         case 'call.mute':
           Native.call('callMute', {'muted': d['muted']});
         // photos

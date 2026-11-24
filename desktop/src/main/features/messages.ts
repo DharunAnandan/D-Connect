@@ -2,7 +2,7 @@
 import type { CallState } from '@shared/protocol'
 import type { Ctx } from '../context'
 
-export function messages(ctx: Ctx, openCall: (c: CallState) => void, closeCall: () => void, answeredHere: () => void = () => {}): void {
+export function messages(ctx: Ctx, openCall: (c: CallState) => void, closeCall: () => void, answeredHere: () => void = () => {}, muteHere: (m: boolean) => void = () => {}): void {
   let call: CallState = { state: 'idle' }
 
   ctx.hub.on('message', (type, data) => {
@@ -46,5 +46,8 @@ export function messages(ctx: Ctx, openCall: (c: CallState) => void, closeCall: 
   })
   ctx.handle('sims', async () => ((await ctx.hub.request('calls.sims', {}).catch(() => null)) as any)?.sims || [])
   ctx.handle('callControl', (action: 'hold' | 'swap' | 'merge') => ctx.hub.request('call.control', { action }).catch(() => ({ ok: false })))
-  ctx.handle('callMute', (muted: boolean) => ctx.hub.send('call.mute', { muted }))
+  ctx.handle('callMute', (muted: boolean) => {
+    muteHere(muted) // the laptop mic, when the call is on this PC
+    ctx.hub.send('call.mute', { muted }) // and the phone's own mic
+  })
 }

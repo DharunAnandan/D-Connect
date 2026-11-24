@@ -15,7 +15,10 @@ export function CallCard() {
   const [hint, setHint] = useState('')
   const [twoCalls, setTwoCalls] = useState(false)
   useEffect(() => {
-    if (c.state === 'idle') setTwoCalls(false)
+    if (c.state === 'idle') {
+      setTwoCalls(false)
+      setMuted(false)
+    }
   }, [c.state])
   const control = async (action: 'hold' | 'swap' | 'merge'): Promise<void> => {
     const r = await call<{ ok: boolean }>('callControl', action)
@@ -90,9 +93,12 @@ export function CallCard() {
             )}
             <div className="no-drag relative mt-7 flex items-center justify-center gap-8">
               {live && (
-                <motion.button whileTap={{ scale: 0.88 }} onClick={() => { setMuted(!muted); call('callMute', !muted) }} className={`grid h-14 w-14 place-items-center rounded-full ${muted ? 'bg-white text-ink-950' : 'bg-white/10'}`}>
-                  {muted ? <MicOff size={22} /> : <Mic size={22} />}
-                </motion.button>
+                <div className="flex flex-col items-center gap-1.5">
+                  <motion.button whileTap={{ scale: 0.88 }} title={muted ? 'Unmute' : 'Mute'} onClick={() => { setMuted(!muted); call('callMute', !muted) }} className={`grid h-14 w-14 place-items-center rounded-full transition-colors ${muted ? 'bg-rose text-white shadow-[0_0_24px_rgba(248,113,113,0.6)]' : 'bg-white/10 hover:bg-white/15'}`}>
+                    {muted ? <MicOff size={22} /> : <Mic size={22} />}
+                  </motion.button>
+                  <span className={`text-[11px] font-semibold ${muted ? 'text-rose' : 'text-white/55'}`}>{muted ? 'Muted' : 'Mute'}</span>
+                </div>
               )}
               <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }} onClick={() => call(c.state === 'ringing' ? 'callReject' : 'callEnd')} className="grid h-16 w-16 place-items-center rounded-full bg-rose shadow-[0_10px_30px_-6px_rgba(248,113,113,0.9)]">
                 <PhoneOff size={26} />

@@ -177,7 +177,7 @@ app.whenReady().then(async () => {
   // ---------------------------------------------------------------- features
   notifications(ctx)
   const audio = callAudio(ctx)
-  messages(ctx, openCall, closeCall, audio.answeredHere)
+  messages(ctx, openCall, closeCall, audio.answeredHere, audio.setMuted)
   clipboardSync(ctx)
   const f = files(ctx)
   photos(ctx, f.onPhoto)

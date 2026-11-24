@@ -97,23 +97,42 @@ object Telephony {
     }
 
     // The SIMs that can place calls, so the PC can pick one (and the phone doesn't ask).
+    // Each entry carries the Telecom account (to place the call on) when Android gives it to us.
     @SuppressLint("MissingPermission")
-    fun sims(ctx: Context): List<Map<String, Any?>> = try {
+    fun sims(ctx: Context): List<Map<String, Any?>> {
         val tm = ctx.getSystemService(TelecomManager::class.java)
-        tm.callCapablePhoneAccounts.mapIndexed { i, h ->
-            val acc = tm.getPhoneAccount(h)
-            mapOf("index" to i, "label" to (acc?.label?.toString() ?: "SIM ${i + 1}"), "number" to acc?.address?.schemeSpecificPart)
+        val handles = try { tm.callCapablePhoneAccounts } catch (e: Exception) { android.util.Log.w("DConnect", "callCapablePhoneAccounts: $e"); emptyList() }
+        val subs = try {
+            ctx.getSystemService(android.telephony.SubscriptionManager::class.java).activeSubscriptionInfoList ?: emptyList()
+        } catch (e: Exception) { android.util.Log.w("DConnect", "activeSubscriptionInfoList: $e"); emptyList() }
+        android.util.Log.i("DConnect", "sims: ${handles.size} call accounts, ${subs.size} subscriptions")
+        if (handles.isNotEmpty()) return handles.mapIndexed { i, h ->
+            val acc = try { tm.getPhoneAccount(h) } catch (e: Exception) { null }
+            val sub = subs.firstOrNull { it.subscriptionId.toString() == h.id || it.iccId == h.id }
+            mapOf("index" to i, "label" to (sub?.displayName?.toString() ?: acc?.label?.toString() ?: "SIM ${i + 1}"), "slot" to sub?.simSlotIndex)
         }
-    } catch (e: Exception) { emptyList() }
+        return subs.sortedBy { it.simSlotIndex }.mapIndexed { i, sub -> mapOf("index" to i, "label" to (sub.displayName?.toString() ?: "SIM ${sub.simSlotIndex + 1}"), "slot" to sub.simSlotIndex) }
+    }
 
     @SuppressLint("MissingPermission")
     fun dial(ctx: Context, number: String, sim: Int? = null) {
         try {
             val tm = ctx.getSystemService(TelecomManager::class.java)
             val extras = Bundle()
-            if (sim != null) tm.callCapablePhoneAccounts.getOrNull(sim)?.let { extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, it) }
+            if (sim != null) {
+                val handles = try { tm.callCapablePhoneAccounts } catch (e: Exception) { emptyList() }
+                val subs = try { ctx.getSystemService(android.telephony.SubscriptionManager::class.java).activeSubscriptionInfoList?.sortedBy { it.simSlotIndex } ?: emptyList() } catch (e: Exception) { emptyList() }
+                // the account for this SIM: by position, or matched to its subscription
+                val sub = subs.getOrNull(sim)
+                val handle = handles.firstOrNull { h -> sub != null && (h.id == sub.subscriptionId.toString() || h.id == sub.iccId) } ?: handles.getOrNull(sim)
+                if (handle != null) extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle)
+                // OEM dialers that look at the slot instead
+                val slot = sub?.simSlotIndex ?: sim
+                for (k in listOf("com.android.phone.extra.slot", "slot", "simSlot", "sim_slot", "subscription", "phone", "com.android.phone.DialingMode")) extras.putInt(k, slot)
+                android.util.Log.i("DConnect", "dial on sim=$sim slot=$slot handle=${handle?.id}")
+            }
             tm.placeCall(Uri.fromParts("tel", number, null), extras)
-        } catch (_: Exception) {}
+        } catch (e: Exception) { android.util.Log.w("DConnect", "dial: $e") }
     }
 
     // Hold / swap / merge: only the default phone app may do these directly, so bring the
@@ -130,6 +149,21 @@ object Telephony {
         val svc = ControlService.instance ?: return false
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ svc.clickByLabel(labels) }, 700)
         return true
+    }
+
+    // Put the ongoing call's audio on the Bluetooth hands-free link (the PC).
+    fun routeToBluetooth(ctx: Context) {
+        val am = ctx.getSystemService(AudioManager::class.java)
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                am.availableCommunicationDevices.firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO }?.let { am.setCommunicationDevice(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                am.startBluetoothSco()
+                @Suppress("DEPRECATION")
+                am.isBluetoothScoOn = true
+            }
+        } catch (_: Exception) {}
     }
 
     fun mute(ctx: Context, muted: Boolean) {
