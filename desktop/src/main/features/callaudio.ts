@@ -223,7 +223,24 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     tunnel('playback', 'dconnect-call-speaker', 'D-Connect call speaker', 'Audio/Sink', vp?.sink || outDev)
     tunnel('capture', 'dconnect-call-mic', 'D-Connect call mic', 'Audio/Source', vp?.source || inDev)
     if (muted) setTimeout(() => applyMute(), 1200)
+    routeLog(`bridges started: speaker→${vp?.sink || outDev || 'default'} mic←${vp?.source || inDev || 'default'}`)
+    for (const ms of [1500, 4000, 8000]) {
+      setTimeout(async () => {
+        if (!bridges.length) return
+        await ensureMicLinked()
+        if (ms === 8000) routeLog(`links: ${await callLinks()}`)
+      }, ms)
+    }
   }
+
+  // the call's PipeWire links, one line (for the log)
+  const callLinks = async (): Promise<string> =>
+    (await sh('pw-link', ['-l'])).split('\n').reduce<{ out: string[]; cur: string }>((a, l) => {
+      if (!/^\s/.test(l)) a.cur = l.trim()
+      else if (/\|->/.test(l) && /dconnect|bluez/.test(a.cur + l)) a.out.push(`${a.cur} -> ${l.replace(/.*\|->\s*/, '').trim()}`)
+      return a
+    }, { out: [], cur: '' }).out.join(' ; ') || 'none'
+
 
   const ensureMicLinked = async (): Promise<void> => {
     const links = await sh('pw-link', ['-l'])
@@ -316,6 +333,8 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
           route = 'pc'
           ctx.emit('call.route', route)
         }
+      } else if (audioHere && bridges.length) {
+        await ensureMicLinked() // WirePlumber doesn't always link the mic into the call
       } else if (!audioHere && bridges.length) {
         stopBridges()
         if (route === 'pc') {
