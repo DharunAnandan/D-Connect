@@ -17,6 +17,11 @@ const api = {
     ipcRenderer.on('video', l)
     return () => ipcRenderer.removeListener('video', l)
   },
+  onAppVideo: (cb: (header: any, payload: Uint8Array) => void): (() => void) => {
+    const l = (_e: unknown, h: any, p: Uint8Array): void => cb(h, p)
+    ipcRenderer.on('appvideo', l)
+    return () => ipcRenderer.removeListener('appvideo', l)
+  },
   pathForFile: (f: File): string => webUtils.getPathForFile(f),
   // eye break overlay (side-eye's bridge)
   eyeBreakDone: (result: string): void => ipcRenderer.send('eyebreak:done', result),

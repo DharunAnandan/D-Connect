@@ -80,7 +80,7 @@ class KeepAliveService : Service() {
     // Report where the call's audio really is (the PC over Bluetooth, the receiver, the
     // loudspeaker), so the PC's call card shows the truth even when it's changed on the phone.
     private val routeHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private var lastRoute: String? = null
+    private var lastRoute: Map<String, Any?>? = null
     private val routeTick = object : Runnable {
         override fun run() {
             val r = currentRoute()

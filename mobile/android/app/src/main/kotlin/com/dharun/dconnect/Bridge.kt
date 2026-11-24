@@ -118,6 +118,7 @@ object Bridge {
             "callRouteBt" -> { Telephony.routeToBluetooth(ctx); result.success(null) }
             "callMute" -> { Telephony.mute(ctx, a("muted") == true); result.success(null) }
             // photos
+            "apps" -> bg(result) { AppsList.list(ctx) }
             "photos" -> bg(result) { Photos.list(ctx, (a("offset") as Number).toInt(), (a("limit") as Number).toInt()) }
             "photoFile" -> bg(result) { Photos.file(ctx, a("id").toString()) }
             // extras

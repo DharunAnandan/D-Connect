@@ -24,6 +24,7 @@ import { media } from './features/media'
 import { remoteInput } from './features/input'
 import { system } from './features/system'
 import { bluetooth } from './features/bluetooth'
+import { appWindows } from './features/appwindows'
 import { callAudio } from './features/callaudio'
 
 const isLinux = process.platform === 'linux'
@@ -246,6 +247,7 @@ app.whenReady().then(async () => {
     emit('findpc', on)
   })
   bluetooth(ctx)
+  appWindows(ctx)
 
   // ---------------------------------------------------------------- eye care (20-20-20)
   let phoneEnd: ((r: EyeResult) => void) | null = null

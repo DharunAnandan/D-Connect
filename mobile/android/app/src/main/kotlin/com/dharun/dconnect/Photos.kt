@@ -42,3 +42,25 @@ object Photos {
         return mapOf("path" to f.absolutePath, "name" to name)
     }
 }
+
+object AppsList {
+    fun list(ctx: Context): List<Map<String, Any?>> {
+        val pm = ctx.packageManager
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+        val seen = HashSet<String>()
+        return pm.queryIntentActivities(intent, 0).mapNotNull { ri ->
+            val pkg = ri.activityInfo.packageName
+            if (pkg == ctx.packageName || !seen.add(pkg)) return@mapNotNull null
+            val icon = try {
+                val d = ri.loadIcon(pm)
+                val b = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
+                d.setBounds(0, 0, 96, 96)
+                d.draw(android.graphics.Canvas(b))
+                val o = ByteArrayOutputStream()
+                b.compress(Bitmap.CompressFormat.PNG, 100, o)
+                Base64.encodeToString(o.toByteArray(), Base64.NO_WRAP)
+            } catch (e: Exception) { null }
+            mapOf("pkg" to pkg, "label" to ri.loadLabel(pm).toString(), "icon" to icon)
+        }.sortedBy { (it["label"] as String).lowercase() }
+    }
+}

@@ -59,6 +59,8 @@ class Bridge {
         case 'call.mute':
           Native.call('callMute', {'muted': d['muted']});
         // photos
+        case 'apps.list':
+          link.reply(m, 'apps', {'apps': await Native.list('apps')});
         case 'photos.get':
           link.reply(m, 'photos.list', {'items': await Native.list('photos', {'offset': d['offset'] ?? 0, 'limit': d['limit'] ?? 48})});
         case 'photos.fetch':

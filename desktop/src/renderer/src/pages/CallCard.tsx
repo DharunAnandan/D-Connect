@@ -1,6 +1,6 @@
 // Incoming / ongoing call: a floating card with a pulsing avatar, answer and decline.
 import { AnimatePresence, motion } from 'framer-motion'
-import { Combine, Laptop, Mic, MicOff, Pause, Phone, PhoneOff, Repeat, Smartphone, Volume2 } from 'lucide-react'
+import { Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Mic, MicOff, Pause, Phone, PhoneOff, Repeat, Smartphone, Volume2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { CallState } from '@shared/protocol'
 import { Avatar } from '@/components/ui'
@@ -100,17 +100,9 @@ export function CallCard() {
             )}
             {hint && <div className="relative mt-2 text-[11px] text-amber">{hint}</div>}
             {live && route === 'pc' && devs && (
-              <div className="no-drag relative mx-auto mt-3 grid w-full max-w-[300px] grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 text-left text-[11px]">
-                <Volume2 size={13} className="text-white/50" />
-                <select value={devs.out || ''} onChange={(e) => pick(e.target.value || null, devs.in)} className="truncate rounded-lg bg-white/[0.07] px-2 py-1.5 text-white/85 outline-none ring-1 ring-white/10">
-                  <option value="">Default speaker</option>
-                  {devs.outputs.map((d) => <option key={d.name} value={d.name}>{d.label}</option>)}
-                </select>
-                <Mic size={13} className="text-white/50" />
-                <select value={devs.in || ''} onChange={(e) => pick(devs.out, e.target.value || null)} className="truncate rounded-lg bg-white/[0.07] px-2 py-1.5 text-white/85 outline-none ring-1 ring-white/10">
-                  <option value="">Default microphone</option>
-                  {devs.inputs.map((d) => <option key={d.name} value={d.name}>{d.label}</option>)}
-                </select>
+              <div className="no-drag relative mx-auto mt-4 flex w-full max-w-[310px] flex-col gap-2">
+                <DevicePicker kind="out" value={devs.out} options={devs.outputs} onPick={(v) => pick(v, devs.in)} />
+                <DevicePicker kind="in" value={devs.in} options={devs.inputs} onPick={(v) => pick(devs.out, v)} />
               </div>
             )}
             {live && (
@@ -150,6 +142,69 @@ export function CallCard() {
                 </motion.button>
               )}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// A glass pill that opens an animated list of speakers / microphones.
+function DevicePicker({ kind, value, options, onPick }: { kind: 'out' | 'in'; value: string | null; options: { name: string; label: string }[]; onPick: (v: string | null) => void }) {
+  const [open, setOpen] = useState(false)
+  const all = [{ name: '', label: kind === 'out' ? 'Default speaker' : 'Default microphone' }, ...options]
+  const current = all.find((o) => o.name === (value || '')) || all[0]
+  const iconFor = (label: string, name: string) => {
+    if (/bluez|bluetooth|buds|airpods|headset|wh-|jbl|noise|realme|oneplus/i.test(name + label)) return Bluetooth
+    if (/usb|headphone|head/i.test(name + label)) return Headphones
+    return kind === 'out' ? Volume2 : Mic
+  }
+  const CurIcon = iconFor(current.label, current.name)
+  return (
+    <div className="relative">
+      <motion.button
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setOpen(!open)}
+        className={`flex w-full items-center gap-2.5 rounded-2xl px-3 py-2 text-left ring-1 transition-colors ${open ? 'bg-white/[0.12] ring-cyan/40' : 'bg-white/[0.06] ring-white/10 hover:bg-white/[0.09]'}`}
+      >
+        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-xl ${kind === 'out' ? 'bg-[linear-gradient(135deg,#7c5cff,#35e0ff)]' : 'bg-[linear-gradient(135deg,#3ddc97,#35e0ff)]'} text-ink-950`}>
+          <CurIcon size={14} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[9.5px] font-semibold uppercase tracking-widest text-white/40">{kind === 'out' ? 'Speaker' : 'Microphone'}</span>
+          <span className="block truncate text-[12.5px] font-medium text-white/90">{current.label}</span>
+        </span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} className="text-white/50">
+          <ChevronDown size={15} />
+        </motion.span>
+      </motion.button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 34 }}
+            className="glass-strong absolute left-0 right-0 top-full z-30 mt-1.5 max-h-48 overflow-y-auto rounded-2xl p-1.5"
+          >
+            {all.map((o) => {
+              const I = iconFor(o.label, o.name)
+              const sel = o.name === (value || '')
+              return (
+                <button
+                  key={o.name || 'default'}
+                  onClick={() => {
+                    onPick(o.name || null)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[12.5px] transition-colors ${sel ? 'bg-white/[0.1] text-white' : 'text-white/75 hover:bg-white/[0.06] hover:text-white'}`}
+                >
+                  <I size={14} className={sel ? 'text-cyan-soft' : 'text-white/45'} />
+                  <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                  {sel && <Check size={14} className="text-mint" />}
+                </button>
+              )
+            })}
           </motion.div>
         )}
       </AnimatePresence>

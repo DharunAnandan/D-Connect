@@ -9,6 +9,7 @@ import { sfx } from './lib/sfx'
 import { useApp } from './lib/store'
 import { page } from './theme/motion'
 import { Calls } from './pages/Calls'
+import { Apps } from './pages/Apps'
 import { EyeCare } from './pages/EyeCare'
 import { Extras } from './pages/Extras'
 import { Files } from './pages/Files'
@@ -29,6 +30,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/files': Files,
   '/photos': Photos,
   '/mirror': Mirror,
+  '/apps': Apps,
   '/extras': Extras,
   '/eye': EyeCare,
   '/settings': Settings,
