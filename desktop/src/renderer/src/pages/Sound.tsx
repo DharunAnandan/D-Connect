@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AppWindow, Globe, Music2, Smartphone, Speaker, Volume1, Volume2, VolumeX, Zap } from 'lucide-react'
+import { AppWindow, Globe, Music2, Smartphone, Speaker, Volume1, Volume2, VolumeX, X, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Card, Empty, PageHeader } from '@/components/ui'
 import { call } from '@/lib/api'
@@ -8,8 +8,7 @@ import { list, spring } from '@/theme/motion'
 interface MixerApp { id: string; name: string; icon?: string; volume: number; muted: boolean; phone?: boolean }
 interface Mixer { supported: boolean; output: { name: string; label: string; volume: number; muted: boolean } | null; apps: MixerApp[] }
 
-// Volume booster: this PC's speaker and each app playing sound, 0-200%.
-export function Sound() {
+function useMixer() {
   const [mx, setMx] = useState<Mixer | null>(null)
   const dragging = useRef(0)
   useEffect(() => {
@@ -20,7 +19,6 @@ export function Sound() {
     const t = setInterval(load, 2000)
     return () => clearInterval(t)
   }, [])
-
   const set = (kind: 'output' | 'app', a: { id: string; phone?: boolean }, v: number): void => {
     dragging.current = Date.now()
     setMx((m) => m && (kind === 'output' ? { ...m, output: m.output && { ...m.output, volume: v } } : { ...m, apps: m.apps.map((x) => (x.id === a.id ? { ...x, volume: v } : x)) }))
@@ -29,10 +27,47 @@ export function Sound() {
   const mute = (kind: 'output' | 'app', id: string, muted: boolean): void => {
     call<Mixer>('mixerMute', kind, id, muted).then(setMx)
   }
+  return { mx, set, mute }
+}
+
+// Small mixer opened from the tray: this PC and every app, with sliders.
+export function MiniMixer() {
+  const { mx, set, mute } = useMixer()
+  return (
+    <div className="h-screen w-screen p-2">
+      <motion.div initial={{ opacity: 0, y: -8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring} className="glass-strong flex h-full flex-col overflow-hidden rounded-[22px] bg-ink-900/95 p-4 ring-1 ring-white/10">
+        <div className="drag mb-3 flex items-center gap-2">
+          <div className="grid h-8 w-8 place-items-center rounded-xl bg-[linear-gradient(135deg,#ff5ca8,#7c5cff)]"><Volume2 size={16} /></div>
+          <div className="flex-1 text-sm font-semibold">Sound</div>
+          <button onClick={() => call('mixerWindow', false)} className="no-drag grid h-7 w-7 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"><X size={15} /></button>
+        </div>
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+          {mx?.output && (
+            <div className="rounded-2xl bg-white/[0.05] p-3 ring-1 ring-white/[0.06]">
+              <div className="mb-1 flex items-center gap-2 text-[13px] font-semibold"><Speaker size={14} className="text-pink" /><span className="min-w-0 flex-1 truncate">This PC</span><Big v={mx.output.volume} muted={mx.output.muted} small /></div>
+              <Boost value={mx.output.volume} muted={mx.output.muted} onChange={(v) => set('output', { id: '' }, v)} onMute={() => mute('output', '', !mx.output!.muted)} />
+            </div>
+          )}
+          {mx?.apps.map((a) => (
+            <div key={a.id} className="rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.05]">
+              <div className="mb-1 flex items-center gap-2 text-[13px] font-semibold"><span className={a.phone ? 'text-pink' : 'text-cyan'}><AppIcon a={a} /></span><span className="min-w-0 flex-1 truncate">{a.name}</span><Big v={a.volume} muted={a.muted} small /></div>
+              <Boost value={a.volume} muted={a.muted} onChange={(v) => set('app', a, v)} onMute={() => mute('app', a.id, !a.muted)} />
+            </div>
+          ))}
+          {mx && !mx.apps.length && <div className="py-4 text-center text-xs text-white/45">No app is playing sound right now.</div>}
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// Volume booster: this PC's speaker and each app playing sound, 0-300%.
+export function Sound() {
+  const { mx, set, mute } = useMixer()
 
   return (
     <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
-      <PageHeader icon={Volume2} title="Sound" subtitle="Volume booster: turn this PC or any app up to 200%" />
+      <PageHeader icon={Volume2} title="Sound" subtitle="Volume booster: turn this PC or any app up to 300%" />
 
       {mx && !mx.supported ? (
         <Empty icon={VolumeX} title="Not available here" body="The volume booster needs PulseAudio or PipeWire on Linux." />
@@ -50,7 +85,7 @@ export function Sound() {
             </div>
             {mx?.output && <Boost value={mx.output.volume} muted={mx.output.muted} onChange={(v) => set('output', { id: '' }, v)} onMute={() => mute('output', '', !mx.output!.muted)} />}
             <div className="relative mt-5 flex gap-2">
-              {[100, 130, 160, 200].map((p) => (
+              {[100, 150, 200, 300].map((p) => (
                 <button key={p} onClick={() => set('output', { id: '' }, p)} className={`flex-1 rounded-xl py-2 text-xs font-semibold ring-1 transition-colors ${mx?.output?.volume === p ? 'bg-white text-ink-950 ring-white' : 'bg-white/[0.05] text-white/70 ring-white/10 hover:bg-white/10'}`}>
                   {p === 100 ? 'Normal' : `${p}%`}
                 </button>
@@ -100,10 +135,12 @@ function Big({ v, muted, small }: { v: number; muted?: boolean; small?: boolean 
   )
 }
 
-// 0-200% slider: the part past 100% glows as "boost"
+// 0-300% slider: the part past 100% glows as "boost"
+export const MAX = 300
+
 export function Boost({ value, muted, onChange, onMute }: { value: number; muted?: boolean; onChange: (v: number) => void; onMute?: () => void }) {
   const Icon = muted ? VolumeX : value > 100 ? Volume2 : Volume1
-  const pct = Math.min(200, value) / 2
+  const pct = Math.min(MAX, value) / (MAX / 100)
   return (
     <div className="relative flex items-center gap-3">
       {onMute && (
@@ -113,9 +150,9 @@ export function Boost({ value, muted, onChange, onMute }: { value: number; muted
         <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 overflow-hidden rounded-full bg-white/10">
           <div className={`h-full rounded-full ${muted ? 'bg-white/25' : value > 100 ? 'bg-[linear-gradient(90deg,#7c5cff_0%,#35e0ff_50%,#ffb547_75%,#ff5ca8_100%)]' : 'bg-[linear-gradient(90deg,#7c5cff,#35e0ff)]'}`} style={{ width: `${pct}%`, backgroundSize: value > 100 ? `${(100 / pct) * 100}% 100%` : undefined }} />
         </div>
-        <div className="pointer-events-none absolute top-1/2 h-4 w-px -translate-y-1/2 bg-white/40" style={{ left: '50%' }} />
+        <div className="pointer-events-none absolute top-1/2 h-4 w-px -translate-y-1/2 bg-white/40" style={{ left: `${10000 / MAX}%` }} />
         <div className="pointer-events-none absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.4)]" style={{ left: `${pct}%` }} />
-        <input type="range" min={0} max={200} step={1} value={Math.min(200, value)} onChange={(e) => onChange(Number(e.target.value))} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+        <input type="range" min={0} max={MAX} step={1} value={Math.min(MAX, value)} onChange={(e) => onChange(Number(e.target.value))} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
       </div>
     </div>
   )

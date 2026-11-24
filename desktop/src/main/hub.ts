@@ -40,6 +40,7 @@ export declare interface Hub {
   on(e: 'binary', l: (channel: Channel, header: any, payload: Buffer) => void): this
   on(e: 'connected', l: (s: Session) => void): this
   on(e: 'disconnected', l: (s: Session) => void): this
+  on(e: 'unanswered', l: (type: string) => void): this
   on(e: 'paired', l: (d: TrustedDevice) => void): this
   on(e: 'token', l: (p: PairPayload) => void): this
   on(e: 'online', l: (ids: string[]) => void): this
@@ -314,6 +315,8 @@ export class Hub extends EventEmitter {
       }
       const timer = setTimeout(() => {
         cleanup()
+        // a long request going unanswered while linked: the phone's app is asleep/frozen
+        if (timeoutMs >= 10000 && this.session) this.emit('unanswered', type)
         reject(new Error('timeout'))
       }, timeoutMs)
       const cleanup = (): void => {

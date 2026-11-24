@@ -108,6 +108,30 @@ export function createCallWindow(): BrowserWindow {
   return win
 }
 
+// The small sound mixer opened from the tray, top-right like a quick-settings panel.
+export function createMixerWindow(): BrowserWindow {
+  const wa = screen.getPrimaryDisplay().workArea
+  const W = 340
+  const H = 440
+  const win = new BrowserWindow({
+    x: wa.x + wa.width - W - 16,
+    y: wa.y + 8,
+    width: W,
+    height: H,
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    resizable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    webPreferences: { preload: PRELOAD, sandbox: false }
+  })
+  load(win, 'index', '/mixer')
+  return win
+}
+
 // The eye break on every screen (from side-eye's showEyeBreak). Resolves with whichever ends it.
 // `external` lets the phone end it too.
 export function showEyeBreak(

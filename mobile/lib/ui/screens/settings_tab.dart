@@ -94,6 +94,7 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
               _Perm(Icons.accessibility_new_rounded, 'Screen control', 'Let the PC tap and type while mirroring (Accessibility)', _perm['accessibility'] == true, () => Native.openSetting('accessibility')),
               _Perm(Icons.do_not_disturb_on_rounded, 'Do Not Disturb access', 'Let the PC switch focus mode', _perm['dnd'] == true, () => Native.openSetting('dnd')),
               _Perm(Icons.battery_charging_full_rounded, 'Run in background', 'Stay connected with the screen off', _perm['battery'] == true, () => Native.openSetting('battery')),
+              _Perm(Icons.lock_clock_rounded, 'Work when locked', 'App info → Battery usage → Allow background activity. Without it the phone freezes D-Connect when locked', _perm['background'] == true, () => Native.openSetting('background')),
               _Perm(Icons.bluetooth_rounded, 'Nearby devices', 'Lets the PC pick this phone for call audio', ok('bt'), () => _ask(Permission.bluetoothConnect)),
               _Perm(Icons.notifications_rounded, 'Show notifications', 'Eye breaks and the connection status', ok('notify'), () => _ask(Permission.notification)),
             ]),

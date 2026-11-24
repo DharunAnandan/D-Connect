@@ -33,14 +33,35 @@ const WP_05 = path.join(os.homedir(), '.config/wireplumber/wireplumber.conf.d/51
 export async function callLinkUp(address: string): Promise<boolean> {
   try {
     const all = JSON.parse((await sh('pw-dump', [], 8000)) || '[]')
-    // PipeWire has a device for the phone only while it holds the hands-free link. (Its
-    // "api.bluez5.connection" flag stays "disconnected" because the phone's music link lives in
-    // PulseAudio, so it can't be used here.)
+    // PipeWire shows a device for the phone once a call's audio codec is chosen...
     const dev = all.find((o: any) => o.type === 'PipeWire:Interface:Device' && o.info?.props?.['api.bluez5.address'] === address)
-    return !!dev && (dev.info?.params?.EnumProfile || []).some((p: any) => p.name === 'audio-gateway')
-  } catch {
-    return false
-  }
+    if (dev && (dev.info?.params?.EnumProfile || []).some((p: any) => p.name === 'audio-gateway')) return true
+  } catch {}
+  // ...but between calls PipeWire 0.3.x waits for that codec choice (the phone only makes it
+  // when a call starts), so the link is up whenever WirePlumber holds a hands-free connection.
+  return wirePlumberHoldsCallLink()
+}
+
+function wirePlumberHoldsCallLink(): boolean {
+  try {
+    const inodes = new Set(
+      fs.readFileSync('/proc/net/rfcomm', 'utf8').split('\n').slice(1).map((l) => l.trim().split(/\s+/)[5]).filter(Boolean)
+    )
+    if (!inodes.size) return false
+    for (const pid of fs.readdirSync('/proc')) {
+      if (!/^\d+$/.test(pid)) continue
+      let comm = ''
+      try { comm = fs.readFileSync(`/proc/${pid}/comm`, 'utf8').trim() } catch { continue }
+      if (comm !== 'wireplumber') continue
+      for (const fd of fs.readdirSync(`/proc/${pid}/fd`)) {
+        try {
+          const m = /^socket:\[(\d+)\]$/.exec(fs.readlinkSync(`/proc/${pid}/fd/${fd}`))
+          if (m && inodes.has(m[1])) return true
+        } catch {}
+      }
+    }
+  } catch {}
+  return false
 }
 
 export async function pcBtAddress(): Promise<string | null> {
@@ -396,7 +417,10 @@ export function bluetooth(ctx: Ctx): void {
     autoCallLink(data?.enabled !== false)
   })
   // keep trying now and then while linked (phone walked away and came back, etc.)
+  let autoTick = 0
   setInterval(() => {
-    if (ctx.hub.session && autoFails < 5) autoCallLink()
+    autoTick++
+    // every minute at first, then every 5 minutes after repeated failures (never give up)
+    if (ctx.hub.session && (autoFails < 5 || autoTick % 5 === 0)) autoCallLink()
   }, 60000)
 }

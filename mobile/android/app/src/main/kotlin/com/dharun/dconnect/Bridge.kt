@@ -241,7 +241,10 @@ object Bridge {
             "notifications" to NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName),
             "accessibility" to (ControlService.instance != null || enabledA11y.contains("${ctx.packageName}/")),
             "dnd" to nm.isNotificationPolicyAccessGranted,
-            "battery" to pm.isIgnoringBatteryOptimizations(ctx.packageName)
+            "battery" to pm.isIgnoringBatteryOptimizations(ctx.packageName),
+            // OnePlus/Oppo/Realme "Allow background activity": Android can't report it, so we
+            // remember that the page was opened
+            "background" to ctx.getSharedPreferences("dc_setup", Context.MODE_PRIVATE).getBoolean("background", false)
         )
     }
 
@@ -252,6 +255,11 @@ object Bridge {
             "dnd" -> Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
             "bluetooth" -> Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
             "battery" -> Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}"))
+            "background" -> {
+                ctx.getSharedPreferences("dc_setup", Context.MODE_PRIVATE).edit().putBoolean("background", true).apply()
+                Toast.makeText(ctx, "Battery usage → turn on “Allow background activity”", Toast.LENGTH_LONG).show()
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}"))
+            }
             else -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}"))
         }
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

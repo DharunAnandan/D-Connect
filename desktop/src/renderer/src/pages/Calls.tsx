@@ -15,7 +15,7 @@ export function Calls() {
   const { conn, go } = useApp()
   const [num, setNum] = useState('')
   const [log, setLog] = useState<CallLogEntry[] | null>(null)
-  const [bt, setBt] = useState<{ ready: boolean } | null>(null)
+  const [bt, setBt] = useState<{ ready: boolean; platform: string; adapter: boolean; hfpConfigured: boolean; phone: { paired: boolean } | null } | null>(null)
   const [sims, setSims] = useState<{ index: number; label: string; number?: string }[]>([])
   const [sim, setSim] = useState<number>(() => +(localStorage.getItem('dc.sim') || 0))
   const dial = (n: string): void => {
@@ -46,7 +46,7 @@ export function Calls() {
   return (
     <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
       <PageHeader icon={Phone} title="Calls" subtitle="Dial from your keyboard. Answer from anywhere on your desktop." />
-      {bt && !bt.ready && (
+      {bt && bt.platform === 'linux' && (!bt.adapter || !bt.hfpConfigured || !bt.phone?.paired) && (
         <Card className="mb-5 flex items-center gap-4 p-4">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber/15 text-amber"><Headphones size={18} /></div>
           <div className="flex-1 text-sm">

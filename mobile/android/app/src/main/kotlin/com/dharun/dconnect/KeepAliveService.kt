@@ -43,8 +43,19 @@ class KeepAliveService : Service() {
         return START_STICKY
     }
 
+    // While linked to the PC, keep Wi-Fi responsive with the screen off. (A CPU wake lock does
+    // not help on OnePlus/Oppo: their battery manager freezes the app regardless, unless
+    // "Allow background activity" is on for D-Connect. Settings → "Work when locked" opens it.)
+    private var wifi: android.net.wifi.WifiManager.WifiLock? = null
+
     override fun onCreate() {
         super.onCreate()
+        try {
+            @Suppress("DEPRECATION")
+            val mode = if (Build.VERSION.SDK_INT >= 29) android.net.wifi.WifiManager.WIFI_MODE_FULL_LOW_LATENCY else android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF
+            wifi = applicationContext.getSystemService(android.net.wifi.WifiManager::class.java)
+                .createWifiLock(mode, "dconnect:link").apply { setReferenceCounted(false); acquire() }
+        } catch (_: Exception) {}
         val f = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
@@ -72,6 +83,7 @@ class KeepAliveService : Service() {
 
     override fun onDestroy() {
         try { unregisterReceiver(receiver) } catch (_: Exception) {}
+        try { wifi?.release() } catch (_: Exception) {}
         super.onDestroy()
     }
 

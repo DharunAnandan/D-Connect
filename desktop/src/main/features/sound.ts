@@ -1,5 +1,5 @@
 // Volume booster: this PC's speaker and every app playing sound (Chrome, Spotify, the phone's
-// music...), each settable 0-200%. Above 100% PulseAudio amplifies in software, which is how
+// music...), each settable 0-300%. Above 100% PulseAudio amplifies in software, which is how
 // a quiet video in Chrome gets loud enough. Linux (PulseAudio / pipewire-pulse) only.
 import { execFile } from 'child_process'
 import type { Ctx } from '../context'
@@ -62,7 +62,7 @@ async function read(): Promise<Mixer> {
 }
 
 export function sound(ctx: Ctx): void {
-  const clamp = (n: number): number => Math.max(0, Math.min(200, Math.round(n)))
+  const clamp = (n: number): number => Math.max(0, Math.min(300, Math.round(n)))
   ctx.handle('mixer', () => read())
   ctx.handle('mixerSet', async (kind: 'output' | 'app', id: string, pct: number, phone?: boolean) => {
     const v = `${clamp(pct)}%`

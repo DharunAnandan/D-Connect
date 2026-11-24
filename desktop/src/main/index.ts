@@ -13,7 +13,7 @@ import { Hub, Session } from './hub'
 import { Store, type SettingKey } from './store'
 import { Usb } from './adb'
 import { devControl } from './devcontrol'
-import { createCallWindow, createMain, createToastWindow, fitToastWindow, showEyeBreak } from './windows'
+import { createCallWindow, createMain, createMixerWindow, createToastWindow, fitToastWindow, showEyeBreak } from './windows'
 import { notifications, sendReply } from './features/notifications'
 import { messages } from './features/messages'
 import { clipboardSync } from './features/clipboard'
@@ -307,6 +307,31 @@ app.whenReady().then(async () => {
       if (typeof data.sync === 'boolean') store.set('eyePhoneSync', data.sync)
     } else if (type === 'eye.stats.get') sendEyeStats()
   })
+  // the phone stopped answering (OnePlus/Oppo freeze apps when locked): say how to fix it
+  let lastAsleepHint = 0
+  hub.on('unanswered', () => {
+    if (Date.now() - lastAsleepHint < 30 * 60000) return
+    lastAsleepHint = Date.now()
+    toast({ id: 'phone-asleep', kind: 'info', title: 'Your phone isn\'t answering', body: 'Its battery saver froze D-Connect while locked. On the phone: D-Connect → Settings → “Work when locked” (Allow background activity). Unlocking the phone wakes it now.', ttl: 15000 })
+  })
+
+  // tray sound mixer
+  let mixerWin: BrowserWindow | null = null
+  const showMixer = (on: boolean): void => {
+    if (!on) return mixerWin?.hide()
+    if (!mixerWin || mixerWin.isDestroyed()) {
+      mixerWin = createMixerWindow()
+      mixerWin.on('blur', () => mixerWin?.hide()) // closes like a popup when you click elsewhere
+      mixerWin.once('ready-to-show', () => { mixerWin?.show(); mixerWin?.focus() })
+    } else {
+      mixerWin.show()
+      mixerWin.focus()
+    }
+  }
+  ctx.handle('mixerWindow', (on: boolean) => showMixer(on))
+  const setPcVolume = (pct: number): void => {
+    handlers.get('mixerSet')?.('output', '', pct)
+  }
   ctx.handle('eyeStatus', () => eye.status())
   ctx.handle('eyeTake', () => eye.take())
   ctx.handle('eyeReset', () => eye.reset())
@@ -380,6 +405,12 @@ app.whenReady().then(async () => {
         { label: 'Open D-Connect', click: () => focusMain() },
         { label: 'Find my phone', enabled: !!s, click: () => hub.send('find.ring', { on: true }) },
         { label: 'Send clipboard to phone', enabled: !!s, click: async () => hub.send('clip.set', { text: await clipboard.readText() }) },
+        { type: 'separator' },
+        { label: 'Sound mixer…', click: () => showMixer(true) },
+        {
+          label: 'PC volume',
+          submenu: [25, 50, 75, 100, 150, 200, 250, 300].map((p) => ({ label: p > 100 ? `${p}% (boost)` : `${p}%`, click: () => setPcVolume(p) }))
+        },
         { type: 'separator' },
         { label: 'Eye breaks (20-20-20)', type: 'checkbox', checked: es.on, click: (i) => store.set('eyeBreaks', i.checked) },
         { label: es.on && es.nextInMs !== null ? `Next break in ${Math.ceil(es.nextInMs / 60000)} min` : 'Eye breaks are off', enabled: false },

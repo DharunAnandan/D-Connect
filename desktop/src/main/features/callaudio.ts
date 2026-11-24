@@ -178,8 +178,8 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
         `sink_master=${sinkMaster}`,
         'source_name=dconnect_call_mic_clean',
         'sink_name=dconnect_call_speaker_ec',
-        'source_properties=device.description="D-Connect call mic (noise suppressed)"',
-        'sink_properties=device.description="D-Connect call speaker"'
+        `source_properties='device.description="D-Connect call mic (noise suppressed)"'`,
+        `sink_properties='device.description="D-Connect call speaker"'`
       ])
     ).trim()
     if (!/^\d+$/.test(id)) return null
@@ -313,7 +313,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   // role, so nothing else gets paused). Off: keep that link off so stray phone sounds never play here.
   // One loopback only, even after restarts (the module outlives the app). While the music plays
   // here the phone's own media volume goes to full (Android scales the sound before Bluetooth,
-  // so a low phone volume made it quiet here); loudness is then set on this PC, up to 200%.
+  // so a low phone volume made it quiet here); loudness is then set on this PC, up to 300%.
   let mediaLoop: string | null = null
   let phoneVolBefore: number | null = null
   const loopsFor = async (src: string): Promise<string[]> =>
@@ -321,7 +321,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   const applyPhoneVolume = async (): Promise<void> => {
     if (!mediaLoop) return
     const list = await sh('pactl', ['list', 'short', 'sink-inputs'])
-    const pct = Math.max(0, Math.min(200, Number(ctx.store.get('phoneAudioVolume') ?? 100)))
+    const pct = Math.max(0, Math.min(300, Number(ctx.store.get('phoneAudioVolume') ?? 100)))
     for (const l of list.split('\n')) {
       const [idx, , mod] = l.split('\t')
       if (mod === mediaLoop) await sh('pactl', ['set-sink-input-volume', idx, `${pct}%`])
