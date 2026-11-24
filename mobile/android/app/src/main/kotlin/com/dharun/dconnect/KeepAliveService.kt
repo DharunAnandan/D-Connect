@@ -98,9 +98,10 @@ class KeepAliveService : Service() {
             TelephonyManager.EXTRA_STATE_OFFHOOK -> if (lastCallState == TelephonyManager.EXTRA_STATE_IDLE) "dialing" else "offhook"
             else -> "idle"
         }
+        val waiting = state == TelephonyManager.EXTRA_STATE_RINGING && callSince > 0L // a second call while on one
         if (state == TelephonyManager.EXTRA_STATE_OFFHOOK && callSince == 0L) callSince = System.currentTimeMillis()
         if (state == TelephonyManager.EXTRA_STATE_IDLE) callSince = 0L
         lastCallState = state
-        Bridge.emit("call.state", mapOf("state" to s, "number" to number, "name" to Telephony.contactName(this, number), "since" to if (callSince > 0) callSince else null))
+        Bridge.emit("call.state", mapOf("state" to s, "number" to number, "name" to Telephony.contactName(this, number), "since" to if (callSince > 0) callSince else null, "waiting" to waiting))
     }
 }

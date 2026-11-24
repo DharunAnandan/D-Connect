@@ -1,6 +1,6 @@
 // Incoming / ongoing call: a floating card with a pulsing avatar, answer and decline.
 import { AnimatePresence, motion } from 'framer-motion'
-import { Laptop, Mic, MicOff, Phone, PhoneOff, Smartphone } from 'lucide-react'
+import { Combine, Laptop, Mic, MicOff, Pause, Phone, PhoneOff, Repeat, Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { CallState } from '@shared/protocol'
 import { Avatar } from '@/components/ui'
@@ -12,6 +12,15 @@ export function CallCard() {
   const [c, setC] = useState<CallState>({ state: 'idle' })
   const [muted, setMuted] = useState(false)
   const [route, setRoute] = useState<'pc' | 'phone' | null>(null)
+  const [hint, setHint] = useState('')
+  const [twoCalls, setTwoCalls] = useState(false)
+  useEffect(() => {
+    if (c.state === 'idle') setTwoCalls(false)
+  }, [c.state])
+  const control = async (action: 'hold' | 'swap' | 'merge'): Promise<void> => {
+    const r = await call<{ ok: boolean }>('callControl', action)
+    setHint(r?.ok ? '' : 'Turn on Screen control on the phone (Settings → Screen control) to hold, swap and merge from here.')
+  }
   useEffect(() => {
     call('callRoute').then(setRoute)
     return dc.on('call.route', setRoute)
@@ -54,12 +63,23 @@ export function CallCard() {
                 <Avatar name={name} src={c.photo ? `data:image/jpeg;base64,${c.photo}` : undefined} size={96} />
               </motion.div>
             </div>
-            <div className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-mint">{c.state === 'ringing' ? 'Incoming call' : c.state === 'dialing' ? 'Calling…' : 'On call'}</div>
+            <div className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-mint">{c.state === 'ringing' ? (c.waiting ? 'Call waiting' : 'Incoming call') : c.state === 'dialing' ? 'Calling…' : 'On call'}</div>
             <div className="relative mt-1 truncate text-2xl font-bold">{name}</div>
             {c.name && c.number && <div className="relative text-sm text-white/55">{c.number}</div>}
             {live && c.since && <div className="relative mt-1 text-sm tabular-nums text-white/70">{duration((Date.now() - c.since) / 1000)}</div>}
+            {c.state === 'ringing' && c.waiting && <div className="relative mt-2 text-xs text-white/60">Answering puts your current call on hold</div>}
             {live && (
-              <div className="no-drag relative mx-auto mt-5 flex w-fit rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
+              <div className="no-drag relative mx-auto mt-4 flex justify-center gap-2">
+                {[{ a: 'hold' as const, I: Pause, label: 'Hold' }, ...(twoCalls ? [{ a: 'swap' as const, I: Repeat, label: 'Swap' }, { a: 'merge' as const, I: Combine, label: 'Merge' }] : [])].map(({ a, I, label }) => (
+                  <button key={a} onClick={() => control(a)} className="flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/80 ring-1 ring-white/10 hover:bg-white/[0.12]">
+                    <I size={13} /> {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {hint && <div className="relative mt-2 text-[11px] text-amber">{hint}</div>}
+            {live && (
+              <div className="no-drag relative mx-auto mt-4 flex w-fit rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
                 {(['pc', 'phone'] as const).map((r) => (
                   <button key={r} onClick={() => call('setCallRoute', r)} className={`relative flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${route === r ? 'text-ink-950' : 'text-white/60 hover:text-white'}`}>
                     {route === r && <motion.span layoutId="route" transition={{ type: 'spring', stiffness: 500, damping: 34 }} className="absolute inset-0 rounded-full bg-mint" />}
@@ -78,7 +98,7 @@ export function CallCard() {
                 <PhoneOff size={26} />
               </motion.button>
               {c.state === 'ringing' && (
-                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }} animate={{ rotate: [0, -14, 14, -14, 14, 0] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }} onClick={() => call('callAnswer')} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.9)]">
+                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }} animate={{ rotate: [0, -14, 14, -14, 14, 0] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }} title={c.waiting ? 'Answer and hold the current call' : 'Answer'} onClick={() => { if (c.waiting) setTwoCalls(true); call('callAnswer') }} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.9)]">
                   <Phone size={26} fill="currentColor" />
                 </motion.button>
               )}

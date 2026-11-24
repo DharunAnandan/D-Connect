@@ -87,6 +87,7 @@ export interface CallState {
   name?: string
   photo?: string
   since?: number
+  waiting?: boolean // a second call ringing while already on one
 }
 export interface CallLogEntry {
   number: string

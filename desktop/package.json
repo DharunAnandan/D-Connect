@@ -16,7 +16,8 @@
     "dist:win": "electron-vite build && electron-builder --win",
     "start": "env -u ELECTRON_RUN_AS_NODE electron-vite preview",
     "icons": "env -u ELECTRON_RUN_AS_NODE electron scripts/make-icons.cjs",
-    "fake-phone": "node scripts/fake-phone.mjs"
+    "fake-phone": "node scripts/fake-phone.mjs",
+    "icons:android": "env -u ELECTRON_RUN_AS_NODE electron scripts/make-android-icon.cjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

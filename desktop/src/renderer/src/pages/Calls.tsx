@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Delete, Headphones, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { CallLogEntry } from '@shared/protocol'
-import { Avatar, Button, Card, Empty, PageHeader } from '@/components/ui'
+import { Avatar, Button, Card, Empty, PageHeader, Segmented } from '@/components/ui'
 import { call } from '@/lib/api'
 import { ago, duration } from '@/lib/format'
 import { useApp } from '@/lib/store'
@@ -16,11 +16,18 @@ export function Calls() {
   const [num, setNum] = useState('')
   const [log, setLog] = useState<CallLogEntry[] | null>(null)
   const [bt, setBt] = useState<{ ready: boolean } | null>(null)
+  const [sims, setSims] = useState<{ index: number; label: string; number?: string }[]>([])
+  const [sim, setSim] = useState<number>(() => +(localStorage.getItem('dc.sim') || 0))
+  const dial = (n: string): void => {
+    if (!n) return
+    call('callDial', n, sims.length > 1 ? sim : undefined)
+  }
 
   useEffect(() => {
     if (!conn.connected) return
     call<{ calls: CallLogEntry[] }>('callLog').then((r) => setLog(r.calls)).catch(() => setLog([]))
     call('btStatus').then(setBt)
+    call('sims').then(setSims)
   }, [conn.connected])
 
   useEffect(() => {
@@ -28,7 +35,7 @@ export function Calls() {
       if ((e.target as HTMLElement).tagName === 'INPUT') return
       if (KEYS.includes(e.key) || e.key === '+') setNum((n) => n + e.key)
       else if (e.key === 'Backspace') setNum((n) => n.slice(0, -1))
-      else if (e.key === 'Enter' && num) call('callDial', num)
+      else if (e.key === 'Enter' && num) dial(num)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -51,6 +58,18 @@ export function Calls() {
       )}
       <div className="grid grid-cols-[360px_1fr] gap-5">
         <Card className="p-6">
+          {sims.length > 1 && (
+            <div className="mb-3 flex justify-center">
+              <Segmented
+                value={String(sim)}
+                onChange={(v) => {
+                  setSim(+v)
+                  localStorage.setItem('dc.sim', v)
+                }}
+                options={sims.map((x) => ({ value: String(x.index), label: x.label || `SIM ${x.index + 1}` }))}
+              />
+            </div>
+          )}
           <div className="mb-5 flex h-14 items-center justify-center">
             <motion.span key={num.length} initial={{ scale: 1.06 }} animate={{ scale: 1 }} className="truncate text-[32px] font-light tabular-nums tracking-wider">
               {num || <span className="text-white/25">Enter a number</span>}
@@ -66,7 +85,7 @@ export function Calls() {
           </div>
           <div className="mt-5 flex items-center justify-center gap-6">
             <div className="w-12" />
-            <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.06 }} disabled={!num} onClick={() => call('callDial', num)} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.8)] disabled:opacity-40">
+            <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.06 }} disabled={!num} onClick={() => dial(num)} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.8)] disabled:opacity-40">
               <Phone size={26} fill="currentColor" />
             </motion.button>
             <motion.button whileTap={{ scale: 0.85 }} onClick={() => setNum((n) => n.slice(0, -1))} className="grid h-12 w-12 place-items-center rounded-full text-white/60 hover:bg-white/5 hover:text-white">
@@ -95,7 +114,7 @@ export function Calls() {
                         {ago(c.date)}{c.duration ? ` · ${duration(c.duration)}` : ''}
                       </div>
                     </div>
-                    <motion.button whileTap={{ scale: 0.85 }} onClick={() => call('callDial', c.number)} className="grid h-9 w-9 place-items-center rounded-full bg-mint/15 text-mint opacity-0 transition group-hover:opacity-100">
+                    <motion.button whileTap={{ scale: 0.85 }} onClick={() => dial(c.number)} className="grid h-9 w-9 place-items-center rounded-full bg-mint/15 text-mint opacity-0 transition group-hover:opacity-100">
                       <Phone size={15} />
                     </motion.button>
                   </motion.div>

@@ -47,7 +47,12 @@ class Bridge {
         case 'call.end':
           Native.call('callEnd');
         case 'call.dial':
-          Native.call('callDial', {'number': d['number']});
+          Native.call('callDial', {'number': d['number'], 'sim': d['sim']});
+        case 'calls.sims':
+          link.reply(m, 'calls.sims', {'sims': await Native.list('sims')});
+        case 'call.control':
+          final ok = await Native.call<bool>('callControl', {'action': d['action']});
+          if (m.id != null) link.reply(m, 'call.control', {'ok': ok == true});
         case 'call.mute':
           Native.call('callMute', {'muted': d['muted']});
         // photos

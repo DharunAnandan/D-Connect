@@ -40,9 +40,11 @@ export function messages(ctx: Ctx, openCall: (c: CallState) => void, closeCall: 
   })
   ctx.handle('callReject', () => ctx.hub.send('call.reject'))
   ctx.handle('callEnd', () => ctx.hub.send('call.end'))
-  ctx.handle('callDial', (number: string) => {
+  ctx.handle('callDial', (number: string, sim?: number) => {
     answeredHere()
-    ctx.hub.send('call.dial', { number })
+    ctx.hub.send('call.dial', { number, sim })
   })
+  ctx.handle('sims', async () => ((await ctx.hub.request('calls.sims', {}).catch(() => null)) as any)?.sims || [])
+  ctx.handle('callControl', (action: 'hold' | 'swap' | 'merge') => ctx.hub.request('call.control', { action }).catch(() => ({ ok: false })))
   ctx.handle('callMute', (muted: boolean) => ctx.hub.send('call.mute', { muted }))
 }

@@ -124,10 +124,11 @@ async function configureHfp(): Promise<string> {
     fs.writeFileSync(
       WP_04,
       `-- D-Connect: WirePlumber only takes the phone's hands-free call link (HFP, this PC = hands-free
--- unit). PulseAudio keeps the sound card, earbuds and A2DP; D-Connect bridges calls into it.
+-- unit). PulseAudio keeps the sound card, earbuds and A2DP (it already holds those, so PipeWire's
+-- music side simply doesn't register); D-Connect bridges calls into PulseAudio.
+-- (Don't empty "bluez5.codecs": PipeWire then treats itself as broken and makes no devices.)
 bluez_monitor.properties["bluez5.headset-roles"] = "[ hfp_hf ]"
 bluez_monitor.properties["bluez5.hfphsp-backend"] = "native"
-bluez_monitor.properties["bluez5.codecs"] = "[ ]"
 bluez_monitor.enable()
 `
     )
@@ -144,6 +145,12 @@ monitor.bluez.properties = {
 `
     )
   }
+  // start WirePlumber after PulseAudio, so PulseAudio's Bluetooth music endpoints come first
+  // and earbuds keep going to PulseAudio; WirePlumber then only takes phone calls
+  const dropIn = path.join(os.homedir(), '.config/systemd/user/wireplumber.service.d/dconnect-order.conf')
+  fs.mkdirSync(path.dirname(dropIn), { recursive: true })
+  fs.writeFileSync(dropIn, '[Unit]\n# D-Connect: PulseAudio first (earbuds), WirePlumber only for phone calls\nAfter=pulseaudio.service pulseaudio.socket\nWants=pulseaudio.service\n')
+  await sh('systemctl', ['--user', 'daemon-reload'], 15000)
   await sh('systemctl', ['--user', 'enable', '--now', 'pipewire.socket', 'pipewire', 'wireplumber'], 15000)
   await sh('systemctl', ['--user', 'restart', 'wireplumber'], 15000)
   return 'Done. Call audio is ready, and PulseAudio stays your sound system.'

@@ -104,6 +104,25 @@ class ControlService : AccessibilityService() {
         setText(n, t + s)
     }
 
+    // press the first button whose text or description matches (the phone's own call screen)
+    fun clickByLabel(labels: List<String>): Boolean {
+        val roots = windows.mapNotNull { it.root } + listOfNotNull(rootInActiveWindow)
+        for (root in roots) {
+            val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+            while (queue.isNotEmpty()) {
+                val n = queue.removeFirst()
+                val t = ((n.text ?: "").toString() + " " + (n.contentDescription ?: "").toString()).lowercase()
+                if (labels.any { t.trim() == it || t.contains(it) }) {
+                    var c: AccessibilityNodeInfo? = n
+                    while (c != null && !c.isClickable) c = c.parent
+                    if (c?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true) return true
+                }
+                for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
+            }
+        }
+        return false
+    }
+
     private fun focused(): AccessibilityNodeInfo? = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
 
     private fun setText(n: AccessibilityNodeInfo, t: String) {

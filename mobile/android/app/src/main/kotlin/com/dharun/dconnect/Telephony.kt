@@ -96,9 +96,40 @@ object Telephony {
         } catch (_: Exception) {}
     }
 
+    // The SIMs that can place calls, so the PC can pick one (and the phone doesn't ask).
     @SuppressLint("MissingPermission")
-    fun dial(ctx: Context, number: String) {
-        try { ctx.getSystemService(TelecomManager::class.java).placeCall(Uri.fromParts("tel", number, null), Bundle()) } catch (_: Exception) {}
+    fun sims(ctx: Context): List<Map<String, Any?>> = try {
+        val tm = ctx.getSystemService(TelecomManager::class.java)
+        tm.callCapablePhoneAccounts.mapIndexed { i, h ->
+            val acc = tm.getPhoneAccount(h)
+            mapOf("index" to i, "label" to (acc?.label?.toString() ?: "SIM ${i + 1}"), "number" to acc?.address?.schemeSpecificPart)
+        }
+    } catch (e: Exception) { emptyList() }
+
+    @SuppressLint("MissingPermission")
+    fun dial(ctx: Context, number: String, sim: Int? = null) {
+        try {
+            val tm = ctx.getSystemService(TelecomManager::class.java)
+            val extras = Bundle()
+            if (sim != null) tm.callCapablePhoneAccounts.getOrNull(sim)?.let { extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, it) }
+            tm.placeCall(Uri.fromParts("tel", number, null), extras)
+        } catch (_: Exception) {}
+    }
+
+    // Hold / swap / merge: only the default phone app may do these directly, so bring the
+    // phone's own call screen up and press its button through the screen-control service.
+    @SuppressLint("MissingPermission")
+    fun control(ctx: Context, action: String): Boolean {
+        try { ctx.getSystemService(TelecomManager::class.java).showInCallScreen(false) } catch (_: Exception) {}
+        val labels = when (action) {
+            "hold" -> listOf("hold", "resume", "unhold")
+            "swap" -> listOf("swap", "switch calls", "switch")
+            "merge" -> listOf("merge", "merge calls", "conference")
+            else -> return false
+        }
+        val svc = ControlService.instance ?: return false
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ svc.clickByLabel(labels) }, 700)
+        return true
     }
 
     fun mute(ctx: Context, muted: Boolean) {

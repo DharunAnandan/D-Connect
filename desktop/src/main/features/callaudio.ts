@@ -85,6 +85,9 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void } {
   }
 
   const toPc = async (): Promise<boolean> => {
+    // make sure the phone's hands-free call link is open (phones don't always open it themselves)
+    const addr = await phoneAddress()
+    if (addr) await sh('busctl', ['call', 'org.bluez', `/org/bluez/hci0/dev_${addr.replace(/:/g, '_')}`, 'org.bluez.Device1', 'ConnectProfile', 's', '0000111f-0000-1000-8000-00805f9b34fb'], 12000)
     await setPwProfile('audio-gateway')
     let n: { source?: PwObject; sink?: PwObject } = {}
     for (let i = 0; i < 24 && !(n.source && n.sink); i++) {
