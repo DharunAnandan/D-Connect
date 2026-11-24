@@ -70,7 +70,7 @@ export function createToastWindow(): BrowserWindow {
 export function createCallWindow(): BrowserWindow {
   const wa = screen.getPrimaryDisplay().workArea
   const W = 380
-  const H = 560
+  const H = 660
   const win = new BrowserWindow({
     x: wa.x + wa.width - W - 24,
     y: wa.y + 24,

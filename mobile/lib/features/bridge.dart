@@ -51,7 +51,7 @@ class Bridge {
         case 'calls.sims':
           link.reply(m, 'calls.sims', {'sims': await Native.list('sims')});
         case 'call.control':
-          final ok = await Native.call<bool>('callControl', {'action': d['action']});
+          final ok = await Native.call<bool>('callControl', {'action': d['action'], 'target': d['target']});
           if (m.id != null) link.reply(m, 'call.control', {'ok': ok == true});
         case 'call.route.bt':
           Native.call('callRouteBt');

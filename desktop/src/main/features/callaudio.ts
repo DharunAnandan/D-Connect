@@ -42,6 +42,11 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   let state: CallState['state'] = 'idle'
   let busy = Promise.resolve()
   let lastError = ''
+  let controlOff = false
+  // where the call plays and listens on this PC (null = the system default)
+  let outDev: string | null = null
+  let inDev: string | null = null
+  let nodesNow: { source?: PwObject; sink?: PwObject } = {}
 
   // the linked phone's Bluetooth address (by name), e.g. 18:AB:1D:B9:E5:AA
   const phoneAddress = async (): Promise<string | null> => {
@@ -97,22 +102,41 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
       }
     }
     await setPwProfile('audio-gateway')
-    // if the call was moved to the phone earlier, Android won't move it back on its own: ask it
+    // Android keeps a live call on its earpiece/speaker unless its own call screen moves it:
+    // ask the phone to pick this PC in its Audio menu (needs screen control on the phone)
     ctx.hub.send('call.route.bt', {})
+    const alias = /Alias:\s*(.+)/.exec(await sh('bluetoothctl', ['show']))?.[1]?.trim()
+    const r: any = await ctx.hub.request('call.control', { action: 'audio-pc', target: alias }, 8000).catch(() => null)
+    controlOff = r?.ok === false
     let n: { source?: PwObject; sink?: PwObject } = {}
     for (let i = 0; i < 40 && !(n.source && n.sink); i++) {
       n = await pwPhone()
       if (!(n.source && n.sink)) await wait(250)
     }
-    if (!n.source && !n.sink) return false
-    stopBridges()
-    if (n.source) startBridge(['pipewiresrc', `path=${n.source.id}`, 'do-timestamp=true', '!', 'audioconvert', '!', 'audioresample', '!', 'pulsesink', 'client-name=D-Connect call', 'latency-time=20000', 'buffer-time=80000'])
-    if (n.sink) startBridge(['pulsesrc', 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=80000', '!', 'audioconvert', '!', 'audioresample', '!', 'pipewiresink', `path=${n.sink.id}`])
+    if (!n.source && !n.sink) {
+      lastError = controlOff
+        ? 'Turn on Screen control on the phone (phone app → Settings → Screen control). Android only lets its own call screen move a call to the laptop.'
+        : "The phone didn't move the call to the laptop. On the phone's call screen, tap Audio → choose this PC."
+      return false
+    }
+    nodesNow = n
+    startCallBridges()
     return true
+  }
+
+  const startCallBridges = (): void => {
+    stopBridges()
+    const n = nodesNow
+    const out = outDev ? [`device=${outDev}`] : []
+    const inp = inDev ? [`device=${inDev}`] : []
+    if (n.source) startBridge(['pipewiresrc', `path=${n.source.id}`, 'do-timestamp=true', '!', 'audioconvert', '!', 'audioresample', '!', 'pulsesink', ...out, 'client-name=D-Connect call', 'latency-time=20000', 'buffer-time=80000'])
+    if (n.sink) startBridge(['pulsesrc', ...inp, 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=80000', '!', 'audioconvert', '!', 'audioresample', '!', 'pipewiresink', `path=${n.sink.id}`])
+    if (muted) setTimeout(() => applyMute(), 800)
   }
 
   const toPhone = async (): Promise<void> => {
     stopBridges()
+    ctx.hub.request('call.control', { action: 'audio-phone' }, 8000).catch(() => null)
     // with the hands-free audio link dropped, Android puts the call back on the phone
     await setPwProfile('off')
   }
@@ -167,6 +191,24 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   }
   setInterval(() => ctx.hub.session && quietPulseCard(), 5000)
 
+  // speakers/headsets and mics on this PC (never the phone itself)
+  ctx.handle('callDevices', async () => {
+    const list = async (kind: 'sinks' | 'sources'): Promise<{ name: string; label: string }[]> => {
+      const out = await sh('pactl', ['list', kind])
+      return out
+        .split(kind === 'sinks' ? 'Sink #' : 'Source #')
+        .slice(1)
+        .map((b) => ({ name: /Name:\s*(\S+)/.exec(b)?.[1] || '', label: /Description:\s*(.+)/.exec(b)?.[1]?.trim() || '' }))
+        .filter((d) => d.name && !d.name.endsWith('.monitor') && !d.name.includes('bluez_card') && !/2C_A7|18_AB/.test(d.name))
+        .filter((d) => !(d.name.startsWith('bluez_') && /a2dp_source|headset_audio_gateway|handsfree_audio_gateway/.test(d.name)))
+    }
+    return { outputs: await list('sinks'), inputs: await list('sources'), out: outDev, in: inDev }
+  })
+  ctx.handle('setCallDevices', (out: string | null, inp: string | null) => {
+    outDev = out || null
+    inDev = inp || null
+    if (route === 'pc') startCallBridges()
+  })
   ctx.handle('callRoute', () => route)
   ctx.handle('setCallRoute', (r: CallRoute) => setRoute(r))
 

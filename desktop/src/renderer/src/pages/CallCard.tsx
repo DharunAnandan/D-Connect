@@ -1,6 +1,6 @@
 // Incoming / ongoing call: a floating card with a pulsing avatar, answer and decline.
 import { AnimatePresence, motion } from 'framer-motion'
-import { Combine, Laptop, Mic, MicOff, Pause, Phone, PhoneOff, Repeat, Smartphone } from 'lucide-react'
+import { Combine, Laptop, Mic, MicOff, Pause, Phone, PhoneOff, Repeat, Smartphone, Volume2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { CallState } from '@shared/protocol'
 import { Avatar } from '@/components/ui'
@@ -13,6 +13,20 @@ export function CallCard() {
   const [muted, setMuted] = useState(false)
   const [route, setRoute] = useState<'pc' | 'phone' | null>(null)
   const [hint, setHint] = useState('')
+  const [devs, setDevs] = useState<{ outputs: { name: string; label: string }[]; inputs: { name: string; label: string }[]; out: string | null; in: string | null } | null>(null)
+  useEffect(() => {
+    if (route !== 'pc') return
+    const load = (): void => {
+      call('callDevices').then(setDevs)
+    }
+    load()
+    const t = setInterval(load, 4000) // a headset plugged in mid-call shows up
+    return () => clearInterval(t)
+  }, [route])
+  const pick = (out: string | null, inp: string | null): void => {
+    setDevs((d) => (d ? { ...d, out, in: inp } : d))
+    call('setCallDevices', out, inp)
+  }
   const [twoCalls, setTwoCalls] = useState(false)
   useEffect(() => {
     if (c.state === 'idle') {
@@ -81,6 +95,20 @@ export function CallCard() {
               </div>
             )}
             {hint && <div className="relative mt-2 text-[11px] text-amber">{hint}</div>}
+            {live && route === 'pc' && devs && (
+              <div className="no-drag relative mx-auto mt-3 grid w-full max-w-[300px] grid-cols-[auto_1fr] items-center gap-x-2 gap-y-1.5 text-left text-[11px]">
+                <Volume2 size={13} className="text-white/50" />
+                <select value={devs.out || ''} onChange={(e) => pick(e.target.value || null, devs.in)} className="truncate rounded-lg bg-white/[0.07] px-2 py-1.5 text-white/85 outline-none ring-1 ring-white/10">
+                  <option value="">Default speaker</option>
+                  {devs.outputs.map((d) => <option key={d.name} value={d.name}>{d.label}</option>)}
+                </select>
+                <Mic size={13} className="text-white/50" />
+                <select value={devs.in || ''} onChange={(e) => pick(devs.out, e.target.value || null)} className="truncate rounded-lg bg-white/[0.07] px-2 py-1.5 text-white/85 outline-none ring-1 ring-white/10">
+                  <option value="">Default microphone</option>
+                  {devs.inputs.map((d) => <option key={d.name} value={d.name}>{d.label}</option>)}
+                </select>
+              </div>
+            )}
             {live && (
               <div className="no-drag relative mx-auto mt-4 flex w-fit rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
                 {(['pc', 'phone'] as const).map((r) => (

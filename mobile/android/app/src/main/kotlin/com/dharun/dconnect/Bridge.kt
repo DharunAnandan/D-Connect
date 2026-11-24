@@ -113,7 +113,7 @@ object Bridge {
             "callEnd" -> { Telephony.end(ctx); result.success(null) }
             "callDial" -> { Telephony.dial(ctx, a("number") as String, (a("sim") as? Number)?.toInt()); result.success(null) }
             "sims" -> bg(result) { Telephony.sims(ctx) }
-            "callControl" -> result.success(Telephony.control(ctx, a("action") as String))
+            "callControl" -> result.success(Telephony.control(ctx, a("action") as String, a("target") as String?))
             "callRouteBt" -> { Telephony.routeToBluetooth(ctx); result.success(null) }
             "callMute" -> { Telephony.mute(ctx, a("muted") == true); result.success(null) }
             // photos

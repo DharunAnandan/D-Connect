@@ -135,19 +135,34 @@ object Telephony {
         } catch (e: Exception) { android.util.Log.w("DConnect", "dial: $e") }
     }
 
-    // Hold / swap / merge: only the default phone app may do these directly, so bring the
-    // phone's own call screen up and press its button through the screen-control service.
+    // Hold / swap / merge and the call's audio route: only the default phone app may change these
+    // directly, so bring the phone's own call screen up and press its buttons through the
+    // screen-control service. "audio-pc" picks the PC (by its Bluetooth name) in the Audio menu.
     @SuppressLint("MissingPermission")
-    fun control(ctx: Context, action: String): Boolean {
+    fun control(ctx: Context, action: String, target: String? = null): Boolean {
+        val svc = ControlService.instance ?: return false
         try { ctx.getSystemService(TelecomManager::class.java).showInCallScreen(false) } catch (_: Exception) {}
-        val labels = when (action) {
-            "hold" -> listOf("hold", "resume", "unhold")
-            "swap" -> listOf("swap", "switch calls", "switch")
-            "merge" -> listOf("merge", "merge calls", "conference")
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        when (action) {
+            "hold" -> main.postDelayed({ svc.clickByLabel(listOf("hold", "resume", "unhold")) }, 700)
+            "swap" -> main.postDelayed({ svc.clickByLabel(listOf("swap", "switch calls", "switch")) }, 700)
+            "merge" -> main.postDelayed({ svc.clickByLabel(listOf("merge", "merge calls", "conference")) }, 700)
+            "audio-pc", "audio-phone", "audio-speaker" -> {
+                val choice = when (action) {
+                    "audio-pc" -> listOfNotNull(target?.lowercase(), "bluetooth")
+                    "audio-phone" -> listOf("phone", "earpiece", "handset")
+                    else -> listOf("speaker")
+                }
+                main.postDelayed({
+                    // the choice may already be on screen; otherwise open the Audio menu first
+                    if (!svc.clickByLabel(choice)) {
+                        svc.clickByLabel(listOf("audio", "audio route", "speaker", "bluetooth"))
+                        main.postDelayed({ svc.clickByLabel(choice) }, 700)
+                    }
+                }, 800)
+            }
             else -> return false
         }
-        val svc = ControlService.instance ?: return false
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ svc.clickByLabel(labels) }, 700)
         return true
     }
 
