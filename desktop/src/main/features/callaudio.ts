@@ -90,7 +90,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     for (const b of bridges) b.kill()
     // unload this bridge's voice processing (not a newer one started right after)
     const mod = ecModule
-    if (bridges.length && mod) {
+    if (mod && !bridging) {
       ecModule = null
       setTimeout(() => sh('pactl', ['unload-module', mod]), 300)
     }
@@ -182,6 +182,17 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     bridges.push(p)
   }
 
+  // A real microphone on this PC: the one picked on the call card, else the default, but never
+  // the phone's own Bluetooth music link (PulseAudio lists it as a "source"), a monitor, or ours.
+  const notAMic = (n: string): boolean => !n || n.startsWith('bluez_') || n.endsWith('.monitor') || n.startsWith('dconnect')
+  const realMic = async (): Promise<string> => {
+    const sources = (await sh('pactl', ['list', 'short', 'sources'])).split('\n').map((l) => l.split('\t')[1]).filter(Boolean)
+    if (inDev && sources.includes(inDev) && !inDev.includes('a2dp_source')) return inDev
+    const def = (await sh('pactl', ['get-default-source'])).trim()
+    if (!notAMic(def)) return def
+    return sources.find((n) => n.startsWith('alsa_input.')) || sources.find((n) => !notAMic(n)) || def
+  }
+
   // PulseAudio's WebRTC voice processing (as in video-call apps): background noise suppressed,
   // the caller's own voice coming out of the laptop speakers cancelled, level kept steady.
   // The call plays into its speaker side and the mic is taken from its cleaned output.
@@ -189,7 +200,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   const startVoiceProcessing = async (): Promise<{ sink: string; source: string } | null> => {
     await stopVoiceProcessing()
     const sinkMaster = outDev || (await sh('pactl', ['get-default-sink'])).trim()
-    const sourceMaster = inDev || (await sh('pactl', ['get-default-source'])).trim()
+    const sourceMaster = await realMic()
     if (!sinkMaster || !sourceMaster) return null
     const id = (
       await sh('pactl', [
@@ -214,16 +225,21 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     ecModule = null
   }
 
-  const startCallBridges = async (): Promise<void> => {
+  let bridging: Promise<void> | null = null
+  const startCallBridges = (): Promise<void> => {
+    if (!bridging) bridging = doStartCallBridges().finally(() => (bridging = null))
+    return bridging
+  }
+  const doStartCallBridges = async (): Promise<void> => {
     stopBridges()
     const vp = await startVoiceProcessing() // falls back to the plain devices if unavailable
     // drop the virtual speaker left from older versions so WirePlumber picks the tunnel
     const old = (await pwDump()).find((o) => o.info?.props?.['node.name'] === 'dconnect-call-speaker' && o.info?.props?.['factory.name'] === 'support.null-audio-sink')
     if (old) await sh('pw-cli', ['destroy', String(old.id)])
     tunnel('playback', 'dconnect-call-speaker', 'D-Connect call speaker', 'Audio/Sink', vp?.sink || outDev)
-    tunnel('capture', 'dconnect-call-mic', 'D-Connect call mic', 'Audio/Source', vp?.source || inDev)
+    tunnel('capture', 'dconnect-call-mic', 'D-Connect call mic', 'Audio/Source', vp?.source || (await realMic()))
     if (muted) setTimeout(() => applyMute(), 1200)
-    routeLog(`bridges started: speaker→${vp?.sink || outDev || 'default'} mic←${vp?.source || inDev || 'default'}`)
+    routeLog(`bridges started: speaker→${vp?.sink || outDev || 'default'} mic←${vp?.source || 'raw'} (from ${await realMic()})`)
     for (const ms of [1500, 4000, 8000]) {
       setTimeout(async () => {
         if (!bridges.length) return
@@ -291,6 +307,12 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     if (data.route === 'speaker') r = 'speaker'
     else if (data.route === 'bluetooth' && (!data.address || !pcAddr || String(data.address).toUpperCase() === pcAddr.toUpperCase())) r = 'pc'
     else r = 'phone' // receiver, a wired headset, or another Bluetooth headset on the phone
+    // the call's audio streaming here over Bluetooth is the truth: some phones (OnePlus) keep
+    // reporting "receiver" while the call is on this PC
+    if (r !== 'pc' && bridges.length) {
+      const n = await pwPhone()
+      if (n.source || n.sink) r = 'pc'
+    }
     if (r !== route) {
       route = r
       ctx.emit('call.route', route)
@@ -404,6 +426,12 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
         return
       }
       if (active !== 'a2dp_source' && /a2dp_source:/.test(info)) await sh('pactl', ['set-card-profile', card, 'a2dp_source'])
+      // PulseAudio makes a newly connected source the default mic: undo that for the phone's
+      // music link, or Teams/Meet (and calls) would "hear" the phone instead of you
+      if ((await sh('pactl', ['get-default-source'])).trim() === src) {
+        const mic = await realMic()
+        if (mic && mic !== src) await sh('pactl', ['set-default-source', mic])
+      }
       // keep exactly one
       for (const m of loops.slice(1)) await sh('pactl', ['unload-module', m])
       if (loops[0]) {

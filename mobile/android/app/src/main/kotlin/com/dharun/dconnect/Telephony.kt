@@ -61,8 +61,15 @@ object Telephony {
     fun searchContacts(ctx: Context, q: String): List<Map<String, Any?>> {
         val out = mutableListOf<Map<String, Any?>>()
         val uri = if (q.isBlank()) ContactsContract.CommonDataKinds.Phone.CONTENT_URI else Uri.withAppendedPath(ContactsContract.CommonDataKinds.Phone.CONTENT_FILTER_URI, Uri.encode(q))
-        ctx.contentResolver.query(uri, arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, null)?.use { c ->
-            while (c.moveToNext() && out.size < 30) out.add(mapOf("name" to c.getString(0), "number" to c.getString(1)))
+        // the whole address book (sorted, one row per number) when browsing; 30 matches when searching
+        val limit = if (q.isBlank()) 5000 else 30
+        val seen = HashSet<String>()
+        ctx.contentResolver.query(uri, arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} COLLATE NOCASE ASC")?.use { c ->
+            while (c.moveToNext() && out.size < limit) {
+                val name = c.getString(0) ?: continue
+                val number = c.getString(1) ?: continue
+                if (seen.add(name + "|" + number.filter { it.isDigit() }.takeLast(10))) out.add(mapOf("name" to name, "number" to number))
+            }
         }
         return out
     }

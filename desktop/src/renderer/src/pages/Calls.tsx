@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Delete, Headphones, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing } from 'lucide-react'
+import { Delete, Hash, Headphones, Phone, Search, PhoneIncoming, PhoneMissed, PhoneOutgoing } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { CallLogEntry } from '@shared/protocol'
 import { Avatar, Button, Card, Empty, PageHeader, Segmented } from '@/components/ui'
@@ -17,6 +17,17 @@ export function Calls() {
   const [log, setLog] = useState<CallLogEntry[] | null>(null)
   const [bt, setBt] = useState<{ ready: boolean; platform: string; adapter: boolean; hfpConfigured: boolean; phone: { paired: boolean } | null } | null>(null)
   const [sims, setSims] = useState<{ index: number; label: string; number?: string }[]>([])
+  const [tab, setTab] = useState<'recent' | 'contacts'>('recent')
+  const [contacts, setContacts] = useState<{ name: string; number: string }[] | null>(null)
+  const [q, setQ] = useState('')
+  useEffect(() => {
+    if (tab === 'contacts' && contacts === null && conn.connected)
+      call<{ items: { name: string; number: string }[] }>('contacts', '').then((r) => setContacts(r.items || [])).catch(() => setContacts([]))
+  }, [tab, conn.connected])
+  // search by name, or by digits typed here or on the dial pad
+  const needle = q.trim().toLowerCase()
+  const digits = (needle || (tab === 'contacts' ? num : '')).replace(/\D/g, '')
+  const shown = (contacts || []).filter((c) => (!needle && !digits) || (needle && c.name.toLowerCase().includes(needle)) || (digits.length >= 2 && c.number.replace(/\D/g, '').includes(digits)))
   const [sim, setSim] = useState<number>(() => +(localStorage.getItem('dc.sim') || 0))
   const dial = (n: string): void => {
     if (!n) return
@@ -95,8 +106,40 @@ export function Calls() {
         </Card>
 
         <Card className="p-5">
-          <h3 className="mb-3 font-semibold">Recent</h3>
-          {log === null ? (
+          <div className="mb-3 flex items-center gap-3">
+            <Segmented value={tab} options={[{ value: 'recent', label: 'Recent' }, { value: 'contacts', label: 'Contacts' }]} onChange={setTab} />
+            {tab === 'contacts' && (
+              <div className="relative flex-1">
+                <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or number" className="w-full rounded-xl bg-white/[0.06] py-2 pl-9 pr-3 text-sm outline-none ring-1 ring-white/10 placeholder:text-white/35 focus:ring-violet/60" />
+              </div>
+            )}
+          </div>
+          {tab === 'contacts' ? (
+            contacts === null ? (
+              Array.from({ length: 6 }).map((_, i) => <div key={i} className="shimmer mb-2 h-14 rounded-xl" />)
+            ) : shown.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted">{contacts.length ? 'No matching contacts' : 'No contacts. Allow Contacts in the phone app → Settings.'}</p>
+            ) : (
+              <div className="max-h-[520px] space-y-0.5 overflow-y-auto">
+                {shown.slice(0, 300).map((c, i) => (
+                  <div key={c.name + c.number + i} className="group flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-white/[0.04]">
+                    <Avatar name={c.name} size={38} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{c.name}</div>
+                      <div className="truncate text-xs text-muted">{c.number}</div>
+                    </div>
+                    <motion.button whileTap={{ scale: 0.85 }} onClick={() => setNum(c.number.replace(/[^\d+*#]/g, ''))} title="Put in the dial pad" className="grid h-9 w-9 place-items-center rounded-full bg-white/[0.06] text-white/70 opacity-0 transition hover:bg-white/10 group-hover:opacity-100">
+                      <Hash size={15} />
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.85 }} onClick={() => dial(c.number)} title="Call" className="grid h-9 w-9 place-items-center rounded-full bg-mint/15 text-mint opacity-0 transition group-hover:opacity-100">
+                      <Phone size={15} />
+                    </motion.button>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : log === null ? (
             Array.from({ length: 6 }).map((_, i) => <div key={i} className="shimmer mb-2 h-14 rounded-xl" />)
           ) : log.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted">No recent calls</p>
