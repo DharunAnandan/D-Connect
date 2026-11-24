@@ -148,8 +148,16 @@ object Telephony {
             "swap" -> main.postDelayed({ svc.clickByLabel(listOf("swap", "switch calls", "switch")) }, 700)
             "merge" -> main.postDelayed({ svc.clickByLabel(listOf("merge", "merge calls", "conference")) }, 700)
             "audio-pc", "audio-phone", "audio-speaker" -> {
+                // the call screen can only be pressed while it's on: wake it for a few seconds
+                try {
+                    @Suppress("DEPRECATION")
+                    ctx.getSystemService(android.os.PowerManager::class.java)
+                        .newWakeLock(android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP, "dconnect:route")
+                        .acquire(8000)
+                } catch (_: Exception) {}
                 val choice = when (action) {
-                    "audio-pc" -> listOfNotNull(target?.lowercase())
+                    // the PC by its Bluetooth name, and by the name this phone saved for it
+                    "audio-pc" -> (listOfNotNull(target?.lowercase()) + pcNames(ctx)).distinct()
                     "audio-phone" -> listOf("phone receiver", "receiver", "earpiece", "handset", "phone")
                     else -> listOf("speaker")
                 }
@@ -158,10 +166,15 @@ object Telephony {
                 var tries = 0
                 fun attempt() {
                     tries++
-                    if (svc.clickByLabel(choice)) return // menu already open
+                    if (svc.clickByLabel(choice)) return report(action, true, "picked")
                     if (svc.clickByLabel(listOf("audio output", "audio route", "audio", "speaker", "bluetooth"))) {
-                        main.postDelayed({ if (!svc.clickByLabel(choice) && tries < 5) main.postDelayed({ attempt() }, 600) }, 700)
+                        main.postDelayed({
+                            if (svc.clickByLabel(choice)) report(action, true, "picked from menu")
+                            else if (tries < 5) main.postDelayed({ attempt() }, 600)
+                            else report(action, false, "menu had no ${choice.joinToString("/")}: ${svc.lastScreen}")
+                        }, 700)
                     } else if (tries < 6) main.postDelayed({ attempt() }, 500)
+                    else report(action, false, "no audio button on screen: ${svc.lastScreen}")
                 }
                 main.postDelayed({ attempt() }, 600)
             }
@@ -169,6 +182,21 @@ object Telephony {
         }
         return true
     }
+
+    // how a route change went, for the PC (so a failure says why)
+    private fun report(action: String, ok: Boolean, detail: String) {
+        android.util.Log.i("DConnect", "route $action ok=$ok $detail")
+        Bridge.emit("call.route.result", mapOf("action" to action, "ok" to ok, "detail" to detail.take(1500)))
+    }
+
+    // names this phone uses for paired PCs (laptops/desktops), lowercased
+    @SuppressLint("MissingPermission")
+    private fun pcNames(ctx: Context): List<String> = try {
+        ctx.getSystemService(android.bluetooth.BluetoothManager::class.java).adapter.bondedDevices
+            .filter { it.bluetoothClass?.majorDeviceClass == android.bluetooth.BluetoothClass.Device.Major.COMPUTER }
+            .flatMap { listOfNotNull(it.alias, it.name) }
+            .map { it.lowercase() }
+    } catch (_: Exception) { emptyList() }
 
     // Put the ongoing call's audio on the Bluetooth hands-free link (the PC).
     fun routeToBluetooth(ctx: Context) {

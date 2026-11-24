@@ -9,6 +9,9 @@
 //  - answered on the phone             -> the PC drops the call audio link, the phone keeps it
 import { ChildProcess, execFile, spawn } from 'child_process'
 import type { CallState } from '@shared/protocol'
+import fs from 'fs'
+import path from 'path'
+import { app } from 'electron'
 import type { Ctx } from '../context'
 import { callLinkUp, fixCallLink } from './bluetooth'
 
@@ -100,7 +103,23 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     bridges.push(p)
   }
 
+  // what the phone did when asked to move the call (and a small log for diagnosing failures)
+  let lastRouteResult: { action: string; ok: boolean; detail: string } | null = null
+  const routeLog = (line: string): void => {
+    try {
+      const f = path.join(app.getPath('userData'), 'call-route.log')
+      if (fs.existsSync(f) && fs.statSync(f).size > 200000) fs.rmSync(f)
+      fs.appendFileSync(f, `${new Date().toISOString()} ${line}\n`)
+    } catch {}
+  }
+  ctx.hub.on('message', (type, data) => {
+    if (type !== 'call.route.result') return
+    lastRouteResult = data
+    routeLog(`phone: ${JSON.stringify(data)}`)
+  })
+
   const toPc = async (): Promise<boolean> => {
+    lastRouteResult = null
     // make sure the phone's hands-free call link is open (phones don't always open it themselves)
     const addr = await phoneAddress()
     if (addr && !(await callLinkUp(addr))) {
@@ -119,12 +138,16 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     controlOff = r?.ok === false
     phoneWantedUntil = 0
     let n: { source?: PwObject; sink?: PwObject } = {}
-    for (let i = 0; i < 40 && !(n.source || n.sink); i++) {
+    for (let i = 0; i < 60 && !(n.source || n.sink); i++) {
       n = await pwPhone()
       if (!(n.source || n.sink)) await wait(250)
     }
     if (!n.source && !n.sink) {
-      lastError = controlOff
+      const rr = lastRouteResult as { ok: boolean } | null // set by the phone meanwhile
+      routeLog(`toPc failed: control=${r?.ok} phone said: ${rr ? JSON.stringify(rr) : 'nothing'} callLink=${await callLinkUp(addr || '')}`)
+      lastError = rr && !rr.ok
+        ? "The phone couldn't pick this PC on its call screen. On the phone's call screen, tap the speaker/Audio button → choose this PC."
+        : controlOff
         ? 'Turn on Screen control on the phone (phone app → Settings → Screen control). Android only lets its own call screen move a call to the laptop.'
         : "The phone didn't move the call to the laptop. On the phone's call screen, tap Audio → choose this PC."
       return false

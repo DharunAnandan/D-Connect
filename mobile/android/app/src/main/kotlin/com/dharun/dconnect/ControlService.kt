@@ -105,6 +105,8 @@ class ControlService : AccessibilityService() {
     }
 
     // press the first button whose text or description matches (the phone's own call screen)
+    var lastScreen = ""
+
     fun clickByLabel(labels: List<String>): Boolean {
         val roots = windows.mapNotNull { it.root } + listOfNotNull(rootInActiveWindow)
         for (root in roots) {
@@ -131,7 +133,8 @@ class ControlService : AccessibilityService() {
                 for (i in 0 until n.childCount) n.getChild(i)?.let { q.add(it) }
             }
         }
-        android.util.Log.i("DConnect", "clickByLabel $labels not found; screen: ${seen.joinToString(" ; ")}")
+        lastScreen = seen.joinToString(" ; ")
+        android.util.Log.i("DConnect", "clickByLabel $labels not found; screen: $lastScreen")
         return false
     }
 
