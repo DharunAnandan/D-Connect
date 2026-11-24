@@ -95,21 +95,37 @@ class _RootState extends State<Root> with WidgetsBindingObserver {
               : Material(
                   color: C.ink950.withValues(alpha: .86),
                   child: Center(
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      ConnectScene(state: _celebrate!, phoneName: Link.I.deviceName, pcName: Link.I.pc?.name ?? 'PC', height: 300),
-                      AnimatedSwitcher(
-                        duration: M.fast,
-                        child: _celebrate == SceneState.connected
-                            ? ShaderMask(
-                                key: const ValueKey('c'),
-                                shaderCallback: (r) => C.aurora.createShader(r),
-                                child: const Text('Connected', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white)),
-                              )
-                            : Text(_celebrate == SceneState.handshake ? 'Securing the link…' : 'Found ${Link.I.pc?.name ?? 'your PC'}', key: ValueKey(_celebrate), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(Link.I.via == 'usb' ? 'Over USB · encrypted' : 'Over Wi-Fi · encrypted', style: const TextStyle(color: C.muted)),
-                    ]),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 28),
+                      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        ConnectScene(state: _celebrate!, phoneName: Link.I.deviceName, pcName: Link.I.pc?.name ?? 'PC', height: 300),
+                        const SizedBox(height: 4),
+                        // fixed height, centred, never wider than the screen: no jumping or overflow
+                        SizedBox(
+                          height: 74,
+                          child: AnimatedSwitcher(
+                            duration: M.fast,
+                            child: _celebrate == SceneState.connected
+                                ? Center(
+                                    key: const ValueKey('c'),
+                                    child: ShaderMask(
+                                      shaderCallback: (r) => C.aurora.createShader(r),
+                                      child: const Text('Connected', textAlign: TextAlign.center, style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white)),
+                                    ),
+                                  )
+                                : Column(key: ValueKey(_celebrate), mainAxisAlignment: MainAxisAlignment.center, children: [
+                                    Text(_celebrate == SceneState.handshake ? 'Securing the link…' : 'Found', textAlign: TextAlign.center, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+                                    if (_celebrate != SceneState.handshake) ...[
+                                      const SizedBox(height: 4),
+                                      Text(Link.I.pc?.name ?? 'your PC', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: .75))),
+                                    ],
+                                  ]),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(Link.I.via == 'usb' ? 'Over USB · encrypted' : 'Over Wi-Fi · encrypted', textAlign: TextAlign.center, style: const TextStyle(color: C.muted)),
+                      ]),
+                    ),
                   ),
                 ),
         ),
