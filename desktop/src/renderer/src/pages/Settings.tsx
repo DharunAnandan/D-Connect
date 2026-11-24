@@ -53,7 +53,14 @@ export function Settings() {
       <Section title="Phones" icon={Smartphone}>
         {devices.map((d) => (
           <Row key={d.deviceId} icon={Smartphone} title={d.name} body={`${d.model} · paired ${ago(d.pairedAt)} ago${conn.device?.deviceId === d.deviceId && conn.connected ? '' : ` · last seen ${ago(d.lastSeen)}`}`}>
-            {conn.connected && conn.device?.deviceId === d.deviceId && <Pill color="mint">Connected</Pill>}
+            {d.active ? (
+              <Pill color="mint">In use</Pill>
+            ) : (
+              <>
+                <Pill color={d.online ? 'amber' : 'violet'}>{d.online ? 'Standby' : 'Offline'}</Pill>
+                <Button size="sm" variant="soft" onClick={() => call('activateDevice', d.deviceId)}>Use this phone</Button>
+              </>
+            )}
             <Button size="sm" variant="ghost" icon={Trash2} onClick={() => call('forget', d.deviceId)}>Forget</Button>
           </Row>
         ))}

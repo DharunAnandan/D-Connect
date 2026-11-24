@@ -17,6 +17,7 @@ export const DEFAULTS = {
   deviceName: '',
   port: 47820,
   trusted: {} as Record<string, TrustedDevice>,
+  activeDevice: '', // the phone the user chose when several are paired
   // notifications
   notifyToasts: true,
   mutedApps: [] as string[],

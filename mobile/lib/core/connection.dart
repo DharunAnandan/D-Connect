@@ -15,7 +15,7 @@ import 'package:uuid/uuid.dart';
 import 'native.dart';
 import 'protocol.dart';
 
-enum LinkState { unpaired, searching, connecting, handshake, connected }
+enum LinkState { unpaired, searching, connecting, handshake, standby, connected }
 
 class Link extends ChangeNotifier {
   Link._();
@@ -44,6 +44,12 @@ class Link extends ChangeNotifier {
   Stream<Envelope> get messages => _messages.stream;
   Stream<({int channel, Map<String, dynamic> header, Uint8List payload})> get binary => _binary.stream;
   bool get connected => state == LinkState.connected;
+  // linked and online, but the PC is using another paired phone right now
+  bool get standby => state == LinkState.standby;
+  String? activeElsewhere;
+
+  // ask the PC to use this phone instead of the other one
+  void claim() => _ws?.add(Envelope('standby.claim', {}).encode());
 
   Stream<Envelope> on(String type) => messages.where((m) => m.type == type);
 
@@ -121,14 +127,14 @@ class Link extends ChangeNotifier {
 
   // the app came to the front or the network changed: try now
   void nudge() {
-    if (!_running || connected || state == LinkState.connecting) return;
+    if (!_running || connected || standby || state == LinkState.connecting) return;
     _retry?.cancel();
     _attempt = 0;
     _loop();
   }
 
   Future<void> _loop() async {
-    if (!_running || connected || pc == null) return;
+    if (!_running || connected || standby || pc == null) return;
     state = LinkState.searching;
     notifyListeners();
     final hosts = <String>{'127.0.0.1', if (_mdnsHosts[pc!.id] != null) _mdnsHosts[pc!.id]!, ...pc!.hosts};
@@ -216,7 +222,7 @@ class Link extends ChangeNotifier {
     _ws = ws;
     ws.pingInterval = const Duration(seconds: 15);
     via = host == '127.0.0.1' ? 'usb' : 'wifi';
-    state = LinkState.connected;
+    state = w['standby'] == true ? LinkState.standby : LinkState.connected;
     error = null;
     _attempt = 0;
     notifyListeners();
@@ -230,7 +236,7 @@ class Link extends ChangeNotifier {
       if (!c.isCompleted) c.completeError('disconnected');
     }
     _pending.clear();
-    if (state == LinkState.connected) {
+    if (state == LinkState.connected || state == LinkState.standby) {
       state = LinkState.searching;
       notifyListeners();
     }
@@ -242,6 +248,22 @@ class Link extends ChangeNotifier {
       send('pong', m.data);
       final t = m.data?['t'];
       if (t is int) rtt = max(0, DateTime.now().millisecondsSinceEpoch - t);
+      return;
+    }
+    if (m.type == 'standby') {
+      activeElsewhere = m.data?['active'] as String?;
+      if (state != LinkState.standby) {
+        state = LinkState.standby;
+        notifyListeners();
+      }
+      return;
+    }
+    if (m.type == 'activated') {
+      activeElsewhere = null;
+      if (state != LinkState.connected) {
+        state = LinkState.connected;
+        notifyListeners();
+      }
       return;
     }
     if (m.id != null && _pending.containsKey(m.id)) {

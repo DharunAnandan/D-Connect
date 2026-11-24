@@ -30,7 +30,7 @@ class HomeTab extends StatelessWidget {
             _Header(),
             const SizedBox(height: 16),
             _PcCard().animate().fadeIn(duration: 400.ms).slideY(begin: .08, curve: M.ease),
-            if (!link.connected) ...[
+            if (!link.connected && !link.standby) ...[
               const SizedBox(height: 4),
               ConnectScene(state: SceneState.searching, phoneName: link.deviceName, pcName: link.pc?.name ?? 'PC', height: 220),
               Center(child: Text(link.error ?? 'Open D-Connect on ${link.pc?.name ?? 'your PC'}. Same Wi-Fi, or plug in USB.', textAlign: TextAlign.center, style: const TextStyle(color: C.muted))),
@@ -185,11 +185,24 @@ class _PcCard extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Pill(on ? 'Connected' : _stateText(link.state), color: on ? C.mint : C.amber, dot: true),
+              Pill(on ? 'Connected' : link.standby ? 'Standby' : _stateText(link.state), color: on ? C.mint : link.standby ? C.violetSoft : C.amber, dot: true),
               if (on) ...[const SizedBox(width: 6), Pill(link.via == 'usb' ? 'USB' : 'Wi-Fi${link.rtt > 0 ? ' · ${link.rtt} ms' : ''}', color: link.via == 'usb' ? C.violetSoft : C.cyan)],
             ]),
             const SizedBox(height: 8),
             Text(link.pc?.name ?? 'Your PC', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+            if (link.standby) ...[
+              const SizedBox(height: 4),
+              Text('The PC is using ${link.activeElsewhere ?? 'another phone'} right now.', style: const TextStyle(color: C.muted, fontSize: 12)),
+              const SizedBox(height: 10),
+              Press(
+                onTap: link.claim,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(gradient: C.primary, borderRadius: BorderRadius.circular(12)),
+                  child: const Text('Use this phone', style: TextStyle(color: C.ink950, fontWeight: FontWeight.w800, fontSize: 13)),
+                ),
+              ),
+            ],
           ]),
         ),
       ]),

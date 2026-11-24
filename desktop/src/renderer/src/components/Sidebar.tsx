@@ -1,5 +1,7 @@
-import { motion } from 'framer-motion'
-import { Bell, Eye, FolderUp, Home, Image, MessageSquare, MonitorSmartphone, Phone, Settings, Sparkles } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useState } from 'react'
+import { call } from '@/lib/api'
+import { Bell, Check, ChevronsUpDown, Eye, FolderUp, Home, Image, MessageSquare, MonitorSmartphone, Phone, Settings, Sparkles } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { spring } from '@/theme/motion'
 import { BatteryPill } from './Battery'
@@ -17,11 +19,14 @@ export const NAV = [
 ]
 
 export function Sidebar({ route, go }: { route: string; go: (r: string) => void }) {
-  const { conn, status, notifs, eye } = useApp()
+  const { conn, status, notifs, eye, devices } = useApp()
+  const [open, setOpen] = useState(false)
+  const many = devices.length > 1
   return (
     <aside className="flex w-[232px] shrink-0 flex-col px-3 pb-4">
-      {/* the phone */}
-      <motion.div layout className="glass mb-4 rounded-2xl p-3.5">
+      {/* the phone (click to choose when several are paired) */}
+      <div className="relative mb-4">
+      <motion.div layout onClick={() => many && setOpen(!open)} className={`glass rounded-2xl p-3.5 ${many ? 'cursor-pointer hover:ring-1 hover:ring-white/10' : ''}`}>
         <div className="flex items-center gap-3">
           <div className="relative grid h-10 w-10 place-items-center rounded-xl bg-[linear-gradient(135deg,#7c5cff,#35e0ff)] text-ink-950">
             <MonitorSmartphone size={19} />
@@ -31,6 +36,7 @@ export function Sidebar({ route, go }: { route: string; go: (r: string) => void 
             <div className="truncate text-sm font-semibold">{conn.device?.name || 'No phone'}</div>
             <div className="truncate text-[11px] text-muted">{conn.connected ? (conn.via === 'usb' ? 'Connected by USB' : 'Connected on Wi-Fi') : conn.device ? 'Disconnected' : 'Pair to get started'}</div>
           </div>
+          {many && <ChevronsUpDown size={15} className="shrink-0 text-white/40" />}
         </div>
         {conn.connected && status && (
           <div className="mt-3 flex items-center gap-2">
@@ -39,6 +45,37 @@ export function Sidebar({ route, go }: { route: string; go: (r: string) => void 
           </div>
         )}
       </motion.div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={spring}
+            className="glass-strong absolute left-0 right-0 top-full z-30 mt-2 rounded-2xl p-1.5"
+          >
+            <div className="px-2.5 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-widest text-white/40">Use which phone?</div>
+            {devices.map((d: any) => (
+              <button
+                key={d.deviceId}
+                onClick={async () => {
+                  await call('activateDevice', d.deviceId)
+                  setOpen(false)
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors ${d.active ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}
+              >
+                <span className={`h-2 w-2 shrink-0 rounded-full ${d.active ? 'bg-mint shadow-[0_0_6px_#3ddc97]' : d.online ? 'bg-amber' : 'bg-white/20'}`} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium">{d.name}</span>
+                  <span className="block text-[10.5px] text-muted">{d.active ? 'In use' : d.online ? 'Online · standby' : 'Offline'}</span>
+                </span>
+                {d.active && <Check size={15} className="text-mint" />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </div>
 
       <nav className="flex flex-1 flex-col gap-0.5">
         {NAV.map((n) => {

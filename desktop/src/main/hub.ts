@@ -42,6 +42,7 @@ export declare interface Hub {
   on(e: 'disconnected', l: (s: Session) => void): this
   on(e: 'paired', l: (d: TrustedDevice) => void): this
   on(e: 'token', l: (p: PairPayload) => void): this
+  on(e: 'online', l: (ids: string[]) => void): this
 }
 
 export class Hub extends EventEmitter {
@@ -104,7 +105,51 @@ export class Hub extends EventEmitter {
     const t = { ...this.store.get('trusted') }
     delete t[deviceId]
     this.store.set('trusted', t)
-    if (this.session?.device.deviceId === deviceId) this.session.ws.close(4001, 'forgotten')
+    if (this.store.get('activeDevice') === deviceId) this.store.set('activeDevice', '')
+    const s = this.online.get(deviceId)
+    if (s) s.ws.close(4001, 'forgotten')
+  }
+
+  // ---------------------------------------------------------------- several phones
+  // Every paired phone may stay connected. One is active (all features go to it); the others
+  // wait on standby, so two phones never fight over the PC. The user picks which is active.
+  private online = new Map<string, Session>()
+
+  onlineIds(): string[] {
+    return [...this.online.keys()]
+  }
+
+  private preferred(): string {
+    return this.store.get('activeDevice') || ''
+  }
+
+  private broadcastStandby(): void {
+    for (const s of this.online.values()) {
+      if (s !== this.session) this.sendTo(s.ws, 'standby', { active: this.session?.device.name || null })
+    }
+    this.emit('online', this.onlineIds())
+  }
+
+  private promote(s: Session): void {
+    const old = this.session
+    if (old === s) return
+    if (old) {
+      this.session = null
+      this.emit('disconnected', old)
+    }
+    this.session = s
+    this.sendTo(s.ws, 'activated', { name: this.name })
+    this.emit('connected', s)
+    this.broadcastStandby()
+  }
+
+  // switch the active phone (from the PC, or a standby phone asking for it)
+  activate(deviceId: string): boolean {
+    this.store.set('activeDevice', deviceId)
+    const s = this.online.get(deviceId)
+    if (!s) return false
+    this.promote(s)
+    return true
   }
 
   // ---------------------------------------------------------------- connections
@@ -114,8 +159,9 @@ export class Hub extends EventEmitter {
     const helloTimeout = setTimeout(() => !session && ws.close(4000, 'no hello'), 8000)
 
     ws.on('message', (raw, isBinary) => {
+      const active = !!session && this.session === session
       if (isBinary) {
-        if (!session) return
+        if (!active) return
         const buf = raw as Buffer
         try {
           const { channel, header, payload } = decodeBinary(buf)
@@ -142,15 +188,25 @@ export class Hub extends EventEmitter {
         return
       }
       if (msg.type === 'ping') return this.sendTo(ws, 'pong', msg.data)
-      this.emit('message', msg.type, msg.data, msg.id)
+      if (msg.type === 'standby.claim') {
+        this.activate(session.device.deviceId)
+        return
+      }
+      if (active) this.emit('message', msg.type, msg.data, msg.id)
     })
 
     ws.on('close', () => {
       clearTimeout(helloTimeout)
-      if (session && this.session === session) {
+      if (!session || this.online.get(session.device.deviceId) !== session) return
+      this.online.delete(session.device.deviceId)
+      if (this.session === session) {
         this.session = null
         this.emit('disconnected', session)
+        // another paired phone that is online takes over
+        const next = this.online.get(this.preferred()) || [...this.online.values()][0]
+        if (next) this.promote(next)
       }
+      this.broadcastStandby()
     })
     ws.on('error', () => {})
   }
@@ -185,24 +241,41 @@ export class Hub extends EventEmitter {
     trusted[device.deviceId] = device
     this.store.set('trusted', trusted)
 
-    // a newer connection replaces the old one (e.g. Wi-Fi -> USB)
-    if (this.session) {
-      const old = this.session
-      this.session = null
-      old.ws.close(4002, 'replaced')
-      this.emit('disconnected', old)
+    // the same phone connecting again (e.g. Wi-Fi -> USB) replaces its own old link
+    const prev = this.online.get(device.deviceId)
+    const wasActive = !!prev && this.session === prev
+    if (prev) {
+      this.online.delete(device.deviceId)
+      if (wasActive) {
+        this.session = null
+        this.emit('disconnected', prev)
+      }
+      prev.ws.close(4002, 'replaced')
     }
-    const welcome: Welcome = { deviceId: this.identity.id, name: this.name, os: process.platform, key: issuedKey, features: FEATURES }
-    this.sendTo(ws, 'welcome', welcome)
+
     const s: Session = { device, ws, via, address, since: Date.now(), rtt: 0 }
-    this.session = s
+    this.online.set(device.deviceId, s)
+    // active if: nobody is, it's the chosen phone, it was active a moment ago, or it was just paired
+    const becomeActive = !this.session || wasActive || !!issuedKey || this.preferred() === device.deviceId
+    if (issuedKey) this.store.set('activeDevice', device.deviceId)
+    const welcome: Welcome = { deviceId: this.identity.id, name: this.name, os: process.platform, key: issuedKey, features: FEATURES, standby: !becomeActive }
+    this.sendTo(ws, 'welcome', welcome)
     if (issuedKey) this.emit('paired', device)
-    this.emit('connected', s)
+    if (becomeActive) {
+      const old = this.session
+      if (old) {
+        this.session = null
+        this.emit('disconnected', old)
+      }
+      this.session = s
+      this.emit('connected', s)
+    }
+    this.broadcastStandby()
     return s
   }
 
   private ping(): void {
-    if (this.session) this.sendTo(this.session.ws, 'ping', { t: Date.now() })
+    for (const s of this.online.values()) this.sendTo(s.ws, 'ping', { t: Date.now() })
   }
 
   // ---------------------------------------------------------------- sending

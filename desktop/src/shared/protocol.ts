@@ -35,6 +35,7 @@ export interface Welcome {
   os: string
   key?: string // only sent right after pairing
   features: string[]
+  standby?: boolean // another phone is the active one; this one waits
 }
 
 // ---------------------------------------------------------------- phone status

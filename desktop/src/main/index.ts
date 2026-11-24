@@ -101,7 +101,17 @@ app.whenReady().then(async () => {
     return { ...p, uri, qr: await QRCode.toDataURL(uri, { margin: 1, width: 360, errorCorrectionLevel: 'M', color: { dark: '#0b1020', light: '#ffffff' } }) }
   })
   ctx.handle('rotateToken', () => hub.rotateToken())
-  ctx.handle('devices', () => Object.values(store.get('trusted')).map((d) => ({ ...d, key: undefined })))
+  const deviceList = (): any[] =>
+    Object.values(store.get('trusted')).map((d) => ({
+      ...d,
+      key: undefined,
+      online: hub.onlineIds().includes(d.deviceId),
+      active: hub.session?.device.deviceId === d.deviceId,
+      preferred: store.get('activeDevice') === d.deviceId
+    }))
+  ctx.handle('devices', () => deviceList())
+  ctx.handle('activateDevice', (id: string) => hub.activate(id))
+  hub.on('online', () => emit('devices', deviceList()))
   ctx.handle('forget', (id: string) => hub.forget(id))
   ctx.handle('settings', () => store.all())
   ctx.handle('setSetting', (k: SettingKey, v: any) => store.set(k, v))
@@ -206,7 +216,7 @@ app.whenReady().then(async () => {
       emit('eye', eye.status())
       hub.send('eye.status', eye.status())
     }
-    if (k === 'trusted') emit('devices', Object.values(store.get('trusted')).map((d) => ({ ...d, key: undefined })))
+    if (k === 'trusted' || k === 'activeDevice') emit('devices', deviceList())
     emit('settings', store.all())
   })
   hub.on('message', (type, data) => {
