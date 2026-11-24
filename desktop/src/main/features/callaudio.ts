@@ -129,39 +129,38 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   }
 
   // PipeWire only links the phone's call streams to a speaker/mic *device*, and it has none
-  // (PulseAudio owns the sound card). So D-Connect gives it two virtual ones:
-  //  - "dconnect-call-speaker": a null sink (it also drives the timing); its monitor is read by
-  //    GStreamer and played on PulseAudio (the laptop speaker or the chosen headset)
-  //  - "dconnect-call-mic": GStreamer takes PulseAudio's mic and provides it as a PipeWire source
-  // WirePlumber links the call to them by itself.
-  const virtualSpeaker = async (): Promise<number | null> => {
-    const find = async (): Promise<number | null> => (await pwDump()).find((o) => o.info?.props?.['node.name'] === 'dconnect-call-speaker')?.id ?? null
-    let id = await find()
-    if (id === null) {
-      // priority.driver 1: the phone's Bluetooth stream (2010) drives the timing, so the two
-      // clocks never fight (that made the call audio choppy)
-      await sh('pw-cli', ['create-node', 'adapter', '{ factory.name=support.null-audio-sink node.name=dconnect-call-speaker node.description="D-Connect call speaker" media.class=Audio/Sink object.linger=true audio.position=[ MONO ] audio.rate=16000 priority.driver=1 priority.session=1 }'])
-      for (let i = 0; i < 10 && id === null; i++) {
-        await wait(200)
-        id = await find()
-      }
-    }
-    return id
+  // (PulseAudio owns the sound card). PipeWire's PulseAudio tunnel gives it two real ones:
+  //  - "dconnect-call-speaker": a PipeWire sink whose audio plays on a PulseAudio speaker
+  //  - "dconnect-call-mic":     a PipeWire source fed by a PulseAudio microphone
+  // WirePlumber links the call to them by itself. Each tunnel lives in its own pw-cli process,
+  // so stopping the bridge is just killing those. (A GStreamer pipewiresink into PipeWire sent
+  // only silence on this PipeWire version, and two independent clocks made audio lag.)
+  const tunnel = (mode: 'playback' | 'capture', name: string, desc: string, cls: string, target: string | null): void => {
+    const sock = `/run/user/${process.getuid?.() ?? 1000}/pulse/native`
+    const args = [
+      `tunnel.mode=${mode}`,
+      `pulse.server.address="${sock}"`,
+      'pulse.latency=40',
+      'audio.rate=16000',
+      'audio.channels=1',
+      'audio.position=[ MONO ]',
+      target ? `node.target="${target}"` : '',
+      `stream.props={ node.name=${name} node.description="${desc}" media.class=${cls} priority.driver=1 priority.session=1 }`
+    ].filter(Boolean).join(' ')
+    const p = spawn('pw-cli', [], { stdio: ['pipe', 'ignore', 'ignore'] })
+    p.on('error', () => {})
+    p.stdin.write(`load-module libpipewire-module-pulse-tunnel { ${args} }\n`) // stdin stays open: the module lives while pw-cli runs
+    bridges.push(p)
   }
 
   const startCallBridges = async (): Promise<void> => {
     stopBridges()
-    const out = outDev ? [`device=${outDev}`] : []
-    const inp = inDev ? [`device=${inDev}`] : []
-    const spk = await virtualSpeaker()
-    const callCaps = 'audio/x-raw,rate=16000,channels=1'
-    if (spk !== null) startBridge(['pipewiresrc', `path=${spk}`, 'stream-properties=props,stream.capture.sink=true,node.name=dconnect-call-speaker-reader,node.latency=320/16000', 'do-timestamp=true', '!', 'audioconvert', '!', 'audioresample', '!', callCaps, '!', 'queue', 'max-size-time=200000000', 'leaky=downstream', '!', 'pulsesink', ...out, 'client-name=D-Connect call', 'latency-time=20000', 'buffer-time=120000', 'provide-clock=false'])
-    // the mic as it worked on a live call: stereo, so WirePlumber links both of the phone's
-    // call inputs (FL/FR); a mono source didn't get linked and the caller heard nothing
-    startBridge(['pulsesrc', ...inp, 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=120000', '!', 'audioconvert', '!', 'audioresample', '!', 'queue', 'max-size-time=200000000', 'leaky=downstream', '!', 'pipewiresink', 'mode=provide', 'stream-properties=props,media.class=Audio/Source,node.name=dconnect-call-mic'])
-    // and check it really is linked; if not, link it by hand
-    setTimeout(() => ensureMicLinked(), 2500)
-    if (muted) setTimeout(() => applyMute(), 800)
+    // drop the virtual speaker left from older versions so WirePlumber picks the tunnel
+    const old = (await pwDump()).find((o) => o.info?.props?.['node.name'] === 'dconnect-call-speaker' && o.info?.props?.['factory.name'] === 'support.null-audio-sink')
+    if (old) await sh('pw-cli', ['destroy', String(old.id)])
+    tunnel('playback', 'dconnect-call-speaker', 'D-Connect call speaker', 'Audio/Sink', outDev)
+    tunnel('capture', 'dconnect-call-mic', 'D-Connect call mic', 'Audio/Source', inDev)
+    if (muted) setTimeout(() => applyMute(), 1200)
   }
 
   const ensureMicLinked = async (): Promise<void> => {
@@ -288,12 +287,8 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   // Mute while the call is on the laptop: silence the laptop-mic stream that feeds the call.
   let muted = false
   const applyMute = async (): Promise<void> => {
-    const out = await sh('pactl', ['list', 'source-outputs'])
-    for (const block of out.split('Source Output #').slice(1)) {
-      if (!/D-Connect call mic/.test(block)) continue
-      const id = block.split('\n')[0].trim()
-      await sh('pactl', ['set-source-output-mute', id, muted ? '1' : '0'])
-    }
+    const mic = (await pwDump()).find((o) => o.info?.props?.['node.name'] === 'dconnect-call-mic')
+    if (mic) await sh('pw-cli', ['set-param', String(mic.id), 'Props', `{ mute: ${muted ? 'true' : 'false'} }`])
   }
   const setMuted = (m: boolean): void => {
     muted = m
