@@ -28,7 +28,7 @@ export function Notifications() {
   if (!conn.connected) return <Empty icon={Bell} title="Connect your phone" body="Phone notifications show up here and as desktop toasts." />
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto w-full max-w-[1680px]">
       <PageHeader icon={Bell} title="Notifications" subtitle={`${notifs.length} from your phone`}>
         <Button size="sm" variant="soft" icon={CheckCheck} disabled={!notifs.length} onClick={() => call('notifClear')}>Clear all</Button>
       </PageHeader>

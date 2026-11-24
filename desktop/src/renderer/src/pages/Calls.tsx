@@ -44,7 +44,7 @@ export function Calls() {
   if (!conn.connected) return <Empty icon={Phone} title="Connect your phone" body="Make and take calls from your PC once your phone is connected." />
 
   return (
-    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto max-w-6xl">
+    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
       <PageHeader icon={Phone} title="Calls" subtitle="Dial from your keyboard. Answer from anywhere on your desktop." />
       {bt && !bt.ready && (
         <Card className="mb-5 flex items-center gap-4 p-4">
@@ -56,7 +56,7 @@ export function Calls() {
           <Button size="sm" variant="soft" onClick={() => go('/settings')}>Set up</Button>
         </Card>
       )}
-      <div className="grid grid-cols-[360px_1fr] gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[360px_1fr] xl:grid-cols-[400px_1fr]">
         <Card className="p-6">
           {sims.length > 1 && (
             <div className="mb-3 flex justify-center">

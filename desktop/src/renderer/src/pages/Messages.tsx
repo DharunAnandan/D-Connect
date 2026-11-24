@@ -63,7 +63,7 @@ export function Messages() {
   if (!connected) return <Empty icon={MessageSquare} title="Connect your phone" body="Your text messages show up here once your phone is connected." />
 
   return (
-    <div className="mx-auto flex h-full max-w-6xl gap-5 pb-2">
+    <div className="mx-auto flex h-full w-full max-w-[1680px] gap-5 pb-2">
       {/* threads */}
       <Card className="flex w-[340px] shrink-0 flex-col overflow-hidden">
         <div className="flex items-center gap-2 p-4 pb-3">

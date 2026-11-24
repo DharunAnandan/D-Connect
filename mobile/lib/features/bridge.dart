@@ -93,6 +93,9 @@ class Bridge {
           Native.call('mirrorStop');
         case 'mirror.keyframe':
           Native.call('mirrorKeyframe');
+        case 'bt.ensure':
+          final on = await Native.call<bool>('btEnsure');
+          if (m.id != null) link.reply(m, 'bt.ensure', {'enabled': on == true});
         case 'bt.refresh':
           final ok = await Native.call<bool>('btRefresh', {'address': d['address']});
           if (m.id != null) link.reply(m, 'bt.refresh', {'ok': ok == true});
@@ -146,6 +149,8 @@ class Bridge {
           _sendStatus();
         case 'bt.bond':
           link.send('bt.bond', data);
+        case 'bt.state':
+          link.send('bt.state', data);
         case 'share':
           _onShare(Map<String, dynamic>.from(data as Map));
       }

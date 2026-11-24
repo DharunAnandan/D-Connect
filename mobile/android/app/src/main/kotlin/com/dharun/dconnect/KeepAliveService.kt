@@ -25,6 +25,11 @@ class KeepAliveService : Service() {
                 Intent.ACTION_BATTERY_CHANGED, Intent.ACTION_POWER_CONNECTED, Intent.ACTION_POWER_DISCONNECTED -> Bridge.emit("battery", null)
                 SysTelephony.Sms.Intents.SMS_RECEIVED_ACTION -> onSms(i)
                 TelephonyManager.ACTION_PHONE_STATE_CHANGED -> onCall(i)
+                android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                    val st = i.getIntExtra(android.bluetooth.BluetoothAdapter.EXTRA_STATE, -1)
+                    if (st == android.bluetooth.BluetoothAdapter.STATE_ON) Bridge.emit("bt.state", mapOf("on" to true))
+                    if (st == android.bluetooth.BluetoothAdapter.STATE_OFF) Bridge.emit("bt.state", mapOf("on" to false))
+                }
             }
         }
     }
@@ -48,6 +53,7 @@ class KeepAliveService : Service() {
             addAction(Intent.ACTION_POWER_DISCONNECTED)
             addAction(SysTelephony.Sms.Intents.SMS_RECEIVED_ACTION)
             addAction(TelephonyManager.ACTION_PHONE_STATE_CHANGED)
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
         }
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(receiver, f, RECEIVER_EXPORTED) else registerReceiver(receiver, f)
         // battery level: only tell the PC when it moves

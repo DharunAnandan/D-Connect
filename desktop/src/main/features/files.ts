@@ -178,7 +178,21 @@ export function files(ctx: Ctx): { onPhoto: (fn: (t: Transfer) => void) => void 
       push(true)
     } else if (action === 'open' && t?.path) shell.openPath(t.path)
     else if (action === 'show' && t?.path) shell.showItemInFolder(t.path)
+    else if (action === 'delete' && t) {
+      // delete a received file from disk (never a file you sent from this PC)
+      if (t.dir === 'in' && t.path && fs.existsSync(t.path)) fs.rmSync(t.path, { force: true })
+      transfers.delete(fid)
+      push(true)
+    } else if (action === 'remove' && t) {
+      transfers.delete(fid)
+      push(true)
+    }
   })
+  ctx.handle('clearTransfers', () => {
+    for (const [fid, t] of transfers) if (t.state !== 'active' && t.state !== 'waiting') transfers.delete(fid)
+    push(true)
+  })
+  ctx.handle('downloadDir', () => dir())
   ctx.handle('openDownloads', () => shell.openPath(dir()))
 
   return { onPhoto: (fn) => (photoListeners = [...photoListeners, fn]) }

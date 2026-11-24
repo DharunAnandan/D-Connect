@@ -29,6 +29,7 @@ export const DEFAULTS = {
   // usb
   usbAuto: true,
   // extras
+  phoneAudioOnPc: true, // play the phone's media (Spotify, YouTube...) through this PC's speaker
   proximityLock: false,
   proximityGraceSec: 20,
   lowBatteryAlert: 20,

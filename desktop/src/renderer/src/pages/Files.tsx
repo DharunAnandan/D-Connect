@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowDownToLine, ArrowUpFromLine, Check, File, FolderOpen, Upload, X } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowDownToLine, ArrowUpFromLine, Check, File, FolderOpen, Trash2, Upload, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Button, Card, Empty, PageHeader, Ring } from '@/components/ui'
 import { call, dc, useLive } from '@/lib/api'
 import { size } from '@/lib/format'
@@ -22,6 +22,10 @@ export function Files() {
   const connected = useApp((s) => s.conn.connected)
   const [transfers] = useLive<Transfer[]>('transfers', 'transfers', [])
   const [over, setOver] = useState(false)
+  const [folder, setFolder] = useState('')
+  useEffect(() => {
+    call<string>('downloadDir').then(setFolder)
+  }, [])
 
   const sendList = (files: FileList | null): void => {
     if (!files?.length) return
@@ -30,8 +34,9 @@ export function Files() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <PageHeader icon={FolderOpen} title="Files" subtitle="Drop anything here to send it to your phone. Files from your phone land in Downloads/D-Connect.">
+    <div className="mx-auto w-full max-w-[1680px]">
+      <PageHeader icon={FolderOpen} title="Files" subtitle={`Drop anything here to send it to your phone. Files from your phone are saved in ${folder || 'Downloads/D-Connect'}`}>
+        {transfers.some((t) => t.state !== 'active' && t.state !== 'waiting') && <Button size="sm" variant="ghost" icon={Trash2} onClick={() => call('clearTransfers')}>Clear list</Button>}
         <Button size="sm" variant="soft" icon={FolderOpen} onClick={() => call('openDownloads')}>Open folder</Button>
       </PageHeader>
 
@@ -86,6 +91,7 @@ export function Files() {
                     </Ring>
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-semibold">{t.name}</div>
+                      {done && t.dir === 'in' && t.path && <div className="selectable truncate text-[11px] text-white/40" title={t.path}>Saved to {t.path}</div>}
                       <div className="text-xs text-muted">
                         {t.dir === 'in' ? 'From phone' : 'To phone'} · {done ? size(t.size) : bad ? t.state : t.state === 'waiting' ? 'Waiting for the phone…' : `${size(t.done)} of ${size(t.size)} · ${size(t.speed)}/s`}
                       </div>
@@ -94,8 +100,14 @@ export function Files() {
                     {done && t.dir === 'in' && (
                       <>
                         <Button size="sm" variant="soft" onClick={() => call('fileAction', 'open', t.fid)}>Open</Button>
-                        <Button size="sm" variant="ghost" onClick={() => call('fileAction', 'show', t.fid)}>Show</Button>
+                        <Button size="sm" variant="ghost" onClick={() => call('fileAction', 'show', t.fid)}>Show in folder</Button>
+                        <Button size="sm" variant="ghost" icon={Trash2} className="hover:!bg-rose/20 hover:!text-rose" onClick={() => call('fileAction', 'delete', t.fid)}>Delete file</Button>
                       </>
+                    )}
+                    {t.state !== 'active' && t.state !== 'waiting' && (
+                      <button title="Remove from list" onClick={() => call('fileAction', 'remove', t.fid)} className="grid h-8 w-8 place-items-center rounded-lg text-white/40 hover:bg-white/10 hover:text-white">
+                        <X size={15} />
+                      </button>
                     )}
                   </Card>
                 </motion.div>

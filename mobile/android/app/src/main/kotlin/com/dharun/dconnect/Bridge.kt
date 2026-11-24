@@ -84,6 +84,7 @@ object Bridge {
             "btInfo" -> result.success(btInfo())
             "btPair" -> result.success(BtPair.start(ctx, a("address") as String))
             "btRefresh" -> result.success(BtPair.refresh(ctx, a("address") as String))
+            "btEnsure" -> result.success(ensureBluetooth())
             "permissions" -> result.success(permissions())
             "keepAlive" -> {
                 val i = Intent(ctx, KeepAliveService::class.java).putExtra("pc", a("pc") as String?)
@@ -192,7 +193,30 @@ object Bridge {
                 ctx.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.name
             else null
         } catch (e: SecurityException) { null }
-        return mapOf("name" to (adapterName ?: Settings.Global.getString(ctx.contentResolver, "device_name") ?: Build.MODEL))
+        val enabled = try { ctx.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.isEnabled == true } catch (e: Exception) { false }
+        return mapOf("name" to (adapterName ?: Settings.Global.getString(ctx.contentResolver, "device_name") ?: Build.MODEL), "enabled" to enabled)
+    }
+
+    // Android doesn't let apps switch Bluetooth on silently: show its one-tap prompt (or a
+    // notification that opens it when D-Connect isn't on screen).
+    private fun ensureBluetooth(): Boolean {
+        val adapter = ctx.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter ?: return false
+        if (adapter.isEnabled) return true
+        val ask = Intent(android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val act = MainActivity.current
+        if (act != null && MainActivity.resumed) {
+            main.post { try { act.startActivity(ask) } catch (_: Exception) {} }
+        } else {
+            val pi = android.app.PendingIntent.getActivity(ctx, 77, ask, android.app.PendingIntent.FLAG_IMMUTABLE)
+            val n = androidx.core.app.NotificationCompat.Builder(ctx, Notifs.ALERT)
+                .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+                .setContentTitle("Turn on Bluetooth for calls on your PC")
+                .setContentText("Tap to turn it on")
+                .setContentIntent(pi).setAutoCancel(true)
+                .build()
+            ctx.getSystemService(NotificationManager::class.java).notify(77, n)
+        }
+        return false
     }
 
     private fun permissions(): Map<String, Boolean> {

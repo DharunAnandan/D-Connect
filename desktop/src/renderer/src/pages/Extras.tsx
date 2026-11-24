@@ -38,9 +38,9 @@ export function Extras() {
   }
 
   return (
-    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto max-w-6xl">
+    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
       <PageHeader icon={Sparkles} title="Extras" subtitle="The things Phone Link doesn't do" />
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* find my phone */}
         <Card className="relative overflow-hidden p-6">
           <div className="flex items-center gap-5">
@@ -147,7 +147,10 @@ export function Extras() {
         </Card>
 
         {/* toggles */}
-        <Card className="col-span-2 divide-y divide-white/[0.06] px-6 py-2">
+        <Card className="divide-y lg:col-span-2 divide-white/[0.06] px-6 py-2">
+          <Row icon={Music2} title="Play phone audio on this PC" body="Spotify, YouTube and other phone sounds come out of this PC's speaker.">
+            <Toggle on={settings.phoneAudioOnPc !== false} onChange={(v) => setSetting('phoneAudioOnPc', v)} />
+          </Row>
           <Row icon={ShieldCheck} title="Proximity lock" body={`Lock this PC when your phone leaves (disconnects for ${settings.proximityGraceSec ?? 20}s).`}>
             <Toggle on={!!settings.proximityLock} onChange={(v) => setSetting('proximityLock', v)} />
           </Row>

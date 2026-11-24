@@ -336,13 +336,67 @@ export function bluetooth(ctx: Ctx): void {
     else if (data?.state === 'failed') ctx.emit('bt.progress', data.message || 'Pairing was cancelled.')
     else if (data?.state === 'bonding') ctx.emit('bt.progress', 'Pairing… confirm the code on both screens.')
   })
+  // ---------------------------------------------------------------- automatic call link
+  // When the phone connects (or its Bluetooth comes on), make sure its Bluetooth is on and open
+  // the hands-free call link, quietly. No buttons unless it keeps failing.
+  let autoBusy = false
+  let autoFails = 0
+  // adb from the Android SDK when it isn't on PATH (apps started from the menu often lack it)
+  const ADB = [path.join(os.homedir(), 'Android', 'Sdk', 'platform-tools', 'adb'), '/usr/bin/adb'].find((p) => fs.existsSync(p)) || 'adb'
+  const adbSerial = async (): Promise<string | null> => {
+    const out = await sh(ADB, ['devices', '-l'])
+    const model = (ctx.hub.session?.device.model || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const lines = out.split('\n').slice(1).filter((l) => /\sdevice\s/.test(l + ' '))
+    const hit = lines.find((l) => model && model.includes((/model:(\S+)/.exec(l)?.[1] || '#').toLowerCase().replace(/[^a-z0-9]/g, '')))
+    return hit ? hit.split(/\s+/)[0] : null
+  }
+  const turnPhoneBtOn = async (): Promise<boolean> => {
+    // on USB with debugging allowed: switch it on directly, no taps
+    const serial = await adbSerial()
+    if (serial) {
+      await sh(ADB, ['-s', serial, 'shell', 'svc', 'bluetooth', 'enable'], 8000)
+      await sh(ADB, ['-s', serial, 'shell', 'cmd', 'bluetooth_manager', 'enable'], 8000)
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 800))
+        const info: any = await ctx.hub.request('bt.ensure', {}, 4000).catch(() => null)
+        if (info?.enabled) return true
+      }
+    }
+    // otherwise Android's one-tap "turn on Bluetooth" prompt on the phone
+    const r: any = await ctx.hub.request('bt.ensure', {}, 6000).catch(() => null)
+    return !!r?.enabled
+  }
+  const autoCallLink = async (phoneBtOn?: boolean): Promise<void> => {
+    if (autoBusy || !ctx.hub.session) return
+    autoBusy = true
+    try {
+      const s = await status(names())
+      if (!s.hfpConfigured || !s.adapter) return
+      if (phoneBtOn === false && !(await turnPhoneBtOn())) return
+      if (!s.phone?.paired) return // pairing needs the user once (Settings → Pair)
+      if (s.phone.callLink) {
+        autoFails = 0
+        return
+      }
+      await new Promise((r) => setTimeout(r, 2500)) // let the phone's Bluetooth settle
+      const r = await fixCallLink(ctx, names())
+      autoFails = r.ok ? 0 : autoFails + 1
+      ctx.emit('bt.changed', true)
+    } finally {
+      autoBusy = false
+    }
+  }
   ctx.hub.on('message', async (type, data) => {
+    if (type === 'bt.state') {
+      if (data?.on) setTimeout(() => autoCallLink(true), 1500)
+      return
+    }
     if (type !== 'bt.info' || !ctx.hub.session) return
     phoneBtName = data?.name || ''
-    // connect call audio to this phone (and only this phone) when it's already paired
-    const s = await status(names())
-    if (s.phone?.address && s.phone.paired && !s.phone.connected && s.hfpConfigured) {
-      sh('bluetoothctl', ['connect', s.phone.address], 20000)
-    }
+    autoCallLink(data?.enabled !== false)
   })
+  // keep trying now and then while linked (phone walked away and came back, etc.)
+  setInterval(() => {
+    if (ctx.hub.session && autoFails < 5) autoCallLink()
+  }, 60000)
 }

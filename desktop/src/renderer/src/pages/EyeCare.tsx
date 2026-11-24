@@ -32,13 +32,13 @@ export function EyeCare() {
   const week = days.reduce((a, d) => a + d.done, 0)
 
   return (
-    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto max-w-6xl">
+    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
       <PageHeader icon={Eye} title="Eye Care" subtitle="20 · 20 · 20: every 20 minutes, look 20 feet away for 20 seconds">
         <Button variant="soft" icon={RotateCcw} onClick={() => call('eyeReset')}>Restart timer</Button>
         <Button variant="primary" icon={Play} onClick={() => call('eyeTake')}>Break now</Button>
       </PageHeader>
 
-      <div className="grid grid-cols-[1.1fr_1fr] gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_1fr]">
         <Card strong className="relative flex items-center gap-8 overflow-hidden p-8">
           <div className="absolute -left-16 -top-16 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(53,224,255,0.20)_0%,transparent_70%)]" />
           <div className="relative">
@@ -86,7 +86,7 @@ export function EyeCare() {
           </div>
         </Card>
 
-        <Card className="col-span-2 grid grid-cols-2 gap-x-10 px-6 py-3">
+        <Card className="grid grid-cols-1 lg:col-span-2 lg:grid-cols-2 gap-x-10 px-6 py-3">
           <div className="divide-y divide-white/[0.06]">
             <Row icon={Eye} title="Eye breaks" body="Counts only time with a screen on. 5 min away counts as a rest.">
               <Toggle on={!!settings.eyeBreaks} onChange={(v) => setSetting('eyeBreaks', v)} />

@@ -39,7 +39,7 @@ export function Apps() {
   if (!connected) return <Empty icon={LayoutGrid} title="Connect your phone" body="Open your phone's apps in their own windows on this PC." />
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto w-full max-w-[1680px]">
       <PageHeader icon={LayoutGrid} title="Apps" subtitle="Each app opens in its own window and runs on its own screen, so your phone stays free">
         <div className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" />
@@ -54,7 +54,7 @@ export function Apps() {
         </Card>
       )}
       {apps === null ? (
-        <div className="grid grid-cols-6 gap-3">{Array.from({ length: 18 }).map((_, i) => <div key={i} className="shimmer h-28 rounded-2xl" />)}</div>
+        <div className="grid grid-cols-3 gap-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10">{Array.from({ length: 18 }).map((_, i) => <div key={i} className="shimmer h-28 rounded-2xl" />)}</div>
       ) : shown.length === 0 ? (
         <Empty icon={LayoutGrid} title="No apps found" body="Update the D-Connect phone app, then refresh." />
       ) : (

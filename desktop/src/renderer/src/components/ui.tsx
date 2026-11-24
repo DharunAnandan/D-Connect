@@ -148,7 +148,7 @@ export function Avatar({ name, src, size = 40 }: { name: string; src?: string; s
 
 export function PageHeader({ title, subtitle, children, icon: Icon }: { title: string; subtitle?: string; children?: ReactNode; icon?: LucideIcon }) {
   return (
-    <div className="sticky top-0 z-20 -mx-8 mb-6 flex items-end justify-between gap-4 border-b border-white/[0.04] bg-ink-900/95 px-8 pb-4 pt-2 shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]">
+    <div className="sticky top-0 z-20 -mx-6 mb-6 flex items-end justify-between gap-4 border-b border-white/[0.04] bg-ink-900/95 px-6 pb-4 pt-2 xl:-mx-8 xl:px-8 shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]">
       <div className="flex items-center gap-3.5">
         {Icon && (
           <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[linear-gradient(135deg,rgba(124,92,255,0.25),rgba(53,224,255,0.18))] text-cyan-soft ring-1 ring-white/10">

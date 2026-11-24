@@ -28,7 +28,7 @@ export function Home() {
   const storagePct = status?.storageTotal ? 1 - (status.storageFree || 0) / status.storageTotal : 0
 
   return (
-    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto max-w-6xl">
+    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
       {/* hero */}
       <Card strong className="relative mb-5 overflow-hidden p-6">
         <div className="absolute -left-20 -top-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.30)_0%,transparent_70%)]" />
@@ -54,7 +54,7 @@ export function Home() {
       </Card>
 
       {/* quick actions */}
-      <div className="mb-5 grid grid-cols-6 gap-3">
+      <div className="mb-5 grid grid-cols-3 gap-3 lg:grid-cols-6">
         {[
           { icon: Radar, label: 'Find phone', color: 'from-pink/30 to-violet/20', run: () => call('findPhone', true) },
           { icon: Clipboard, label: 'Send clipboard', color: 'from-cyan/30 to-violet/10', run: () => call('clipSendNow') },
@@ -72,7 +72,7 @@ export function Home() {
         ))}
       </div>
 
-      <div className="grid grid-cols-[1.4fr_1fr] gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr] 2xl:grid-cols-[1.6fr_1fr]">
         {/* latest notifications */}
         <Card className="p-5">
           <div className="mb-3 flex items-center justify-between">

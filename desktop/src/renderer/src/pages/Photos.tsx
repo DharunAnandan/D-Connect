@@ -52,12 +52,12 @@ export function Photos() {
   if (!connected) return <Empty icon={Image} title="Connect your phone" body="Your latest photos and screenshots appear here." />
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto w-full max-w-[1680px]">
       <PageHeader icon={Image} title="Photos" subtitle="Recent photos and screenshots from your phone">
         <Button size="sm" variant="soft" icon={RefreshCw} onClick={() => { setEnd(false); more(true) }}>Refresh</Button>
       </PageHeader>
       {items === null ? (
-        <div className="grid grid-cols-5 gap-2.5">{Array.from({ length: 15 }).map((_, i) => <div key={i} className="shimmer aspect-square rounded-2xl" />)}</div>
+        <div className="grid grid-cols-3 gap-2.5 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">{Array.from({ length: 15 }).map((_, i) => <div key={i} className="shimmer aspect-square rounded-2xl" />)}</div>
       ) : items.length === 0 ? (
         <Empty icon={Image} title="No photos" body="Allow photo access in the phone app to browse your gallery here." />
       ) : (

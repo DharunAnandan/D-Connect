@@ -83,7 +83,7 @@ export function App() {
         {!firstRun && <Sidebar route={route} go={go} />}
         <main className="relative min-w-0 flex-1 overflow-hidden">
           <AnimatePresence mode="wait">
-            <motion.div key={firstRun ? 'pair' : route} variants={page} initial="initial" animate="animate" exit="exit" className="absolute inset-0 overflow-y-auto px-8 pb-10 pt-2">
+            <motion.div key={firstRun ? 'pair' : route} variants={page} initial="initial" animate="animate" exit="exit" className="absolute inset-0 overflow-y-auto px-6 pb-10 pt-2 xl:px-8">
               <Page />
             </motion.div>
           </AnimatePresence>

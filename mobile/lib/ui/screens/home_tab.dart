@@ -54,23 +54,31 @@ class HomeTab extends StatelessWidget {
             if (app.pcPlayers.isNotEmpty) ...[const SectionTitle('Playing on your PC'), for (final p in app.pcPlayers.take(2)) _MediaCard(p)],
             if (link.connected && app.commands.isNotEmpty) ...[
               const SectionTitle('PC actions'),
-              SizedBox(
-                height: 92,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: app.commands.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (_, i) {
-                    final c = app.commands[i];
-                    return Press(
+              GridView.count(
+                padding: EdgeInsets.zero,
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.15,
+                children: [
+                  for (final c in app.commands)
+                    Press(
                       onTap: () {
                         Link.I.send('commands.run', {'id': c.id});
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${c.name} ✓'), duration: const Duration(seconds: 1)));
                       },
-                      child: Glass(padding: const EdgeInsets.all(14), child: SizedBox(width: 76, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(_cmdIcon(c.icon), color: C.violetSoft), const SizedBox(height: 8), Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))]))),
-                    );
-                  },
-                ),
+                      child: Glass(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Icon(_cmdIcon(c.icon), color: C.violetSoft),
+                          const SizedBox(height: 8),
+                          Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                        ]),
+                      ),
+                    ),
+                ],
               ),
             ],
             _EyeMini(onTap: () => onGo(2)),

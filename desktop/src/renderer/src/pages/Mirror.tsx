@@ -178,7 +178,7 @@ export function Mirror() {
 
   const on = m.state === 'on'
   return (
-    <div className="mx-auto flex h-full max-w-6xl flex-col">
+    <div className="mx-auto flex h-full w-full max-w-[1680px] flex-col">
       <PageHeader icon={MonitorSmartphone} title="Phone screen" subtitle={on ? `${m.width}×${m.height} · ${fps} fps · click to tap, scroll to swipe, type to type` : 'Mirror and control your phone with your mouse and keyboard'}>
         {!on && <Segmented value={quality} onChange={setQuality} options={[{ value: 'smooth', label: 'Smooth' }, { value: 'sharp', label: 'Sharp' }, { value: 'max', label: 'Max' }]} />}
         {on ? (

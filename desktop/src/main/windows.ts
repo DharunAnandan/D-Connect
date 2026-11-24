@@ -80,6 +80,7 @@ export function fitToastWindow(win: BrowserWindow, height: number): void {
   const W = 420
   const H = Math.min(Math.ceil(height), wa.height - 16)
   win.setBounds({ x: wa.x + wa.width - W - 8, y: wa.y + wa.height - H - 8, width: W, height: H })
+  if (!win.isVisible()) win.showInactive()
 }
 
 export function createCallWindow(): BrowserWindow {

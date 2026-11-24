@@ -308,16 +308,38 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     }
   }, 1000)
 
-  // PulseAudio also sees the phone (as a music source). Keep that off so the phone's media
-  // and notification sounds never start playing on the laptop by themselves.
-  const quietPulseCard = async (): Promise<void> => {
+  // The phone's media (Spotify, YouTube...) over Bluetooth: with "Play phone audio on this PC"
+  // on, keep its music link active and play it on this PC's speaker (a plain loopback, music
+  // role, so nothing else gets paused). Off: keep that link off so stray phone sounds never play here.
+  let mediaLoop: string | null = null
+  const phoneMedia = async (): Promise<void> => {
     const addr = (await phoneAddress())?.replace(/:/g, '_')
     if (!addr) return
     const card = `bluez_card.${addr}`
     const info = (await sh('pactl', ['list', 'cards'])).split('Name: ').find((b) => b.startsWith(card))
-    if (info && !/Active Profile: off/.test(info)) await sh('pactl', ['set-card-profile', card, 'off'])
+    if (!info) return
+    const want = !!ctx.store.get('phoneAudioOnPc')
+    const active = /Active Profile: (\S+)/.exec(info)?.[1]
+    if (!want) {
+      if (mediaLoop) await sh('pactl', ['unload-module', mediaLoop])
+      mediaLoop = null
+      if (active !== 'off') await sh('pactl', ['set-card-profile', card, 'off'])
+      return
+    }
+    if (active !== 'a2dp_source' && /a2dp_source:/.test(info)) await sh('pactl', ['set-card-profile', card, 'a2dp_source'])
+    const src = `bluez_source.${addr}.a2dp_source`
+    const loaded = mediaLoop && (await sh('pactl', ['list', 'short', 'modules'])).split('\n').some((l) => l.startsWith(mediaLoop + '\t'))
+    if (loaded) return
+    const sink = (await sh('pactl', ['get-default-sink'])).trim()
+    const id = (await sh('pactl', ['load-module', 'module-loopback', `source=${src}`, `sink=${sink}`, 'latency_msec=120', 'source_dont_move=true', 'sink_input_properties=media.role=music'])).trim()
+    mediaLoop = /^\d+$/.test(id) ? id : null
   }
-  setInterval(() => ctx.hub.session && quietPulseCard(), 5000)
+  setInterval(() => ctx.hub.session && phoneMedia(), 4000)
+  ctx.store.on('change', (k: string) => k === 'phoneAudioOnPc' && phoneMedia())
+  ctx.hub.on('disconnected', async () => {
+    if (mediaLoop) await sh('pactl', ['unload-module', mediaLoop])
+    mediaLoop = null
+  })
 
   // speakers/headsets and mics on this PC (never the phone itself)
   ctx.handle('callDevices', async () => {

@@ -47,7 +47,7 @@ export function Settings() {
   }, [])
 
   return (
-    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto max-w-4xl space-y-5">
+    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1100px] space-y-5">
       <PageHeader icon={Cog} title="Settings" subtitle={info ? `${info.name} · D-Connect ${info.version} · port ${info.port}` : ''} />
 
       <Section title="Phones" icon={Smartphone}>

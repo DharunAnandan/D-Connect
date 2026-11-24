@@ -9,7 +9,9 @@ export function notifications(ctx: Ctx, appCall: (n: PhoneNotification | null) =
   ctx.hub.on('message', (type, data) => {
     if (type === 'notif.posted') {
       const n = data as PhoneNotification
-      const isNew = !list.has(n.key)
+      // WhatsApp & co. reuse one notification per chat: a new message changes its text/time
+      const prev = list.get(n.key)
+      const isNew = !prev || (n.text !== prev.text && n.time >= prev.time)
       list.set(n.key, n)
       push()
       // Teams / WhatsApp / ... calls: the call card, not a toast

@@ -35,6 +35,8 @@ class NotifListener : NotificationListenerService() {
         val n = sbn.notification
         if (sbn.packageName == packageName) return null
         if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return null
+        // music players (Spotify, YouTube Music...) live on the PC's "On your phone" player card
+        if (n.extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) return null
         if (sbn.isOngoing && n.category != Notification.CATEGORY_CALL) return null
         val ex = n.extras
         val title = ex.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
@@ -52,7 +54,7 @@ class NotifListener : NotificationListenerService() {
             "icon" to appIcon(sbn.packageName),
             "canReply" to canReply,
             "category" to n.category, // "call" for Teams/WhatsApp/... incoming calls
-            "actions" to actions.filter { it.remoteInputs.isNullOrEmpty() }.map { it.title.toString() }.take(3)
+            "actions" to actions.filter { it.remoteInputs.isNullOrEmpty() }.map { it.title.toString() }.take(5)
         )
     }
 
