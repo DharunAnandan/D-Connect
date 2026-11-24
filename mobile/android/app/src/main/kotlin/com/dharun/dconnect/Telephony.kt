@@ -158,21 +158,27 @@ object Telephony {
                 val choice = when (action) {
                     // the PC by its Bluetooth name, and by the name this phone saved for it
                     "audio-pc" -> (listOfNotNull(target?.lowercase()) + pcNames(ctx)).distinct()
-                    "audio-phone" -> listOf("phone receiver", "receiver", "earpiece", "handset", "phone")
+                    "audio-phone" -> listOf("phone receiver", "receiver", "earpiece", "handset")
                     else -> listOf("speaker")
                 }
-                // OnePlus/most dialers: the speaker button opens a menu (Speaker / Phone receiver /
-                // the PC) when a Bluetooth device is available. Retry while the call screen opens.
+                // The dialer's audio button shows the *current* route ("Phone receiver", "Speaker",
+                // the PC's name...), so find it by id. With Bluetooth connected it opens a menu
+                // (Speaker / Phone receiver / the PC): pick from that menu, never the button itself.
+                val button = listOf("audio_button", "audioButton", "audio_route_button", "speakerButton", "speaker_button")
+                val opener = button.map { "id:${it.lowercase()}" } + listOf("audio output", "audio route", "bluetooth")
+                val skip = button.map { it.lowercase() } + listOf("audio_image", "audio_icon")
                 var tries = 0
                 fun attempt() {
                     tries++
-                    if (svc.clickByLabel(choice)) return report(action, true, "picked")
-                    if (svc.clickByLabel(listOf("audio output", "audio route", "audio", "speaker", "bluetooth"))) {
+                    if (svc.clickByLabel(choice, skip)) return report(action, true, "picked") // menu already open
+                    if (svc.clickByLabel(opener)) {
                         main.postDelayed({
-                            if (svc.clickByLabel(choice)) report(action, true, "picked from menu")
-                            else if (tries < 5) main.postDelayed({ attempt() }, 600)
-                            else report(action, false, "menu had no ${choice.joinToString("/")}: ${svc.lastScreen}")
-                        }, 700)
+                            if (svc.clickByLabel(choice, skip)) report(action, true, "picked from menu")
+                            else if (tries < 4) {
+                                svc.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK) // close a wrong menu
+                                main.postDelayed({ attempt() }, 700)
+                            } else report(action, false, "menu had no ${choice.joinToString("/")}: ${svc.lastScreen}")
+                        }, 800)
                     } else if (tries < 6) main.postDelayed({ attempt() }, 500)
                     else report(action, false, "no audio button on screen: ${svc.lastScreen}")
                 }

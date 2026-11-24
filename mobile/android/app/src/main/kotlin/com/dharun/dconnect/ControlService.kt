@@ -107,14 +107,18 @@ class ControlService : AccessibilityService() {
     // press the first button whose text or description matches (the phone's own call screen)
     var lastScreen = ""
 
-    fun clickByLabel(labels: List<String>): Boolean {
+    // labels match the text, the description, or (as "id:name") the view id; nodes whose id is in
+    // [skipIds] are ignored (e.g. the dialer's audio button, whose text is the current route)
+    fun clickByLabel(labels: List<String>, skipIds: List<String> = emptyList()): Boolean {
         val roots = windows.mapNotNull { it.root } + listOfNotNull(rootInActiveWindow)
         for (root in roots) {
             val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
             while (queue.isNotEmpty()) {
                 val n = queue.removeFirst()
                 val t = ((n.text ?: "").toString() + " " + (n.contentDescription ?: "").toString()).lowercase()
-                if (labels.any { t.trim() == it || t.contains(it) }) {
+                val id = (n.viewIdResourceName ?: "").substringAfter(":id/").lowercase()
+                val skip = id.isNotEmpty() && skipIds.any { id == it }
+                if (!skip && labels.any { if (it.startsWith("id:")) id == it.removePrefix("id:") else (t.trim() == it || t.contains(it)) }) {
                     var c: AccessibilityNodeInfo? = n
                     while (c != null && !c.isClickable) c = c.parent
                     if (c?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true) return true
