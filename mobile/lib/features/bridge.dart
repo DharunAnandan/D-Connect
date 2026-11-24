@@ -25,7 +25,8 @@ class Bridge {
         case 'notif.dismiss':
           Native.call('notifDismiss', {'key': d['key']});
         case 'notif.reply':
-          Native.call('notifReply', {'key': d['key'], 'text': d['text']});
+          final r = await Native.call<String>('notifReply', {'key': d['key'], 'text': d['text']});
+          if (m.id != null) link.reply(m, 'notif.replied', {'result': r ?? 'failed'});
         case 'notif.action':
           Native.call('notifAction', {'key': d['key'], 'index': d['index']});
         // sms

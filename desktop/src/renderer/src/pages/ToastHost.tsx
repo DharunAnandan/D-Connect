@@ -34,6 +34,16 @@ export function ToastHost() {
   const [replying, setReplying] = useState<string | null>(null)
   const [hover, setHover] = useState(false)
   const timers = useRef(new Map<string, number>())
+  const stack = useRef<HTMLDivElement>(null)
+  // Linux: the window is sized to exactly the toasts (no click-through there), so tell main
+  useEffect(() => {
+    const el = stack.current
+    if (!el) return
+    const ro = new ResizeObserver(() => call('toastSize', toasts.length ? el.scrollHeight : 0))
+    ro.observe(el)
+    call('toastSize', toasts.length ? el.scrollHeight : 0)
+    return () => ro.disconnect()
+  }, [toasts.length])
 
   const remove = (id: string): void => {
     setToasts((x) => x.filter((t) => t.id !== id))
@@ -70,7 +80,8 @@ export function ToastHost() {
   }, [toasts.length])
 
   return (
-    <div className="flex h-screen flex-col-reverse items-end gap-2.5 overflow-hidden p-3">
+    <div className="flex h-screen flex-col justify-end overflow-hidden">
+    <div ref={stack} className="flex flex-col-reverse items-end gap-2.5 p-3">
       <AnimatePresence initial={false}>
         {toasts.map((t, i) => {
           const k = KIND[t.kind] || KIND.info
@@ -106,7 +117,7 @@ export function ToastHost() {
                   <div className="truncate text-[14px] font-semibold">{t.title}</div>
                   {t.body && <div className="line-clamp-3 text-[13px] leading-snug text-white/70">{t.body}</div>}
                 </button>
-                <button onClick={() => remove(t.id)} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/40 opacity-0 transition hover:bg-white/10 hover:text-white group-hover:opacity-100">
+                <button onClick={() => remove(t.id)} title="Close" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/50 transition hover:bg-white/10 hover:text-white">
                   <X size={14} />
                 </button>
               </div>
@@ -150,6 +161,7 @@ export function ToastHost() {
           )
         })}
       </AnimatePresence>
+    </div>
     </div>
   )
 }

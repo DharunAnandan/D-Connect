@@ -13,8 +13,8 @@ import { Hub, Session } from './hub'
 import { Store, type SettingKey } from './store'
 import { Usb } from './adb'
 import { devControl } from './devcontrol'
-import { createCallWindow, createMain, createToastWindow, showEyeBreak } from './windows'
-import { notifications } from './features/notifications'
+import { createCallWindow, createMain, createToastWindow, fitToastWindow, showEyeBreak } from './windows'
+import { notifications, sendReply } from './features/notifications'
 import { messages } from './features/messages'
 import { clipboardSync } from './features/clipboard'
 import { files } from './features/files'
@@ -130,7 +130,12 @@ app.whenReady().then(async () => {
     else if (action === 'close') main.hide()
   })
   ctx.handle('openExternal', (url: string) => shell.openExternal(url))
-  ctx.handle('toastHover', (over: boolean) => toastWin?.setIgnoreMouseEvents(!over, { forward: true }))
+  ctx.handle('toastHover', (over: boolean) => {
+    if (process.platform !== 'linux') toastWin?.setIgnoreMouseEvents(!over, { forward: true })
+  })
+  ctx.handle('toastSize', (h: number) => {
+    if (toastWin && process.platform === 'linux') fitToastWindow(toastWin, h)
+  })
   ctx.handle('toastFocus', () => {
     toastWin?.setFocusable(true)
     toastWin?.focus()
@@ -141,7 +146,7 @@ app.whenReady().then(async () => {
     focusMain(route)
   })
   ctx.handle('toastReply', (t: Toast, text: string) => {
-    if (t.reply?.kind === 'notif') hub.send('notif.reply', { key: t.reply.key, text })
+    if (t.reply?.kind === 'notif' && t.reply.key) sendReply(ctx, t.reply.key, text)
     else if (t.reply?.kind === 'sms') hub.send('sms.send', { address: t.reply.address, body: text })
   })
   ctx.handle('toastAction', (id: string) => {

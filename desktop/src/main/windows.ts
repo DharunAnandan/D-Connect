@@ -62,9 +62,24 @@ export function createToastWindow(): BrowserWindow {
   })
   win.setAlwaysOnTop(true, 'pop-up-menu')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  win.setIgnoreMouseEvents(true, { forward: true })
+  // Click-through with mouse forwarding doesn't exist on Linux, so there the window is sized to
+  // exactly the toasts on screen (see fitToastWindow) and stays clickable.
+  if (process.platform !== 'linux') win.setIgnoreMouseEvents(true, { forward: true })
   load(win, 'index', '/toast')
   return win
+}
+
+// Size the toast window to its toasts, anchored bottom-right of the work area.
+export function fitToastWindow(win: BrowserWindow, height: number): void {
+  if (win.isDestroyed()) return
+  if (height <= 0) {
+    win.hide()
+    return
+  }
+  const wa = screen.getPrimaryDisplay().workArea
+  const W = 420
+  const H = Math.min(Math.ceil(height), wa.height - 16)
+  win.setBounds({ x: wa.x + wa.width - W - 8, y: wa.y + wa.height - H - 8, width: W, height: H })
 }
 
 export function createCallWindow(): BrowserWindow {

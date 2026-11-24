@@ -49,7 +49,7 @@ export function notifications(ctx: Ctx): void {
     list.clear()
     push()
   })
-  ctx.handle('notifReply', (key: string, text: string) => ctx.hub.send('notif.reply', { key, text }))
+  ctx.handle('notifReply', (key: string, text: string) => sendReply(ctx, key, text))
   ctx.handle('notifAction', (key: string, index: number) => ctx.hub.send('notif.action', { key, index }))
   ctx.handle('muteApp', (pkg: string, muted: boolean) => {
     const set = new Set(ctx.store.get('mutedApps'))
@@ -57,4 +57,19 @@ export function notifications(ctx: Ctx): void {
     else set.delete(pkg)
     ctx.store.set('mutedApps', [...set])
   })
+}
+
+const REPLY_ERRORS: Record<string, string> = {
+  'no-access': 'Turn on Notification access for D-Connect on the phone.',
+  gone: 'That notification is gone from the phone, so it can no longer be answered.',
+  'no-reply-action': "This app's notification has no reply box.",
+}
+
+// Send a reply and tell the user if the phone couldn't deliver it.
+export async function sendReply(ctx: Ctx, key: string, text: string): Promise<boolean> {
+  const r: any = await ctx.hub.request('notif.reply', { key, text }, 10000).catch(() => null)
+  const result = r?.result as string | undefined
+  if (result === 'ok') return true
+  ctx.toast({ kind: 'info', title: 'Reply not sent', body: (result && REPLY_ERRORS[result]) || `The phone couldn't send it${result ? ` (${result})` : ''}.`, ttl: 9000 })
+  return false
 }

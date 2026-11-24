@@ -101,7 +101,7 @@ object Bridge {
             // notifications
             "notifications" -> result.success(NotifListener.current())
             "notifDismiss" -> { NotifListener.dismiss(a("key") as String); result.success(null) }
-            "notifReply" -> { NotifListener.reply(a("key") as String, a("text") as String); result.success(null) }
+            "notifReply" -> result.success(NotifListener.reply(a("key") as String, a("text") as String))
             "notifAction" -> { NotifListener.action(a("key") as String, (a("index") as Number).toInt()); result.success(null) }
             // telephony
             "smsThreads" -> bg(result) { Telephony.threads(ctx) }

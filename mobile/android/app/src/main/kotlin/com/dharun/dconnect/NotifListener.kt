@@ -85,14 +85,30 @@ class NotifListener : NotificationListenerService() {
 
         fun dismiss(key: String) { try { instance?.cancelNotification(key) } catch (_: Exception) {} }
 
-        fun reply(key: String, text: String) {
-            val sbn = find(key) ?: return
-            val action = sbn.notification.actions?.firstOrNull { a -> a.remoteInputs?.any { it.allowFreeFormInput } == true } ?: return
-            val intent = Intent()
-            val bundle = Bundle()
-            for (ri in action.remoteInputs) bundle.putCharSequence(ri.resultKey, text)
-            RemoteInput.addResultsToIntent(action.remoteInputs, intent, bundle)
-            try { action.actionIntent.send(Bridge.ctx, 0, intent) } catch (_: Exception) {}
+        // Reply through the notification's own reply action (what Android Auto / watches use).
+        // Returns "ok" or why it couldn't.
+        fun reply(key: String, text: String): String {
+            if (instance == null) return "no-access"
+            val sbn = find(key) ?: return "gone"
+            val n = sbn.notification
+            val withInput = { a: Notification.Action -> a.remoteInputs?.any { it.allowFreeFormInput } == true }
+            // the normal actions first, then the ones meant for watches (WhatsApp puts one there)
+            val action = n.actions?.firstOrNull(withInput)
+                ?: Notification.WearableExtender(n).actions.firstOrNull(withInput)
+                ?: return "no-reply-action"
+            return try {
+                val intent = Intent().addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+                val bundle = Bundle()
+                for (ri in action.remoteInputs) bundle.putCharSequence(ri.resultKey, text)
+                RemoteInput.addResultsToIntent(action.remoteInputs, intent, bundle)
+                if (android.os.Build.VERSION.SDK_INT >= 28) RemoteInput.setResultsSource(intent, RemoteInput.SOURCE_FREE_FORM_INPUT)
+                action.actionIntent.send(Bridge.ctx, 0, intent)
+                android.util.Log.i("DConnect", "reply sent to ${sbn.packageName}")
+                "ok"
+            } catch (e: Exception) {
+                android.util.Log.w("DConnect", "reply failed: $e")
+                "failed: ${e.javaClass.simpleName}"
+            }
         }
 
         fun action(key: String, index: Int) {
