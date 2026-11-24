@@ -98,6 +98,9 @@ class Bridge {
           var r = await Native.map('btPair', {'address': d['address']});
           if (r['reason'] == 'permission' && await Permission.bluetoothConnect.request().isGranted) {
             link.send('bt.info', await Native.map('btInfo'));
+        // already on a call when the PC connected: show it there right away
+        final call = await Native.map('callCurrent');
+        if (call['state'] != null && call['state'] != 'idle') link.send('call.state', {...call, 'existing': true});
             r = await Native.map('btPair', {'address': d['address']});
           }
         case 'open.setting':
@@ -159,6 +162,9 @@ class Bridge {
         if (media.isNotEmpty) link.send('media.phone.state', media);
         link.send('eye.screen', {'on': true});
         link.send('bt.info', await Native.map('btInfo'));
+        // already on a call when the PC connected: show it there right away
+        final call = await Native.map('callCurrent');
+        if (call['state'] != null && call['state'] != 'idle') link.send('call.state', {...call, 'existing': true});
       } else {
         _statusTimer?.cancel();
         _statusTimer = null;

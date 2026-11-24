@@ -114,6 +114,7 @@ object Bridge {
             "callDial" -> { Telephony.dial(ctx, a("number") as String, (a("sim") as? Number)?.toInt()); result.success(null) }
             "sims" -> bg(result) { Telephony.sims(ctx) }
             "callControl" -> result.success(Telephony.control(ctx, a("action") as String, a("target") as String?))
+            "callCurrent" -> result.success(Telephony.currentCall(ctx))
             "callRouteBt" -> { Telephony.routeToBluetooth(ctx); result.success(null) }
             "callMute" -> { Telephony.mute(ctx, a("muted") == true); result.success(null) }
             // photos

@@ -181,6 +181,18 @@ object Telephony {
         } catch (_: Exception) {}
     }
 
+    // The call going on right now, if any (e.g. the PC connected in the middle of a call).
+    @SuppressLint("MissingPermission")
+    fun currentCall(ctx: Context): Map<String, Any?> {
+        KeepAliveService.current?.let { return it }
+        val st = try { ctx.getSystemService(android.telephony.TelephonyManager::class.java).callState } catch (e: Exception) { 0 }
+        return when (st) {
+            android.telephony.TelephonyManager.CALL_STATE_RINGING -> mapOf("state" to "ringing")
+            android.telephony.TelephonyManager.CALL_STATE_OFFHOOK -> mapOf("state" to "offhook", "since" to System.currentTimeMillis())
+            else -> mapOf("state" to "idle")
+        }
+    }
+
     fun mute(ctx: Context, muted: Boolean) {
         ctx.getSystemService(AudioManager::class.java).isMicrophoneMute = muted
     }

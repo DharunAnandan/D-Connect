@@ -71,6 +71,12 @@ class KeepAliveService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    companion object {
+        // the call in progress (for a PC that connects mid-call)
+        @Volatile var current: Map<String, Any?>? = null
+        @Volatile var lastNumber: String? = null
+    }
+
     private fun onSms(i: Intent) {
         val msgs = SysTelephony.Sms.Intents.getMessagesFromIntent(i) ?: return
         if (msgs.isEmpty()) return
@@ -102,6 +108,10 @@ class KeepAliveService : Service() {
         if (state == TelephonyManager.EXTRA_STATE_OFFHOOK && callSince == 0L) callSince = System.currentTimeMillis()
         if (state == TelephonyManager.EXTRA_STATE_IDLE) callSince = 0L
         lastCallState = state
-        Bridge.emit("call.state", mapOf("state" to s, "number" to number, "name" to Telephony.contactName(this, number), "since" to if (callSince > 0) callSince else null, "waiting" to waiting))
+        val m = mapOf("state" to s, "number" to (number ?: lastNumber), "name" to Telephony.contactName(this, number ?: lastNumber), "since" to if (callSince > 0) callSince else null, "waiting" to waiting)
+        if (number != null) lastNumber = number
+        if (s == "idle") lastNumber = null
+        current = if (s == "idle") null else m
+        Bridge.emit("call.state", m)
     }
 }

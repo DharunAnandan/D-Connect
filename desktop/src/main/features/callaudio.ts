@@ -47,6 +47,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   let outDev: string | null = null
   let inDev: string | null = null
   let nodesNow: { source?: PwObject; sink?: PwObject } = {}
+  let phoneWantedUntil = 0
 
   // the linked phone's Bluetooth address (by name), e.g. 18:AB:1D:B9:E5:AA
   const phoneAddress = async (): Promise<string | null> => {
@@ -66,8 +67,10 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     const props = (o: PwObject): Record<string, any> => o.info?.props || {}
     return {
       device: all.find((o) => o.type === 'PipeWire:Interface:Device' && String(props(o)['device.name'] || '').startsWith('bluez_card') && match(o)),
-      source: all.find((o) => o.type === 'PipeWire:Interface:Node' && props(o)['media.class'] === 'Audio/Source' && String(props(o)['node.name'] || '').startsWith('bluez_input') && match(o)),
-      sink: all.find((o) => o.type === 'PipeWire:Interface:Node' && props(o)['media.class'] === 'Audio/Sink' && String(props(o)['node.name'] || '').startsWith('bluez_output') && match(o))
+      // the call's audio from the phone / to the phone (PipeWire 0.3 names them bluez_input /
+      // bluez_output and labels them as streams, not devices)
+      source: all.find((o) => o.type === 'PipeWire:Interface:Node' && String(props(o)['node.name'] || '').startsWith('bluez_input') && match(o)),
+      sink: all.find((o) => o.type === 'PipeWire:Interface:Node' && String(props(o)['node.name'] || '').startsWith('bluez_output') && match(o))
     }
   }
 
@@ -108,10 +111,11 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     const alias = /Alias:\s*(.+)/.exec(await sh('bluetoothctl', ['show']))?.[1]?.trim()
     const r: any = await ctx.hub.request('call.control', { action: 'audio-pc', target: alias }, 8000).catch(() => null)
     controlOff = r?.ok === false
+    phoneWantedUntil = 0
     let n: { source?: PwObject; sink?: PwObject } = {}
-    for (let i = 0; i < 40 && !(n.source && n.sink); i++) {
+    for (let i = 0; i < 40 && !(n.source || n.sink); i++) {
       n = await pwPhone()
-      if (!(n.source && n.sink)) await wait(250)
+      if (!(n.source || n.sink)) await wait(250)
     }
     if (!n.source && !n.sink) {
       lastError = controlOff
@@ -120,25 +124,45 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
       return false
     }
     nodesNow = n
-    startCallBridges()
+    if (!bridges.length) await startCallBridges()
     return true
   }
 
-  const startCallBridges = (): void => {
+  // PipeWire only links the phone's call streams to a speaker/mic *device*, and it has none
+  // (PulseAudio owns the sound card). So D-Connect gives it two virtual ones:
+  //  - "dconnect-call-speaker": a null sink (it also drives the timing); its monitor is read by
+  //    GStreamer and played on PulseAudio (the laptop speaker or the chosen headset)
+  //  - "dconnect-call-mic": GStreamer takes PulseAudio's mic and provides it as a PipeWire source
+  // WirePlumber links the call to them by itself.
+  const virtualSpeaker = async (): Promise<number | null> => {
+    const find = async (): Promise<number | null> => (await pwDump()).find((o) => o.info?.props?.['node.name'] === 'dconnect-call-speaker')?.id ?? null
+    let id = await find()
+    if (id === null) {
+      await sh('pw-cli', ['create-node', 'adapter', '{ factory.name=support.null-audio-sink node.name=dconnect-call-speaker node.description="D-Connect call speaker" media.class=Audio/Sink object.linger=true audio.position=[ MONO ] audio.rate=16000 }'])
+      for (let i = 0; i < 10 && id === null; i++) {
+        await wait(200)
+        id = await find()
+      }
+    }
+    return id
+  }
+
+  const startCallBridges = async (): Promise<void> => {
     stopBridges()
-    const n = nodesNow
     const out = outDev ? [`device=${outDev}`] : []
     const inp = inDev ? [`device=${inDev}`] : []
-    if (n.source) startBridge(['pipewiresrc', `path=${n.source.id}`, 'do-timestamp=true', '!', 'audioconvert', '!', 'audioresample', '!', 'pulsesink', ...out, 'client-name=D-Connect call', 'latency-time=20000', 'buffer-time=80000'])
-    if (n.sink) startBridge(['pulsesrc', ...inp, 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=80000', '!', 'audioconvert', '!', 'audioresample', '!', 'pipewiresink', `path=${n.sink.id}`])
+    const spk = await virtualSpeaker()
+    if (spk !== null) startBridge(['pipewiresrc', `path=${spk}`, 'stream-properties=props,stream.capture.sink=true,node.name=dconnect-call-speaker-reader', 'do-timestamp=true', '!', 'audioconvert', '!', 'audioresample', '!', 'pulsesink', ...out, 'client-name=D-Connect call', 'latency-time=20000', 'buffer-time=80000'])
+    startBridge(['pulsesrc', ...inp, 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=80000', '!', 'audioconvert', '!', 'audioresample', '!', 'pipewiresink', 'mode=provide', 'stream-properties=props,media.class=Audio/Source,node.name=dconnect-call-mic'])
     if (muted) setTimeout(() => applyMute(), 800)
   }
 
   const toPhone = async (): Promise<void> => {
     stopBridges()
-    ctx.hub.request('call.control', { action: 'audio-phone' }, 8000).catch(() => null)
-    // with the hands-free audio link dropped, Android puts the call back on the phone
-    await setPwProfile('off')
+    phoneWantedUntil = Date.now() + 6000 // don't re-bridge while the phone moves the audio away
+    const r: any = await ctx.hub.request('call.control', { action: 'audio-phone' }, 8000).catch(() => null)
+    // no screen control: dropping the hands-free audio link puts the call back on the phone
+    if (r?.ok !== true) await setPwProfile('off')
   }
 
   const restore = async (): Promise<void> => {
@@ -171,6 +195,9 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
       here = false
       setRoute(null)
     } else if (state === 'offhook' || state === 'dialing') {
+      // a call that was already going when the PC connected: leave its audio where it is (the
+      // watcher bridges it if it's on this PC)
+      if ((data as any).existing) return
       if (prev === 'ringing' || prev === 'idle' || route === null) setRoute(here ? 'pc' : 'phone')
     }
   })
@@ -179,6 +206,32 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     state = 'idle'
     setRoute(null)
   })
+
+  let watching = false
+  setInterval(async () => {
+    if (watching || !(state === 'offhook' || state === 'dialing')) return
+    watching = true
+    try {
+      const n = await pwPhone()
+      const audioHere = !!(n.source || n.sink)
+      if (audioHere && !bridges.length && Date.now() > phoneWantedUntil) {
+        nodesNow = n
+        await startCallBridges()
+        if (route !== 'pc') {
+          route = 'pc'
+          ctx.emit('call.route', route)
+        }
+      } else if (!audioHere && bridges.length) {
+        stopBridges()
+        if (route === 'pc') {
+          route = 'phone'
+          ctx.emit('call.route', route)
+        }
+      }
+    } finally {
+      watching = false
+    }
+  }, 1000)
 
   // PulseAudio also sees the phone (as a music source). Keep that off so the phone's media
   // and notification sounds never start playing on the laptop by themselves.
@@ -207,7 +260,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   ctx.handle('setCallDevices', (out: string | null, inp: string | null) => {
     outDev = out || null
     inDev = inp || null
-    if (route === 'pc') startCallBridges()
+    if (route === 'pc' || bridges.length) startCallBridges()
   })
   ctx.handle('callRoute', () => route)
   ctx.handle('setCallRoute', (r: CallRoute) => setRoute(r))
