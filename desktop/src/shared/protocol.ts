@@ -62,6 +62,7 @@ export interface PhoneNotification {
   icon?: string // base64 png
   canReply?: boolean
   actions?: string[]
+  category?: string // 'call' for app calls (Teams, WhatsApp...)
 }
 
 // ---------------------------------------------------------------- messages / calls
@@ -88,6 +89,8 @@ export interface CallState {
   photo?: string
   since?: number
   waiting?: boolean // a second call ringing while already on one
+  app?: string // set for app calls (Teams, WhatsApp...): answered via the notification's buttons
+  key?: string
 }
 export interface CallLogEntry {
   number: string

@@ -38,11 +38,12 @@ class _EyeTabState extends State<EyeTab> {
         final left = e.leftMs;
         final mm = left ~/ 60000, ss = (left % 60000) ~/ 1000;
         final maxDay = [4, ...e.days.map((d) => d.done + d.skip + d.snooze)].reduce((a, b) => a > b ? a : b);
-        return ListView(
-          padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 14, 18, 110),
+        return PinnedPage(
+          header: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Eye Care', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.5)),
+            Text('Every 20 minutes, look 20 feet away for 20 seconds', style: TextStyle(color: C.muted)),
+          ]),
           children: [
-            const Text('Eye Care', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.5)),
-            const Text('Every 20 minutes, look 20 feet away for 20 seconds', style: TextStyle(color: C.muted)),
             const SizedBox(height: 22),
             Center(
               child: Stack(alignment: Alignment.center, children: [

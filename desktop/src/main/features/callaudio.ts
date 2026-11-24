@@ -242,6 +242,21 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
       ctx.emit('call.route', route)
     }))
 
+  // The phone reports where the call's audio really is; the card follows that.
+  let pcAddr: string | null = null
+  ctx.hub.on('message', async (type, data) => {
+    if (type !== 'call.audio' || !data) return
+    pcAddr = pcAddr || /Controller\s+([0-9A-F:]{17})/i.exec(await sh('bluetoothctl', ['show']))?.[1] || null
+    let r: CallRoute
+    if (data.route === 'speaker') r = 'speaker'
+    else if (data.route === 'bluetooth' && (!data.address || !pcAddr || String(data.address).toUpperCase() === pcAddr.toUpperCase())) r = 'pc'
+    else r = 'phone' // receiver, a wired headset, or another Bluetooth headset on the phone
+    if (r !== route) {
+      route = r
+      ctx.emit('call.route', route)
+    }
+  })
+
   ctx.hub.on('message', (type, data) => {
     if (type !== 'call.state') return
     const prev = state
@@ -264,7 +279,9 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
 
   let watching = false
   setInterval(async () => {
-    if (watching || !(state === 'offhook' || state === 'dialing')) return
+    // any time the phone sends call audio here (phone calls, and app calls like Teams that use
+    // this PC as their Bluetooth headset), bridge it
+    if (watching || !ctx.hub.session) return
     watching = true
     try {
       const n = await pwPhone()

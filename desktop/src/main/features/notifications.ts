@@ -2,7 +2,7 @@
 import type { PhoneNotification } from '@shared/protocol'
 import type { Ctx } from '../context'
 
-export function notifications(ctx: Ctx): void {
+export function notifications(ctx: Ctx, appCall: (n: PhoneNotification | null) => void = () => {}): void {
   const list = new Map<string, PhoneNotification>()
   const push = (): void => ctx.emit('notifs', [...list.values()].sort((a, b) => b.time - a.time))
 
@@ -12,6 +12,11 @@ export function notifications(ctx: Ctx): void {
       const isNew = !list.has(n.key)
       list.set(n.key, n)
       push()
+      // Teams / WhatsApp / ... calls: the call card, not a toast
+      if (n.category === 'call' && (n.actions || []).some((a) => /answer|accept|pick up|join/i.test(a))) {
+        appCall(n)
+        return
+      }
       if (isNew && ctx.store.get('notifyToasts') && !ctx.store.get('mutedApps').includes(n.pkg)) {
         ctx.toast({
           id: 'n:' + n.key,
@@ -25,6 +30,7 @@ export function notifications(ctx: Ctx): void {
         })
       }
     } else if (type === 'notif.removed') {
+      if (list.get(data.key)?.category === 'call') appCall({ key: data.key } as PhoneNotification)
       list.delete(data.key)
       push()
     } else if (type === 'notif.all') {

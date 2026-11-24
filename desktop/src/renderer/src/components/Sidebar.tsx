@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
-import { call } from '@/lib/api'
-import { Bell, Check, ChevronsUpDown, Eye, FolderUp, Home, Image, MessageSquare, MonitorSmartphone, Phone, Settings, Sparkles } from 'lucide-react'
+import { call, useLive } from '@/lib/api'
+import { Bell, Bluetooth, Check, ChevronsUpDown, Eye, FolderUp, Home, Image, MessageSquare, MonitorSmartphone, Phone, Settings, Sparkles } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { spring } from '@/theme/motion'
 import { BatteryPill } from './Battery'
@@ -21,6 +21,7 @@ export const NAV = [
 export function Sidebar({ route, go }: { route: string; go: (r: string) => void }) {
   const { conn, status, notifs, eye, devices } = useApp()
   const [open, setOpen] = useState(false)
+  const [bt] = useLive<{ connected: boolean; callLink: boolean }>('btLink', 'btlink', { connected: false, callLink: false })
   const many = devices.length > 1
   return (
     <aside className="flex w-[232px] shrink-0 flex-col px-3 pb-4">
@@ -42,6 +43,11 @@ export function Sidebar({ route, go }: { route: string; go: (r: string) => void 
           <div className="mt-3 flex items-center gap-2">
             <BatteryPill level={status.battery} charging={status.charging} />
             {status.network && <span className="rounded-full bg-white/5 px-2 py-1 text-[10.5px] font-medium text-white/60">{status.network === 'wifi' ? 'Wi-Fi' : status.carrier || 'Mobile'}</span>}
+            {bt.connected && (
+              <span title={bt.callLink ? 'Bluetooth: calls can play on this PC' : 'Bluetooth connected'} className={`grid h-[22px] w-[22px] place-items-center rounded-full ${bt.callLink ? 'bg-cyan/15 text-cyan-soft' : 'bg-white/5 text-white/50'}`}>
+                <Bluetooth size={11} />
+              </span>
+            )}
           </div>
         )}
       </motion.div>

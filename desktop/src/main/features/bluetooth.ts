@@ -2,7 +2,7 @@
 // so call audio plays through the laptop's speakers and mic. Needs PipeWire with the hfp_hf
 // role (Ubuntu 22.04 ships PulseAudio, which can't do it without oFono). This module reports
 // what's there, pairs/connects through BlueZ and writes the WirePlumber config.
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -250,11 +250,37 @@ export function bluetooth(ctx: Ctx): void {
     await sh('bluetoothctl', ['discoverable', 'on'])
     const address = /Controller\s+([0-9A-F:]{17})/i.exec(await sh('bluetoothctl', ['show']))?.[1]
     if (!address) return { ok: false, message: 'No Bluetooth adapter on this PC.' }
+    // Accept the pairing on this side ourselves (no desktop dialog to miss): a temporary
+    // Bluetooth agent that says yes, for the next 90 seconds only.
+    startAgent()
     ctx.hub.send('bt.pair', { address })
-    ctx.emit('bt.progress', 'Confirm the pairing code on your phone and on this PC…')
+    ctx.emit('bt.progress', 'Confirm the pairing on your phone…')
     return { ok: true }
   })
+  let agent: import('child_process').ChildProcessWithoutNullStreams | null = null
+  let agentTimer: NodeJS.Timeout | null = null
+  const stopAgent = (): void => {
+    if (agentTimer) clearTimeout(agentTimer)
+    agent?.stdin.write('quit\n')
+    setTimeout(() => agent?.kill(), 500)
+    agent = null
+  }
+  const startAgent = (): void => {
+    stopAgent()
+    const p = spawn('bluetoothctl', [], { stdio: 'pipe' })
+    agent = p
+    p.on('error', () => {})
+    p.stdout.on('data', (d: Buffer) => {
+      const t = d.toString()
+      // "Confirm passkey 123456 (yes/no):", "Authorize service ... (yes/no):", "Accept pairing (yes/no):"
+      if (/\(yes\/no\)/i.test(t)) p.stdin.write('yes\n')
+    })
+    p.stdin.write('power on\nagent NoInputNoOutput\ndefault-agent\npairable on\ndiscoverable on\n')
+    agentTimer = setTimeout(stopAgent, 90000)
+  }
+
   const finishPairing = async (): Promise<void> => {
+    stopAgent()
     for (let i = 0; i < 10; i++) {
       const s = await status(names())
       if (s.phone?.address && s.phone.paired) {
@@ -275,6 +301,23 @@ export function bluetooth(ctx: Ctx): void {
   ctx.hub.on('disconnected', () => (phoneBtName = ''))
   // Open the call link: the phone re-reads this PC's capabilities, then the PC connects.
   ctx.handle('btFixCallLink', () => fixCallLink(ctx, names()))
+  let link = { connected: false, callLink: false }
+  const pollLink = async (): Promise<void> => {
+    if (!ctx.hub.session) return
+    const st = await status(names()).catch(() => null)
+    const next = { connected: !!st?.phone?.connected, callLink: !!st?.phone?.callLink }
+    if (next.connected !== link.connected || next.callLink !== link.callLink) {
+      link = next
+      ctx.emit('btlink', link)
+    }
+  }
+  setInterval(pollLink, 12000)
+  ctx.hub.on('connected', () => setTimeout(pollLink, 2000))
+  ctx.hub.on('disconnected', () => {
+    link = { connected: false, callLink: false }
+    ctx.emit('btlink', link)
+  })
+  ctx.handle('btLink', () => link)
   ctx.handle('btConnect', async (address: string) => {
     await sh('bluetoothctl', ['power', 'on'])
     const out = await sh('bluetoothctl', ['connect', address], 20000)

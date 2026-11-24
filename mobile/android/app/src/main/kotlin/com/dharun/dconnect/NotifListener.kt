@@ -51,6 +51,7 @@ class NotifListener : NotificationListenerService() {
             "time" to sbn.postTime,
             "icon" to appIcon(sbn.packageName),
             "canReply" to canReply,
+            "category" to n.category, // "call" for Teams/WhatsApp/... incoming calls
             "actions" to actions.filter { it.remoteInputs.isNullOrEmpty() }.map { it.title.toString() }.take(3)
         )
     }

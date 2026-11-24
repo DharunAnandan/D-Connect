@@ -77,6 +77,51 @@ class KeepAliveService : Service() {
         @Volatile var lastNumber: String? = null
     }
 
+    // Report where the call's audio really is (the PC over Bluetooth, the receiver, the
+    // loudspeaker), so the PC's call card shows the truth even when it's changed on the phone.
+    private val routeHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var lastRoute: String? = null
+    private val routeTick = object : Runnable {
+        override fun run() {
+            val r = currentRoute()
+            if (r != lastRoute) {
+                lastRoute = r
+                Bridge.emit("call.audio", r)
+            }
+            routeHandler.postDelayed(this, 1000)
+        }
+    }
+
+    private fun currentRoute(): Map<String, Any?> {
+        val am = getSystemService(android.media.AudioManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            val d = am.communicationDevice
+            return when (d?.type) {
+                android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> mapOf("route" to "bluetooth", "address" to d.address)
+                android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> mapOf("route" to "speaker")
+                android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET, android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES, android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> mapOf("route" to "headset")
+                else -> mapOf("route" to "receiver")
+            }
+        }
+        @Suppress("DEPRECATION")
+        return when {
+            am.isBluetoothScoOn -> mapOf("route" to "bluetooth")
+            am.isSpeakerphoneOn -> mapOf("route" to "speaker")
+            else -> mapOf("route" to "receiver")
+        }
+    }
+
+    private fun watchRoute() {
+        routeHandler.removeCallbacks(routeTick)
+        lastRoute = null
+        routeHandler.post(routeTick)
+    }
+
+    private fun stopRouteWatch() {
+        routeHandler.removeCallbacks(routeTick)
+        lastRoute = null
+    }
+
     private fun onSms(i: Intent) {
         val msgs = SysTelephony.Sms.Intents.getMessagesFromIntent(i) ?: return
         if (msgs.isEmpty()) return
@@ -107,6 +152,7 @@ class KeepAliveService : Service() {
         val waiting = state == TelephonyManager.EXTRA_STATE_RINGING && callSince > 0L // a second call while on one
         if (state == TelephonyManager.EXTRA_STATE_OFFHOOK && callSince == 0L) callSince = System.currentTimeMillis()
         if (state == TelephonyManager.EXTRA_STATE_IDLE) callSince = 0L
+        if (state == TelephonyManager.EXTRA_STATE_OFFHOOK) watchRoute() else stopRouteWatch()
         lastCallState = state
         val m = mapOf("state" to s, "number" to (number ?: lastNumber), "name" to Telephony.contactName(this, number ?: lastNumber), "since" to if (callSince > 0) callSince else null, "waiting" to waiting)
         if (number != null) lastNumber = number

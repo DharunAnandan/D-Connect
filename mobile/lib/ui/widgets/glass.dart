@@ -127,3 +127,25 @@ class SectionTitle extends StatelessWidget {
         ]),
       );
 }
+
+// Title pinned at the top; only the content under it scrolls.
+class PinnedPage extends StatelessWidget {
+  final Widget header;
+  final List<Widget> children;
+  const PinnedPage({super.key, required this.header, required this.children});
+  @override
+  Widget build(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(padding: EdgeInsets.fromLTRB(18, top + 14, 18, 8), child: header),
+      Expanded(
+        child: ShaderMask(
+          // content fades out under the title instead of cutting off hard
+          shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black], stops: [0, .04]).createShader(r),
+          blendMode: BlendMode.dstIn,
+          child: ListView(padding: const EdgeInsets.fromLTRB(18, 8, 18, 110), children: children),
+        ),
+      ),
+    ]);
+  }
+}

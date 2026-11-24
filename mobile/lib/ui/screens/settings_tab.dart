@@ -53,11 +53,12 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
     bool ok(String k) => _runtime[k]?.isGranted == true;
     return ListenableBuilder(
       listenable: Link.I,
-      builder: (context, _) => ListView(
-        padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 14, 18, 110),
+      builder: (context, _) => PinnedPage(
+        header: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Settings', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.5)),
+          Text('Give D-Connect what each feature needs', style: TextStyle(color: C.muted)),
+        ]),
         children: [
-          const Text('Settings', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.5)),
-          const Text('Give D-Connect what each feature needs', style: TextStyle(color: C.muted)),
           const SectionTitle('Linked PC'),
           Glass(
             child: Row(children: [

@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
-import { Minus, Square, X } from 'lucide-react'
-import { call } from '@/lib/api'
+import { Bluetooth, Minus, Square, X } from 'lucide-react'
+import { call, useLive } from '@/lib/api'
 import { useApp } from '@/lib/store'
 
 export function TitleBar() {
   const conn = useApp((s) => s.conn)
+  const [bt] = useLive<{ connected: boolean; callLink: boolean }>('btLink', 'btlink', { connected: false, callLink: false })
   return (
     <div className="drag flex h-11 shrink-0 items-center justify-between pl-5 pr-2">
       <div className="flex items-center gap-2.5">
@@ -19,6 +20,17 @@ export function TitleBar() {
           <span className={`h-1.5 w-1.5 rounded-full ${conn.connected ? 'bg-mint shadow-[0_0_8px_#3ddc97]' : 'bg-white/30'}`} />
           {conn.connected ? `${conn.via === 'usb' ? 'USB' : 'Wi-Fi'}${conn.rtt ? ` · ${conn.rtt} ms` : ''}` : 'Offline'}
         </motion.span>
+        {conn.connected && bt.connected && (
+          <motion.span
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            title={bt.callLink ? 'Bluetooth: calls can play on this PC' : 'Bluetooth connected'}
+            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${bt.callLink ? 'bg-cyan/10 text-cyan-soft' : 'bg-white/5 text-white/45'}`}
+          >
+            <Bluetooth size={11} />
+            {bt.callLink ? 'Calls' : 'BT'}
+          </motion.span>
+        )}
       </div>
       <div className="no-drag flex items-center">
         {[

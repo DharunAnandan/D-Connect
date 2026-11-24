@@ -129,6 +129,7 @@ class Bridge {
         case 'notif.removed':
         case 'sms.received':
         case 'call.state':
+        case 'call.audio':
         case 'media.phone.state':
           link.send(type!, data);
         case 'mirror.control':

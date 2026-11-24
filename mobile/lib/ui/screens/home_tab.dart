@@ -24,11 +24,9 @@ class HomeTab extends StatelessWidget {
       builder: (context, _) {
         final link = Link.I;
         final app = AppState.I;
-        return ListView(
-          padding: EdgeInsets.fromLTRB(18, MediaQuery.of(context).padding.top + 14, 18, 110),
+        return PinnedPage(
+          header: _Header(),
           children: [
-            _Header(),
-            const SizedBox(height: 16),
             _PcCard().animate().fadeIn(duration: 400.ms).slideY(begin: .08, curve: M.ease),
             if (!link.connected && !link.standby) ...[
               const SizedBox(height: 4),

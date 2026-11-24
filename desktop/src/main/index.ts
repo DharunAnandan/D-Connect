@@ -180,9 +180,61 @@ app.whenReady().then(async () => {
   ctx.handle('lastCall', () => lastCall)
 
   // ---------------------------------------------------------------- features
-  notifications(ctx)
+  // App calls (Teams, WhatsApp...) ring as notifications: show them on the call card and answer
+  // or decline with the notification's own buttons.
+  let appCallKey: string | null = null
+  let appCallActions: string[] = []
+  notifications(ctx, (n) => {
+    if (!n || !n.actions) {
+      if (n && n.key === appCallKey) {
+        appCallKey = null
+        closeCall()
+      }
+      return
+    }
+    appCallKey = n.key
+    appCallActions = n.actions
+    openCall({ state: 'ringing', name: n.title, number: n.app, app: n.app, key: n.key })
+    for (const w of allWindows()) w.webContents.send('evt', 'call', lastCall)
+  })
+  const pressAppCall = (re: RegExp): boolean => {
+    if (!appCallKey) return false
+    const i = appCallActions.findIndex((a) => re.test(a))
+    if (i < 0) return false
+    hub.send('notif.action', { key: appCallKey, index: i })
+    return true
+  }
   const audio = callAudio(ctx)
   messages(ctx, openCall, closeCall, audio.answeredHere, audio.setMuted)
+  {
+    const answer = handlers.get('callAnswer')!
+    const reject = handlers.get('callReject')!
+    ctx.handle('callAnswer', () => {
+      if (pressAppCall(/answer|accept|pick up|join/i)) {
+        audio.answeredHere()
+        lastCall = { ...lastCall, state: 'offhook', since: Date.now() }
+        for (const w of allWindows()) w.webContents.send('evt', 'call', lastCall)
+        return
+      }
+      return answer()
+    })
+    ctx.handle('callReject', () => {
+      if (pressAppCall(/decline|reject|dismiss|ignore/i)) {
+        appCallKey = null
+        closeCall()
+        return
+      }
+      return reject()
+    })
+    ctx.handle('callEnd', () => {
+      if (appCallKey && pressAppCall(/hang up|end|leave/i)) {
+        appCallKey = null
+        closeCall()
+        return
+      }
+      return hub.send('call.end')
+    })
+  }
   clipboardSync(ctx)
   const f = files(ctx)
   photos(ctx, f.onPhoto)
