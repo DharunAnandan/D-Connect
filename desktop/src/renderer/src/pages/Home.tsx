@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Bell, Clipboard, Eye, FolderUp, Link2, MessageSquare, MonitorSmartphone, Music2, Pause, Play, Radar, SkipBack, SkipForward, Wifi } from 'lucide-react'
+import { Bell, Clipboard, Laptop, Smartphone, Eye, FolderUp, Link2, MessageSquare, MonitorSmartphone, Music2, Pause, Play, Radar, SkipBack, SkipForward, Wifi } from 'lucide-react'
 import { ConnectScene } from '@/components/ConnectScene'
 import { Avatar, Button, Card, Pill, Ring } from '@/components/ui'
 import { call } from '@/lib/api'
@@ -8,7 +8,7 @@ import { useApp } from '@/lib/store'
 import { list } from '@/theme/motion'
 
 export function Home() {
-  const { conn, status, notifs, eye, eyeStats, phoneMedia, info, go: nav } = useApp()
+  const { conn, status, notifs, eye, eyeStats, phoneMedia, info, go: nav, settings, setSetting } = useApp()
 
   if (!conn.connected) {
     return (
@@ -128,7 +128,25 @@ export function Home() {
               </div>
             </div>
             {phoneMedia && (
-              <div className="relative mt-4 flex justify-center gap-2">
+              <div className="relative mt-3 flex justify-center">
+                <div className="flex rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
+                  {[
+                    { v: true, label: 'This PC', I: Laptop },
+                    { v: false, label: 'Phone', I: Smartphone }
+                  ].map(({ v, label, I }) => {
+                    const on = (settings.phoneAudioOnPc !== false) === v
+                    return (
+                      <button key={label} onClick={() => setSetting('phoneAudioOnPc', v)} className={`relative flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${on ? 'text-ink-950' : 'text-white/60 hover:text-white'}`}>
+                        {on && <motion.span layoutId="media-out" className="absolute inset-0 rounded-full bg-mint" transition={{ type: 'spring', stiffness: 500, damping: 34 }} />}
+                        <span className="relative flex items-center gap-1.5"><I size={12} /> {label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            {phoneMedia && (
+              <div className="relative mt-3 flex justify-center gap-2">
                 <MediaBtn icon={SkipBack} onClick={() => call('mediaPhoneCmd', 'prev')} />
                 <MediaBtn icon={phoneMedia.playing ? Pause : Play} big onClick={() => call('mediaPhoneCmd', 'toggle')} />
                 <MediaBtn icon={SkipForward} onClick={() => call('mediaPhoneCmd', 'next')} />

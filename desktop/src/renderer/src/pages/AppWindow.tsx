@@ -11,7 +11,6 @@ export function AppWindow() {
   const canvas = useRef<HTMLCanvasElement>(null)
   const [state, setState] = useState<{ state: 'starting' | 'on' | 'ended'; label?: string; message?: string }>({ state: 'starting' })
   const [label, setLabel] = useState('')
-  const [ratio, setRatio] = useState(720 / 1520)
 
   useEffect(() => {
     call('appwinInfo', id).then((i) => {
@@ -19,7 +18,7 @@ export function AppWindow() {
       setLabel(i.label)
       if (i.state === 'on') setState({ state: 'on', label: i.label })
     })
-    const dec = new StreamDecoder(() => canvas.current, (w, h) => setRatio(w / h))
+    const dec = new StreamDecoder(() => canvas.current)
     const offV = dc.onAppVideo((h, p) => dec.push(h, p))
     const offS = dc.on('appwin.state', (s) => {
       setState(s)
@@ -32,9 +31,16 @@ export function AppWindow() {
     }
   }, [id])
 
+  // the picture is scaled to fit (object-contain): map the pointer into the picture itself
   const pos = (e: React.PointerEvent | React.WheelEvent): { x: number; y: number } => {
-    const r = canvas.current!.getBoundingClientRect()
-    return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) }
+    const c = canvas.current!
+    const r = c.getBoundingClientRect()
+    const scale = Math.min(r.width / (c.width || 1), r.height / (c.height || 1))
+    const w = (c.width || 1) * scale
+    const h = (c.height || 1) * scale
+    const left = r.left + (r.width - w) / 2
+    const top = r.top + (r.height - h) / 2
+    return { x: Math.min(1, Math.max(0, (e.clientX - left) / w)), y: Math.min(1, Math.max(0, (e.clientY - top) / h)) }
   }
   const down = useRef(false)
   const last = useRef(0)
@@ -90,6 +96,11 @@ export function AppWindow() {
         </div>
         <div className="flex-1 truncate text-center text-[12.5px] font-semibold text-white/80">{label || 'Phone app'}</div>
         <div className="no-drag flex items-center">
+          {(['s', 'm', 'l'] as const).map((z) => (
+            <button key={z} title={{ s: 'Small', m: 'Medium', l: 'Large' }[z]} onClick={() => call('appwinSize', id, z)} className="grid h-7 w-6 place-items-center rounded-lg text-[10px] font-bold uppercase text-white/45 hover:bg-white/10 hover:text-white">
+              {z}
+            </button>
+          ))}
           <button title="Minimize" onClick={() => call('appwinMinimize', id)} className="grid h-7 w-8 place-items-center rounded-lg text-white/50 hover:bg-white/10 hover:text-white">
             <Minus size={14} />
           </button>
@@ -98,7 +109,7 @@ export function AppWindow() {
           </button>
         </div>
       </div>
-      <div className="relative grid min-h-0 flex-1 place-items-center bg-black">
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
         <canvas
           ref={canvas}
           tabIndex={0}
@@ -108,8 +119,7 @@ export function AppWindow() {
           onContextMenu={(e) => e.preventDefault()}
           onWheel={(e) => input({ t: 'scroll', ...pos(e), dy: e.deltaY })}
           onKeyDown={onKey}
-          style={{ aspectRatio: String(ratio) }}
-          className="max-h-full max-w-full cursor-default outline-none"
+          className="absolute inset-0 h-full w-full cursor-default object-contain outline-none"
         />
         <AnimatePresence>
           {state.state !== 'on' && (

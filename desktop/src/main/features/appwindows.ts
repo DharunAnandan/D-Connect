@@ -11,7 +11,7 @@ import crypto from 'crypto'
 import fs from 'fs'
 import net from 'net'
 import path from 'path'
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, screen } from 'electron'
 import type { Ctx } from '../context'
 
 const SERVER_VERSION = '3.3.4'
@@ -152,6 +152,7 @@ export function appWindows(ctx: Ctx): void {
       minHeight: 520,
       title: label,
       frame: false,
+      resizable: true,
       backgroundColor: '#05070f',
       webPreferences: { preload: PRELOAD, sandbox: false }
     })
@@ -162,6 +163,8 @@ export function appWindows(ctx: Ctx): void {
     const w: AppWin = { id, pkg, label, win, server: null, video: null, control: null, port, serial, width: 0, height: 0 }
     wins.set(id, w)
     win.on('closed', () => close(id))
+    // keep the phone's proportions when resizing (plus the 40 px title bar)
+    win.setAspectRatio(720 / 1520, { width: 0, height: 40 })
 
     const server = spawn(adbBin(), [
       '-s', serial, 'shell',
@@ -308,6 +311,17 @@ export function appWindows(ctx: Ctx): void {
   })
   ctx.handle('appwinClose', (id: string) => close(id))
   ctx.handle('appwinMinimize', (id: string) => wins.get(id)?.win.minimize())
+  // Small / Medium / Large, keeping the phone's shape
+  ctx.handle('appwinSize', (id: string, size: 's' | 'm' | 'l') => {
+    const w = wins.get(id)
+    if (!w) return
+    const h = { s: 640, m: 820, l: 1000 }[size]
+    const area = screen.getDisplayMatching(w.win.getBounds()).workArea
+    const H = Math.min(h, area.height - 20)
+    const W = Math.round((H - 40) * (720 / 1520))
+    const b = w.win.getBounds()
+    w.win.setBounds({ x: Math.max(area.x, Math.min(b.x, area.x + area.width - W)), y: Math.max(area.y, Math.min(b.y, area.y + area.height - H)), width: W, height: H }, true)
+  })
   ctx.handle('appwinInfo', (id: string) => {
     const w = wins.get(id)
     return w ? { label: w.label, pkg: w.pkg, width: w.width, height: w.height, state: w.width ? 'on' : 'starting' } : null
