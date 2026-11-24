@@ -1,6 +1,6 @@
 // Incoming / ongoing call: a floating card with a pulsing avatar, answer and decline.
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Mic, MicOff, Pause, Phone, PhoneOff, Repeat, Smartphone, Volume2 } from 'lucide-react'
+import { Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Maximize2, Mic, MicOff, Minimize2, Pause, Phone, PhoneOff, Repeat, Smartphone, Volume2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { CallState } from '@shared/protocol'
 import { Avatar } from '@/components/ui'
@@ -14,6 +14,14 @@ export function CallCard() {
   const [route, setRoute] = useState<'pc' | 'phone' | 'speaker' | null>(null)
   const [switching, setSwitching] = useState<'pc' | 'phone' | 'speaker' | null>(null)
   const [hint, setHint] = useState('')
+  const [compact, setCompact] = useState(false)
+  const setSize = (on: boolean): void => {
+    setCompact(on)
+    call('callCompact', on)
+  }
+  useEffect(() => {
+    if (c.state === 'idle' || c.state === 'ringing') setCompact(false) // ringing always shows in full
+  }, [c.state])
   const [devs, setDevs] = useState<{ outputs: { name: string; label: string }[]; inputs: { name: string; label: string }[]; out: string | null; in: string | null } | null>(null)
   useEffect(() => {
     if (route !== 'pc') return
@@ -64,6 +72,37 @@ export function CallCard() {
 
   const name = c.name || c.number || (c.state === 'ringing' ? 'Incoming call' : 'Ongoing call')
   const live = c.state === 'offhook' || c.state === 'dialing'
+  if (compact && live) {
+    return (
+      <div className="flex h-screen items-start p-2">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-strong drag flex w-full items-center gap-2.5 rounded-[22px] py-2 pl-2 pr-2 text-white"
+        >
+          <Avatar name={name} src={c.photo ? `data:image/jpeg;base64,${c.photo}` : undefined} size={40} />
+          <button className="no-drag min-w-0 flex-1 text-left" onClick={() => setSize(false)} title="Show the full call card">
+            <div className="truncate text-[13px] font-semibold">{name}</div>
+            <div className="flex items-center gap-1.5 text-[11px] text-mint">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-mint" />
+              {c.since ? duration((Date.now() - c.since) / 1000) : 'On call'}
+              {route === 'pc' ? ' · on this PC' : route === 'speaker' ? ' · phone speaker' : ''}
+            </div>
+          </button>
+          <button title={muted ? 'Unmute' : 'Mute'} onClick={() => { setMuted(!muted); call('callMute', !muted) }} className={`no-drag grid h-9 w-9 place-items-center rounded-full ${muted ? 'bg-rose text-white' : 'bg-white/10 hover:bg-white/15'}`}>
+            {muted ? <MicOff size={16} /> : <Mic size={16} />}
+          </button>
+          <button title="End call" onClick={() => call('callEnd')} className="no-drag grid h-9 w-9 place-items-center rounded-full bg-rose">
+            <PhoneOff size={16} />
+          </button>
+          <button title="Expand" onClick={() => setSize(false)} className="no-drag grid h-9 w-7 place-items-center rounded-full text-white/60 hover:text-white">
+            <Maximize2 size={14} />
+          </button>
+        </motion.div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen items-start justify-center p-4">
       <AnimatePresence>
@@ -76,6 +115,11 @@ export function CallCard() {
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
             className="glass-strong drag relative w-full overflow-hidden rounded-[30px] px-6 pb-7 pt-8 text-center text-white"
           >
+            {live && (
+              <button title="Minimise" onClick={() => setSize(true)} className="no-drag absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-white/[0.06] text-white/60 hover:bg-white/[0.12] hover:text-white">
+                <Minimize2 size={14} />
+              </button>
+            )}
             <div className="absolute -left-10 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(61,220,151,0.25)_0%,transparent_70%)]" />
             <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.30)_0%,transparent_70%)]" />
             <div className="relative mx-auto grid h-32 w-32 place-items-center">

@@ -2,7 +2,7 @@
 import os from 'os'
 import path from 'path'
 import fs from 'fs'
-import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, powerMonitor, session, shell, Tray } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, powerMonitor, screen, session, shell, Tray } from 'electron'
 import QRCode from 'qrcode'
 import { pairUri, type CallState, type EyeResult } from '@shared/protocol'
 import { loadIdentity } from './cert'
@@ -179,6 +179,13 @@ app.whenReady().then(async () => {
     setTimeout(() => !w.isDestroyed() && lastCall.state === 'idle' && w.destroy(), 700)
   }
   ctx.handle('lastCall', () => lastCall)
+  // the call card can shrink to a small bar in the corner and grow back
+  ctx.handle('callCompact', (on: boolean) => {
+    if (!callWin || callWin.isDestroyed()) return
+    const wa = screen.getPrimaryDisplay().workArea
+    const [W, H] = on ? [340, 84] : [380, 660]
+    callWin.setBounds({ x: wa.x + wa.width - W - 24, y: wa.y + 24, width: W, height: H })
+  })
 
   // ---------------------------------------------------------------- features
   // App calls (Teams, WhatsApp...) ring as notifications: show them on the call card and answer
