@@ -41,6 +41,24 @@ object MediaSessions {
 
     private fun push() = Bridge.emit("media.phone.state", state(Bridge.ctx))
 
+    private fun mediaKey(ctx: Context, cmd: String) {
+        val code = when (cmd) {
+            "play" -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY
+            "pause" -> android.view.KeyEvent.KEYCODE_MEDIA_PAUSE
+            "toggle" -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
+            "next" -> android.view.KeyEvent.KEYCODE_MEDIA_NEXT
+            "prev" -> android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS
+            "volup", "voldown" -> {
+                ctx.getSystemService(android.media.AudioManager::class.java).adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, if (cmd == "volup") android.media.AudioManager.ADJUST_RAISE else android.media.AudioManager.ADJUST_LOWER, 0)
+                return
+            }
+            else -> return
+        }
+        val am = ctx.getSystemService(android.media.AudioManager::class.java)
+        am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, code))
+        am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, code))
+    }
+
     fun state(ctx: Context): Map<String, Any?> {
         val c = watched ?: active(ctx) ?: return emptyMap()
         val md = c.metadata ?: return emptyMap()
@@ -58,7 +76,9 @@ object MediaSessions {
     }
 
     fun command(ctx: Context, cmd: String) {
-        val c = watched ?: active(ctx) ?: return
+        // Without notification access there is no media session to talk to: press the media
+        // buttons instead (like a headset), which reaches whatever app is playing.
+        val c = watched ?: active(ctx) ?: return mediaKey(ctx, cmd)
         val t = c.transportControls
         when (cmd) {
             "play" -> t.play()

@@ -12,6 +12,7 @@ export function CallCard() {
   const [c, setC] = useState<CallState>({ state: 'idle' })
   const [muted, setMuted] = useState(false)
   const [route, setRoute] = useState<'pc' | 'phone' | 'speaker' | null>(null)
+  const [switching, setSwitching] = useState<'pc' | 'phone' | 'speaker' | null>(null)
   const [hint, setHint] = useState('')
   const [devs, setDevs] = useState<{ outputs: { name: string; label: string }[]; inputs: { name: string; label: string }[]; out: string | null; in: string | null } | null>(null)
   useEffect(() => {
@@ -40,7 +41,10 @@ export function CallCard() {
   }
   useEffect(() => {
     call('callRoute').then(setRoute)
-    return dc.on('call.route', setRoute)
+    return dc.on('call.route', (r) => {
+      setRoute(r)
+      setSwitching(null)
+    })
   }, [])
   const [, tick] = useState(0)
   useEffect(() => {
@@ -112,8 +116,17 @@ export function CallCard() {
             {live && (
               <div className="no-drag relative mx-auto mt-4 flex w-fit rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
                 {(['pc', 'phone', 'speaker'] as const).map((r) => (
-                  <button key={r} onClick={() => call('setCallRoute', r)} className={`relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${route === r ? 'text-ink-950' : 'text-white/60 hover:text-white'}`}>
-                    {route === r && <motion.span layoutId="route" transition={{ type: 'spring', stiffness: 500, damping: 34 }} className="absolute inset-0 rounded-full bg-mint" />}
+                  <button
+                    key={r}
+                    onClick={() => {
+                      if ((switching || route) === r) return
+                      setSwitching(r) // highlight at once; the real route arrives when the phone has switched
+                      call('setCallRoute', r)
+                      setTimeout(() => setSwitching((x) => (x === r ? null : x)), 12000)
+                    }}
+                    className={`relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${(switching || route) === r ? 'text-ink-950' : 'text-white/60 hover:text-white'}`}
+                  >
+                    {(switching || route) === r && <motion.span layoutId="route" transition={{ type: 'spring', stiffness: 500, damping: 34 }} className={`absolute inset-0 rounded-full ${switching === r ? 'animate-pulse bg-mint/70' : 'bg-mint'}`} />}
                     <span className="relative flex items-center gap-1.5">{r === 'pc' ? <Laptop size={13} /> : r === 'phone' ? <Smartphone size={13} /> : <Volume2 size={13} />}{r === 'pc' ? 'This PC' : r === 'phone' ? 'Receiver' : 'Speaker'}</span>
                   </button>
                 ))}

@@ -85,6 +85,12 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
 
   const stopBridges = (): void => {
     for (const b of bridges) b.kill()
+    // unload this bridge's voice processing (not a newer one started right after)
+    const mod = ecModule
+    if (bridges.length && mod) {
+      ecModule = null
+      setTimeout(() => sh('pactl', ['unload-module', mod]), 300)
+    }
     bridges = []
   }
 
@@ -140,7 +146,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     const args = [
       `tunnel.mode=${mode}`,
       `pulse.server.address="${sock}"`,
-      'pulse.latency=40',
+      `pulse.latency=${mode === 'playback' ? 90 : 60}`,
       'audio.rate=16000',
       'audio.channels=1',
       'audio.position=[ MONO ]',
@@ -153,13 +159,46 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     bridges.push(p)
   }
 
+  // PulseAudio's WebRTC voice processing (as in video-call apps): background noise suppressed,
+  // the caller's own voice coming out of the laptop speakers cancelled, level kept steady.
+  // The call plays into its speaker side and the mic is taken from its cleaned output.
+  let ecModule: string | null = null
+  const startVoiceProcessing = async (): Promise<{ sink: string; source: string } | null> => {
+    await stopVoiceProcessing()
+    const sinkMaster = outDev || (await sh('pactl', ['get-default-sink'])).trim()
+    const sourceMaster = inDev || (await sh('pactl', ['get-default-source'])).trim()
+    if (!sinkMaster || !sourceMaster) return null
+    const id = (
+      await sh('pactl', [
+        'load-module',
+        'module-echo-cancel',
+        'aec_method=webrtc',
+        'aec_args="noise_suppression=1 analog_gain_control=0 digital_gain_control=1 high_pass_filter=1 extended_filter=1"',
+        `source_master=${sourceMaster}`,
+        `sink_master=${sinkMaster}`,
+        'source_name=dconnect_call_mic_clean',
+        'sink_name=dconnect_call_speaker_ec',
+        'source_properties=device.description="D-Connect call mic (noise suppressed)"',
+        'sink_properties=device.description="D-Connect call speaker"'
+      ])
+    ).trim()
+    if (!/^\d+$/.test(id)) return null
+    ecModule = id
+    return { sink: 'dconnect_call_speaker_ec', source: 'dconnect_call_mic_clean' }
+  }
+  const stopVoiceProcessing = async (): Promise<void> => {
+    if (ecModule) await sh('pactl', ['unload-module', ecModule])
+    ecModule = null
+  }
+
   const startCallBridges = async (): Promise<void> => {
     stopBridges()
+    const vp = await startVoiceProcessing() // falls back to the plain devices if unavailable
     // drop the virtual speaker left from older versions so WirePlumber picks the tunnel
     const old = (await pwDump()).find((o) => o.info?.props?.['node.name'] === 'dconnect-call-speaker' && o.info?.props?.['factory.name'] === 'support.null-audio-sink')
     if (old) await sh('pw-cli', ['destroy', String(old.id)])
-    tunnel('playback', 'dconnect-call-speaker', 'D-Connect call speaker', 'Audio/Sink', outDev)
-    tunnel('capture', 'dconnect-call-mic', 'D-Connect call mic', 'Audio/Source', inDev)
+    tunnel('playback', 'dconnect-call-speaker', 'D-Connect call speaker', 'Audio/Sink', vp?.sink || outDev)
+    tunnel('capture', 'dconnect-call-mic', 'D-Connect call mic', 'Audio/Source', vp?.source || inDev)
     if (muted) setTimeout(() => applyMute(), 1200)
   }
 
