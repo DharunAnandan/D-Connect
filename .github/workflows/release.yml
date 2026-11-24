@@ -1,0 +1,83 @@
+# Builds every download and publishes a GitHub Release when a version tag is pushed:
+#   git tag v0.1.0 && git push origin v0.1.0
+# (or run it by hand from the Actions tab, with a tag name).
+#   Windows installer (.exe) on Windows, AppImage + .deb on Linux, APK with Flutter.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v0.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults: { run: { working-directory: desktop } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: desktop/package-lock.json }
+      - run: npm ci
+      - run: npx electron-vite build
+      - run: npx electron-builder --win nsis --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with: { name: windows, path: desktop/dist/*.exe, if-no-files-found: error }
+
+  linux:
+    runs-on: ubuntu-22.04
+    defaults: { run: { working-directory: desktop } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: desktop/package-lock.json }
+      - run: sudo apt-get update && sudo apt-get install -y rpm libarchive-tools
+      - run: npm ci
+      - run: npx electron-vite build
+      - run: npx electron-builder --linux AppImage deb --x64 --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: flutter build apk --release
+      - name: Name the APK after the version
+        run: |
+          v=$(node -p "require('../desktop/package.json').version")
+          cp build/app/outputs/flutter-apk/app-release.apk "D-Connect-$v-android.apk"
+      - uses: actions/upload-artifact@v4
+        with: { name: android, path: mobile/D-Connect-*-android.apk, if-no-files-found: error }
+
+  release:
+    needs: [windows, linux, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: assets, merge-multiple: true }
+      - run: ls -la assets
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: D-Connect ${{ github.event.inputs.tag || github.ref_name }}
+          body_path: docs/INSTALL.md
+          files: assets/*

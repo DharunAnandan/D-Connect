@@ -5,6 +5,7 @@
   "description": "Your phone, on your PC. Linux-first phone link with eye care.",
   "main": "out/main/index.js",
   "author": "Dharun",
+  "homepage": "https://github.com/DharunAnandan/D-Connect",
   "license": "MIT",
   "scripts": {
     "dev": "env -u ELECTRON_RUN_AS_NODE electron-vite dev",

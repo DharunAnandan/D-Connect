@@ -9,6 +9,11 @@ do, plus 20-20-20 eye care that follows you from screen to screen.
 | `mobile/` | Flutter (Android), with native Kotlin services |
 | `protocol/PROTOCOL.md` | the wire protocol both sides speak |
 
+## Download
+Get the Windows installer (.exe), Linux .deb / AppImage and the Android .apk from the
+[latest release](https://github.com/DharunAnandan/D-Connect/releases/latest).
+How to install each one: [docs/INSTALL.md](docs/INSTALL.md).
+
 ## Features
 **Phone Link parity**: notifications (custom desktop toasts with inline reply, actions, per-app mute) ·
 SMS threads, send and reply · incoming-call card with answer/decline, dialler, call log ·

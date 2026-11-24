@@ -13,6 +13,12 @@ linux:
       StartupWMClass: d-connect
       Name: D-Connect
   executableArgs: ['--ozone-platform=x11']
+appImage:
+  artifactName: D-Connect-${version}-linux-x86_64.${ext}
 win:
   target: nsis
-nsis: { oneClick: false, allowToChangeInstallationDirectory: true }
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: D-Connect-${version}-windows-setup.${ext}
+  shortcutName: D-Connect
