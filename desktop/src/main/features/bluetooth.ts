@@ -92,6 +92,9 @@ async function setupAudio(progress: (step: string) => void): Promise<{ ok: boole
   progress('Keeping PulseAudio as your sound system…')
   await run('systemctl', ['--user', 'unmask', 'pulseaudio'], 30000)
   await run('systemctl', ['--user', '--now', 'disable', 'pipewire-pulse.service', 'pipewire-pulse.socket'], 30000)
+  // installing pipewire-pulse enables it system-wide; only a user mask stops it taking over
+  // PulseAudio's place at the next login (that leaves just "Dummy Output")
+  await run('systemctl', ['--user', 'mask', 'pipewire-pulse.service', 'pipewire-pulse.socket'], 30000)
   await run('systemctl', ['--user', '--now', 'enable', 'pulseaudio.service', 'pulseaudio.socket'], 30000)
   progress('Turning on the hands-free role for phone calls…')
   const msg = await configureHfp()
