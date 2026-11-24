@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:" />
+    <title>Eye break</title>
+  </head>
+  <body>
+    <canvas id="depth"></canvas>
+    <div id="vignette"></div>
+    <main id="card">
+      <div id="kicker">EYE BREAK · 20 · 20 · 20</div>
+      <div id="dial">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <defs>
+            <linearGradient id="arc" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#a08bff" />
+              <stop offset="50%" stop-color="#35e0ff" />
+              <stop offset="100%" stop-color="#3ddc97" />
+            </linearGradient>
+          </defs>
+          <circle class="track" cx="100" cy="100" r="88" />
+          <circle class="ticks" cx="100" cy="100" r="96" />
+          <circle id="progress" cx="100" cy="100" r="88" />
+        </svg>
+        <div id="count">20</div>
+        <div id="unit">seconds</div>
+        <div id="check" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M12 25l8 8 16-18" /></svg></div>
+      </div>
+      <h1 id="title">Look at something 20 feet away</h1>
+      <p id="tip">A window, a tree, the far wall. Let your eyes soften.</p>
+      <div id="phone">📱 Your phone is resting too</div>
+      <div id="actions">
+        <button id="snooze" type="button">5 more minutes</button>
+        <button id="skip" type="button">Skip <kbd>Esc</kbd></button>
+      </div>
+    </main>
+    <script type="module" src="./eyebreak/main.ts"></script>
+  </body>
+</html>

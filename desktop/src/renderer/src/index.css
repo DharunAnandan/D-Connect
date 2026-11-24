@@ -1,0 +1,157 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #070a14;
+  --violet: #7c5cff;
+  --cyan: #35e0ff;
+  --pink: #ff5ca8;
+  --mint: #3ddc97;
+  --amber: #ffb547;
+  --text: #eef2ff;
+  --muted: rgba(214, 224, 255, 0.58);
+  --line: rgba(160, 180, 255, 0.1);
+  --aurora: linear-gradient(120deg, #7c5cff 0%, #35e0ff 55%, #3ddc97 100%);
+  --aurora-pink: linear-gradient(120deg, #ff5ca8 0%, #7c5cff 50%, #35e0ff 100%);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter Variable', Inter, Ubuntu, system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+body.transparent {
+  background: transparent;
+}
+.drag {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+input,
+textarea,
+.selectable {
+  user-select: text;
+}
+
+@layer components {
+  /* No backdrop-filter: over the moving aurora it would re-blur every frame. A richer
+     translucent gradient gives the same glass look for free. */
+  .glass {
+    background: linear-gradient(160deg, rgba(32, 40, 74, 0.78), rgba(15, 19, 38, 0.82));
+    border: 1px solid rgba(170, 190, 255, 0.09);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.05),
+      0 10px 30px -14px rgba(0, 0, 0, 0.55);
+  }
+  .glass-strong {
+    background: linear-gradient(160deg, rgba(36, 44, 82, 0.95), rgba(16, 20, 40, 0.96));
+    border: 1px solid rgba(170, 190, 255, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 24px 60px -16px rgba(0, 0, 0, 0.75);
+  }
+  .text-aurora {
+    background: var(--aurora);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .text-muted {
+    color: var(--muted);
+  }
+  .hairline {
+    border-color: var(--line);
+  }
+  .field {
+    @apply w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-sm outline-none transition;
+    @apply placeholder:text-white/30 focus:border-cyan/50 focus:bg-white/[0.06];
+    box-shadow: 0 0 0 0 rgba(53, 224, 255, 0);
+  }
+  .field:focus {
+    box-shadow: 0 0 0 4px rgba(53, 224, 255, 0.08);
+  }
+  .kbd {
+    @apply rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-white/60;
+  }
+}
+
+/* scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(160, 180, 255, 0.12);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(160, 180, 255, 0.22);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* the aurora behind everything: soft radial gradients (no blur filter), slow transform-only drift */
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.5;
+  will-change: transform;
+  contain: strict;
+}
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(8vw, 6vh) scale(1.15); }
+  66% { transform: translate(-4vw, 10vh) scale(0.92); }
+}
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-10vw, -8vh) scale(1.2); }
+}
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0) scale(1.05); }
+  50% { transform: translate(6vw, -10vh) scale(0.9); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.spin-slow { animation: spin-slow 12s linear infinite; }
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.reduced *,
+.reduced *::before,
+.reduced *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob { animation: none !important; }
+}

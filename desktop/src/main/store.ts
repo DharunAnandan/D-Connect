@@ -1,0 +1,91 @@
+// A small JSON settings store in userData. Writes are debounced; get/set are synchronous.
+import { EventEmitter } from 'events'
+import fs from 'fs'
+import path from 'path'
+
+export interface TrustedDevice {
+  deviceId: string
+  name: string
+  model: string
+  key: string
+  pairedAt: number
+  lastSeen: number
+  btAddress?: string
+}
+
+export const DEFAULTS = {
+  deviceName: '',
+  port: 47820,
+  trusted: {} as Record<string, TrustedDevice>,
+  // notifications
+  notifyToasts: true,
+  mutedApps: [] as string[],
+  // clipboard
+  clipboardSync: true,
+  // files
+  autoAcceptFiles: true,
+  downloadDir: '',
+  // usb
+  usbAuto: true,
+  // extras
+  proximityLock: false,
+  proximityGraceSec: 20,
+  lowBatteryAlert: 20,
+  dndSync: true,
+  commands: [] as { id: string; name: string; icon: string; cmd: string }[],
+  // eye care (from side-eye)
+  eyeBreaks: true,
+  eyeBreakMinutes: 20,
+  eyeBreakSeconds: 20,
+  eyeBreakSound: true,
+  eyePhoneSync: true,
+  eyePhoneCounts: true,
+  eyeStats: {} as Record<string, { done: number; skip: number; snooze: number }>,
+  // ui
+  reducedMotion: false,
+  sounds: true,
+  launchHidden: false
+}
+export type Settings = typeof DEFAULTS
+export type SettingKey = keyof Settings
+
+export class Store extends EventEmitter {
+  private data: Settings
+  private file: string
+  private timer: NodeJS.Timeout | null = null
+
+  constructor(dir: string) {
+    super()
+    this.file = path.join(dir, 'd-connect.json')
+    let saved = {}
+    try {
+      saved = JSON.parse(fs.readFileSync(this.file, 'utf8'))
+    } catch {
+      // first run
+    }
+    this.data = { ...structuredClone(DEFAULTS), ...saved }
+  }
+
+  get<K extends SettingKey>(k: K): Settings[K] {
+    return this.data[k]
+  }
+
+  set<K extends SettingKey>(k: K, v: Settings[K]): void {
+    this.data[k] = v
+    this.save()
+    this.emit('change', k, v)
+  }
+
+  all(): Settings {
+    return this.data
+  }
+
+  private save(): void {
+    if (this.timer) clearTimeout(this.timer)
+    this.timer = setTimeout(() => {
+      fs.mkdirSync(path.dirname(this.file), { recursive: true })
+      fs.writeFileSync(this.file + '.tmp', JSON.stringify(this.data, null, 2))
+      fs.renameSync(this.file + '.tmp', this.file)
+    }, 300)
+  }
+}

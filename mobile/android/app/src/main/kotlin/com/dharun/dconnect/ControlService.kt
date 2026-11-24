@@ -1,0 +1,124 @@
+package com.dharun.dconnect
+
+import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
+import android.content.Context
+import android.graphics.Path
+import android.media.AudioManager
+import android.os.Build
+import android.os.Bundle
+import android.os.SystemClock
+import android.view.WindowManager
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
+
+// Lets the PC tap, swipe and type on the phone while it is mirrored. Touches are recorded from
+// down to up and replayed as one gesture (tap, long-press or swipe along the real path).
+class ControlService : AccessibilityService() {
+    private val path = mutableListOf<Pair<Float, Float>>()
+    private var downAt = 0L
+
+    override fun onServiceConnected() {
+        instance = this
+        Bridge.emit("mirror.control", mapOf("control" to true))
+    }
+    override fun onDestroy() {
+        if (instance === this) instance = null
+        Bridge.emit("mirror.control", mapOf("control" to false))
+        super.onDestroy()
+    }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onInterrupt() {}
+
+    private fun screen(): Pair<Int, Int> {
+        val wm = getSystemService(WindowManager::class.java)
+        return if (Build.VERSION.SDK_INT >= 30) wm.maximumWindowMetrics.bounds.let { it.width() to it.height() }
+        else { val m = android.util.DisplayMetrics(); @Suppress("DEPRECATION") wm.defaultDisplay.getRealMetrics(m); m.widthPixels to m.heightPixels }
+    }
+
+    fun touch(action: String, nx: Float, ny: Float) {
+        val (w, h) = screen()
+        val x = (nx * w).coerceIn(0f, w - 1f)
+        val y = (ny * h).coerceIn(0f, h - 1f)
+        when (action) {
+            "down" -> { path.clear(); path.add(x to y); downAt = SystemClock.uptimeMillis() }
+            "move" -> if (path.isNotEmpty()) path.add(x to y)
+            "up" -> {
+                if (path.isEmpty()) return
+                path.add(x to y)
+                val elapsed = (SystemClock.uptimeMillis() - downAt).coerceIn(1, 4000)
+                val (sx, sy) = path.first()
+                val moved = path.maxOf { kotlin.math.hypot(it.first - sx, it.second - sy) }
+                val p = Path().apply { moveTo(sx, sy) }
+                if (moved < 12) {
+                    val dur = if (elapsed > 450) elapsed else 40L // long press or tap
+                    dispatch(p, dur)
+                } else {
+                    // thin the path so the gesture stays small
+                    val step = maxOf(1, path.size / 40)
+                    for (i in step until path.size step step) p.lineTo(path[i].first, path[i].second)
+                    p.lineTo(path.last().first, path.last().second)
+                    dispatch(p, elapsed.coerceIn(60, 2000))
+                }
+                path.clear()
+            }
+        }
+    }
+
+    fun scroll(nx: Float, ny: Float, dy: Float) {
+        val (w, h) = screen()
+        val x = nx * w
+        val y = ny * h
+        val dist = (if (dy > 0) -1 else 1) * minOf(h * 0.35f, kotlin.math.abs(dy) * 4f + h * 0.08f)
+        val p = Path().apply { moveTo(x, y); lineTo(x, (y + dist).coerceIn(1f, h - 1f)) }
+        dispatch(p, 160)
+    }
+
+    private fun dispatch(p: Path, duration: Long) {
+        val g = GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(p, 0, duration)).build()
+        dispatchGesture(g, null, null)
+    }
+
+    fun key(action: String) {
+        when (action) {
+            "back" -> performGlobalAction(GLOBAL_ACTION_BACK)
+            "home" -> performGlobalAction(GLOBAL_ACTION_HOME)
+            "recents" -> performGlobalAction(GLOBAL_ACTION_RECENTS)
+            "notifications" -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+            "lock" -> if (Build.VERSION.SDK_INT >= 28) performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+            "volup", "voldown" -> volumeFallback(this, action)
+            "backspace" -> focused()?.let { n ->
+                val t = if (n.isShowingHintText) "" else n.text?.toString() ?: ""
+                if (t.isNotEmpty()) setText(n, t.dropLast(1))
+            }
+            "enter" -> focused()?.let { n ->
+                if (Build.VERSION.SDK_INT >= 30) n.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)
+                else setText(n, (n.text?.toString() ?: "") + "\n")
+            }
+        }
+    }
+
+    fun text(s: String) {
+        val n = focused() ?: return
+        val t = if (n.isShowingHintText) "" else n.text?.toString() ?: ""
+        setText(n, t + s)
+    }
+
+    private fun focused(): AccessibilityNodeInfo? = rootInActiveWindow?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+
+    private fun setText(n: AccessibilityNodeInfo, t: String) {
+        n.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, t) })
+        n.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, Bundle().apply {
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, t.length)
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, t.length)
+        })
+    }
+
+    companion object {
+        var instance: ControlService? = null
+        fun volumeFallback(ctx: Context, action: String) {
+            val dir = when (action) { "volup" -> AudioManager.ADJUST_RAISE; "voldown" -> AudioManager.ADJUST_LOWER; else -> return }
+            ctx.getSystemService(AudioManager::class.java).adjustStreamVolume(AudioManager.STREAM_MUSIC, dir, AudioManager.FLAG_SHOW_UI)
+        }
+    }
+}

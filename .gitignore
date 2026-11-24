@@ -1,0 +1,24 @@
+# ---------- desktop (Electron)
+desktop/node_modules/
+desktop/out/
+desktop/dist/
+
+# ---------- mobile (Flutter) — mobile/.gitignore covers the Flutter build itself
+mobile/build/
+mobile/.dart_tool/
+mobile/android/local.properties
+mobile/android/key.properties
+
+# ---------- secrets: never commit signing keys or env files
+*.jks
+*.keystore
+.env
+.env.*
+
+# ---------- logs, OS and editor clutter
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
