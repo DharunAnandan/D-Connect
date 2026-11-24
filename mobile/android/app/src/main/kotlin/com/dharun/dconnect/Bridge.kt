@@ -85,6 +85,7 @@ object Bridge {
             "btPair" -> result.success(BtPair.start(ctx, a("address") as String))
             "btRefresh" -> result.success(BtPair.refresh(ctx, a("address") as String))
             "btEnsure" -> result.success(ensureBluetooth())
+            "mediaVolume" -> result.success(mediaVolume((a("pct") as Number?)?.toInt()))
             "permissions" -> result.success(permissions())
             "keepAlive" -> {
                 val i = Intent(ctx, KeepAliveService::class.java).putExtra("pc", a("pc") as String?)
@@ -199,6 +200,19 @@ object Bridge {
 
     // Android doesn't let apps switch Bluetooth on silently: show its one-tap prompt (or a
     // notification that opens it when D-Connect isn't on screen).
+    // the phone's media volume (what Spotify/YouTube play at, also over Bluetooth to the PC)
+    private fun mediaVolume(pct: Int?): Map<String, Any> {
+        val am = ctx.getSystemService(android.media.AudioManager::class.java)
+        val s = android.media.AudioManager.STREAM_MUSIC
+        val max = am.getStreamMaxVolume(s)
+        if (pct != null) {
+            val v = Math.round(pct.coerceIn(0, 100) * max / 100f)
+            try { am.setStreamVolume(s, v, 0) } catch (_: Exception) {}
+        }
+        val cur = am.getStreamVolume(s)
+        return mapOf("pct" to Math.round(cur * 100f / max), "max" to max)
+    }
+
     private fun ensureBluetooth(): Boolean {
         val adapter = ctx.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter ?: return false
         if (adapter.isEnabled) return true

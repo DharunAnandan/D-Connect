@@ -93,6 +93,9 @@ class Bridge {
           Native.call('mirrorStop');
         case 'mirror.keyframe':
           Native.call('mirrorKeyframe');
+        case 'phone.volume':
+          final r = await Native.map('mediaVolume', d['pct'] == null ? {} : {'pct': d['pct']});
+          if (m.id != null) link.reply(m, 'phone.volume', r);
         case 'bt.ensure':
           final on = await Native.call<bool>('btEnsure');
           if (m.id != null) link.reply(m, 'bt.ensure', {'enabled': on == true});

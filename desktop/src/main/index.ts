@@ -26,6 +26,7 @@ import { system } from './features/system'
 import { bluetooth } from './features/bluetooth'
 import { appWindows } from './features/appwindows'
 import { callAudio } from './features/callaudio'
+import { sound } from './features/sound'
 
 const isLinux = process.platform === 'linux'
 // Transparent always-on-top windows that can place themselves (toasts, call card, eye break)
@@ -255,6 +256,7 @@ app.whenReady().then(async () => {
   })
   bluetooth(ctx)
   appWindows(ctx)
+  sound(ctx)
 
   // ---------------------------------------------------------------- eye care (20-20-20)
   let phoneEnd: ((r: EyeResult) => void) | null = null

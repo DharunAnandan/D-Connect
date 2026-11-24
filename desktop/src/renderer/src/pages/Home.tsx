@@ -4,6 +4,7 @@ import { ConnectScene } from '@/components/ConnectScene'
 import { Avatar, Button, Card, Pill, Ring } from '@/components/ui'
 import { call } from '@/lib/api'
 import { ago, size } from '@/lib/format'
+import { Boost } from './Sound'
 import { useApp } from '@/lib/store'
 import { list } from '@/theme/motion'
 
@@ -150,6 +151,12 @@ export function Home() {
                 <MediaBtn icon={SkipBack} onClick={() => call('mediaPhoneCmd', 'prev')} />
                 <MediaBtn icon={phoneMedia.playing ? Pause : Play} big onClick={() => call('mediaPhoneCmd', 'toggle')} />
                 <MediaBtn icon={SkipForward} onClick={() => call('mediaPhoneCmd', 'next')} />
+              </div>
+            )}
+            {phoneMedia && settings.phoneAudioOnPc !== false && (
+              <div className="relative mt-3 px-1">
+                <div className="mb-0.5 flex justify-between text-[11px] text-white/45"><span>Volume on this PC</span><span className={`tabular-nums ${(settings.phoneAudioVolume ?? 100) > 100 ? 'text-pink' : ''}`}>{settings.phoneAudioVolume ?? 100}%</span></div>
+                <Boost value={settings.phoneAudioVolume ?? 100} onChange={(v) => setSetting('phoneAudioVolume', v)} />
               </div>
             )}
           </Card>

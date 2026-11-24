@@ -311,31 +311,84 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   // The phone's media (Spotify, YouTube...) over Bluetooth: with "Play phone audio on this PC"
   // on, keep its music link active and play it on this PC's speaker (a plain loopback, music
   // role, so nothing else gets paused). Off: keep that link off so stray phone sounds never play here.
+  // One loopback only, even after restarts (the module outlives the app). While the music plays
+  // here the phone's own media volume goes to full (Android scales the sound before Bluetooth,
+  // so a low phone volume made it quiet here); loudness is then set on this PC, up to 200%.
   let mediaLoop: string | null = null
-  const phoneMedia = async (): Promise<void> => {
-    const addr = (await phoneAddress())?.replace(/:/g, '_')
-    if (!addr) return
-    const card = `bluez_card.${addr}`
-    const info = (await sh('pactl', ['list', 'cards'])).split('Name: ').find((b) => b.startsWith(card))
-    if (!info) return
-    const want = !!ctx.store.get('phoneAudioOnPc')
-    const active = /Active Profile: (\S+)/.exec(info)?.[1]
-    if (!want) {
-      if (mediaLoop) await sh('pactl', ['unload-module', mediaLoop])
-      mediaLoop = null
-      if (active !== 'off') await sh('pactl', ['set-card-profile', card, 'off'])
-      return
+  let phoneVolBefore: number | null = null
+  const loopsFor = async (src: string): Promise<string[]> =>
+    (await sh('pactl', ['list', 'short', 'modules'])).split('\n').filter((l) => /\tmodule-loopback\t/.test(l) && l.includes(`source=${src} `)).map((l) => l.split('\t')[0])
+  const applyPhoneVolume = async (): Promise<void> => {
+    if (!mediaLoop) return
+    const list = await sh('pactl', ['list', 'short', 'sink-inputs'])
+    const pct = Math.max(0, Math.min(200, Number(ctx.store.get('phoneAudioVolume') ?? 100)))
+    for (const l of list.split('\n')) {
+      const [idx, , mod] = l.split('\t')
+      if (mod === mediaLoop) await sh('pactl', ['set-sink-input-volume', idx, `${pct}%`])
     }
-    if (active !== 'a2dp_source' && /a2dp_source:/.test(info)) await sh('pactl', ['set-card-profile', card, 'a2dp_source'])
-    const src = `bluez_source.${addr}.a2dp_source`
-    const loaded = mediaLoop && (await sh('pactl', ['list', 'short', 'modules'])).split('\n').some((l) => l.startsWith(mediaLoop + '\t'))
-    if (loaded) return
-    const sink = (await sh('pactl', ['get-default-sink'])).trim()
-    const id = (await sh('pactl', ['load-module', 'module-loopback', `source=${src}`, `sink=${sink}`, 'latency_msec=120', 'source_dont_move=true', 'sink_input_properties=media.role=music'])).trim()
-    mediaLoop = /^\d+$/.test(id) ? id : null
+  }
+  const phoneFullVolume = async (on: boolean): Promise<void> => {
+    if (!ctx.hub.session) return
+    if (on) {
+      const r: any = await ctx.hub.request('phone.volume', {}, 4000).catch(() => null)
+      if (r && typeof r.pct === 'number' && r.pct < 100) {
+        phoneVolBefore = r.pct
+        await ctx.hub.request('phone.volume', { pct: 100 }, 4000).catch(() => null)
+      }
+    } else if (phoneVolBefore != null) {
+      await ctx.hub.request('phone.volume', { pct: phoneVolBefore }, 4000).catch(() => null)
+      phoneVolBefore = null
+    }
+  }
+  let mediaBusy = false
+  const phoneMedia = async (): Promise<void> => {
+    if (mediaBusy) return
+    mediaBusy = true
+    try {
+      const addr = (await phoneAddress())?.replace(/:/g, '_')
+      if (!addr) return
+      const card = `bluez_card.${addr}`
+      const info = (await sh('pactl', ['list', 'cards'])).split('Name: ').find((b) => b.startsWith(card))
+      if (!info) return
+      const want = !!ctx.store.get('phoneAudioOnPc')
+      const active = /Active Profile: (\S+)/.exec(info)?.[1]
+      const src = `bluez_source.${addr}.a2dp_source`
+      const loops = await loopsFor(src)
+      if (!want) {
+        for (const m of loops) await sh('pactl', ['unload-module', m])
+        if (mediaLoop) await phoneFullVolume(false)
+        mediaLoop = null
+        if (active !== 'off') await sh('pactl', ['set-card-profile', card, 'off'])
+        return
+      }
+      if (active !== 'a2dp_source' && /a2dp_source:/.test(info)) await sh('pactl', ['set-card-profile', card, 'a2dp_source'])
+      // keep exactly one
+      for (const m of loops.slice(1)) await sh('pactl', ['unload-module', m])
+      if (loops[0]) {
+        if (mediaLoop !== loops[0]) {
+          mediaLoop = loops[0]
+          await applyPhoneVolume()
+          await phoneFullVolume(true)
+        }
+        return
+      }
+      const sink = (await sh('pactl', ['get-default-sink'])).trim()
+      const id = (await sh('pactl', ['load-module', 'module-loopback', `source=${src}`, `sink=${sink}`, 'latency_msec=120', 'source_dont_move=true', "sink_input_properties='media.role=music application.name=dconnect-phone'"])).trim()
+      mediaLoop = /^\d+$/.test(id) ? id : null
+      if (mediaLoop) {
+        await wait(300)
+        await applyPhoneVolume()
+        await phoneFullVolume(true)
+      }
+    } finally {
+      mediaBusy = false
+    }
   }
   setInterval(() => ctx.hub.session && phoneMedia(), 4000)
-  ctx.store.on('change', (k: string) => k === 'phoneAudioOnPc' && phoneMedia())
+  ctx.store.on('change', (k: string) => {
+    if (k === 'phoneAudioOnPc') phoneMedia()
+    if (k === 'phoneAudioVolume') applyPhoneVolume()
+  })
   ctx.hub.on('disconnected', async () => {
     if (mediaLoop) await sh('pactl', ['unload-module', mediaLoop])
     mediaLoop = null
