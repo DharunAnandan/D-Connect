@@ -32,7 +32,13 @@ const isLinux = process.platform === 'linux'
 if (isLinux) app.commandLine.appendSwitch('ozone-platform', 'x11')
 app.commandLine.appendSwitch('enable-features', 'PlatformHEVCDecoderSupport')
 
-if (!app.requestSingleInstanceLock()) app.quit()
+// Only one D-Connect: a second launch (e.g. clicking the dock icon while it sits in the tray)
+// hands over to the running one, which comes forward, and exits before starting anything.
+const firstInstance = app.requestSingleInstanceLock()
+if (!firstInstance) {
+  app.quit()
+  process.exit(0)
+}
 
 let main: BrowserWindow | null = null
 let toastWin: BrowserWindow | null = null
@@ -50,6 +56,7 @@ function allWindows(): BrowserWindow[] {
 }
 
 app.whenReady().then(async () => {
+  if (!firstInstance) return
   const store = new Store(app.getPath('userData'))
   const hostname = os.hostname()
   if (!store.get('deviceName')) store.set('deviceName', hostname)

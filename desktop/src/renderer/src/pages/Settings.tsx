@@ -15,7 +15,7 @@ interface Bt {
   wireplumber: string | null
   hfpConfigured: boolean
   devices: { address: string; name: string; paired: boolean; connected: boolean }[]
-  phone: { name: string; address?: string; paired: boolean; connected: boolean } | null
+  phone: { name: string; address?: string; paired: boolean; connected: boolean; callLink: boolean } | null
   canAutoSetup: boolean
   ready: boolean
 }
@@ -106,14 +106,14 @@ export function Settings() {
                 )}
               </Step>
               <Step
-                done={!!bt.phone?.connected}
+                done={!!bt.phone?.callLink}
                 n={3}
                 title={`Connect ${bt.phone?.name || conn.device?.name || 'your phone'}`}
-                body={!bt.phone ? 'Connect your phone to D-Connect first' : bt.phone.connected ? 'Connected for calls' : bt.phone.paired ? 'Paired. Connect it for call audio.' : 'Not paired with this PC over Bluetooth yet'}
+                body={!bt.phone ? 'Connect your phone to D-Connect first' : bt.phone.callLink ? 'Call link open: calls you take here play on this PC' : bt.phone.paired ? 'Paired, but the call link isn\'t open yet' : 'Not paired with this PC over Bluetooth yet'}
               >
-                {bt.phone && !bt.phone.connected && (
+                {bt.phone && !bt.phone.callLink && (
                   bt.phone.paired && bt.phone.address ? (
-                    <Button size="sm" variant="soft" icon={Bluetooth} onClick={async () => { setBtMsg((await call('btConnect', bt.phone!.address)) ? 'Connected.' : 'Could not connect. Is Bluetooth on the phone?'); refreshBt() }}>Connect</Button>
+                    <Button size="sm" variant="soft" icon={busy ? Loader2 : Bluetooth} disabled={busy} onClick={async () => { setBusy(true); setBtMsg('Opening the call link…'); const r = await call<{ ok: boolean; message: string }>('btFixCallLink'); setBtMsg(r.message); setBusy(false); refreshBt() }}>Fix call link</Button>
                   ) : (
                     <Button size="sm" variant="soft" icon={Bluetooth} onClick={async () => { setBtMsg(''); const r = await call<{ ok: boolean; message?: string }>('btPairPhone'); if (!r.ok) setBtMsg(r.message || 'Could not start pairing') }}>Pair</Button>
                   )

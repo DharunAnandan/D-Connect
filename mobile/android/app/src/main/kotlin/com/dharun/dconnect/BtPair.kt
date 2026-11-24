@@ -35,6 +35,16 @@ object BtPair {
         return mapOf("ok" to true)
     }
 
+    // Android remembers what a device can do from when it was paired. If the PC gained the
+    // hands-free role later, Android never offers "Phone calls" to it. Re-reading the PC's
+    // service records (SDP) lets Android turn the call link on.
+    @SuppressLint("MissingPermission")
+    fun refresh(ctx: Context, address: String): Boolean = try {
+        val adapter = ctx.getSystemService(BluetoothManager::class.java)?.adapter
+        val d = adapter?.getRemoteDevice(address.uppercase())
+        d != null && d.bondState == BluetoothDevice.BOND_BONDED && d.fetchUuidsWithSdp()
+    } catch (e: Exception) { false }
+
     private fun watch(ctx: Context, address: String) {
         receiver?.let { try { ctx.unregisterReceiver(it) } catch (_: Exception) {} }
         val r = object : BroadcastReceiver() {

@@ -20,7 +20,7 @@ export interface BtStatus {
   wireplumber: string | null
   hfpConfigured: boolean
   devices: { address: string; name: string; paired: boolean; connected: boolean }[]
-  phone: { name: string; address?: string; paired: boolean; connected: boolean } | null // the phone linked to D-Connect
+  phone: { name: string; address?: string; paired: boolean; connected: boolean; callLink: boolean } | null // the phone linked to D-Connect
   canAutoSetup: boolean
   ready: boolean
 }
@@ -28,6 +28,21 @@ export interface BtStatus {
 const WP_04 = path.join(os.homedir(), '.config/wireplumber/bluetooth.lua.d/90-enable-all.lua')
 const WP_04_ALSA = path.join(os.homedir(), '.config/wireplumber/main.lua.d/90-enable-all.lua')
 const WP_05 = path.join(os.homedir(), '.config/wireplumber/wireplumber.conf.d/51-dconnect-hfp.conf')
+
+// Is the phone's hands-free control link up in PipeWire (not just its music link)?
+export async function callLinkUp(address: string): Promise<boolean> {
+  try {
+    const all = JSON.parse((await sh('pw-dump', [], 8000)) || '[]')
+    const dev = all.find((o: any) => o.type === 'PipeWire:Interface:Device' && o.info?.props?.['api.bluez5.address'] === address)
+    return dev?.info?.props?.['api.bluez5.connection'] === 'connected'
+  } catch {
+    return false
+  }
+}
+
+export async function pcBtAddress(): Promise<string | null> {
+  return /Controller\s+([0-9A-F:]{17})/i.exec(await sh('bluetoothctl', ['show']))?.[1] || null
+}
 
 const norm = (n: string): string => n.toLowerCase().replace(/[^a-z0-9]/g, '')
 
@@ -56,9 +71,9 @@ async function status(phoneNames: string[] = []): Promise<BtStatus> {
   // only the phone that is linked to D-Connect, never some other paired phone
   const wanted = phoneNames.filter(Boolean).map(norm)
   const match = devices.find((d) => wanted.includes(norm(d.name)))
-  const phone = wanted.length ? (match ? { ...match } : { name: phoneNames.find(Boolean)!, paired: false, connected: false }) : null
+  const phone = wanted.length ? (match ? { ...match, callLink: await callLinkUp(match.address) } : { name: phoneNames.find(Boolean)!, paired: false, connected: false, callLink: false }) : null
   const canAutoSetup = !!(await sh('which', ['pkexec'])).trim()
-  return { platform: 'linux', adapter, powered, audioServer, wireplumber: wpv, hfpConfigured, devices, phone, canAutoSetup, ready: adapter && powered && hfpConfigured && !!match?.connected }
+  return { platform: 'linux', adapter, powered, audioServer, wireplumber: wpv, hfpConfigured, devices, phone, canAutoSetup, ready: adapter && powered && hfpConfigured && !!phone?.callLink }
 }
 
 // Snaps that can play/record through "pulseaudio" but have no "audio-record" connection.
@@ -161,6 +176,28 @@ export const PIPEWIRE_STEPS = [
   'Then press "Set up call audio": PulseAudio stays your sound system; PipeWire only carries phone calls.'
 ]
 
+export async function fixCallLink(ctx: Ctx, phoneNames: string[]): Promise<{ ok: boolean; message: string }> {
+  const s = await status(phoneNames)
+  if (!s.phone?.address || !s.phone.paired) return { ok: false, message: 'Pair the phone first.' }
+  if (s.phone.callLink) return { ok: true, message: 'The call link is open.' }
+  const pc = await pcBtAddress()
+  if (pc && ctx.hub.session) await ctx.hub.request('bt.refresh', { address: pc }, 8000).catch(() => null)
+  const path = `/org/bluez/hci0/dev_${s.phone.address.replace(/:/g, '_')}`
+  for (let i = 0; i < 4; i++) {
+    await new Promise((r) => setTimeout(r, 2000))
+    await sh('busctl', ['call', 'org.bluez', path, 'org.bluez.Device1', 'ConnectProfile', 's', '0000111f-0000-1000-8000-00805f9b34fb'], 12000)
+    await new Promise((r) => setTimeout(r, 1500))
+    if (await callLinkUp(s.phone.address)) {
+      ctx.emit('bt.changed', true)
+      return { ok: true, message: 'Call link is open. Calls you take on this PC will play here.' }
+    }
+  }
+  return {
+    ok: false,
+    message: `${s.phone.name} isn't letting this PC handle calls. On the phone: Settings → Bluetooth → ⚙ next to “${os.hostname()}” → turn on “Phone calls”. If there's no such switch, tap Forget there, then press Pair here.`
+  }
+}
+
 export function bluetooth(ctx: Ctx): void {
   // after the switch, offer to fix snaps that lost the mic (e.g. Teams)
   ctx.handle('snapsNeedingMic', () => (process.platform === 'linux' ? snapsNeedingMic() : []))
@@ -205,6 +242,8 @@ export function bluetooth(ctx: Ctx): void {
   ctx.handle('btConfigure', () => configureHfp())
   ctx.handle('btSteps', () => PIPEWIRE_STEPS)
   ctx.hub.on('disconnected', () => (phoneBtName = ''))
+  // Open the call link: the phone re-reads this PC's capabilities, then the PC connects.
+  ctx.handle('btFixCallLink', () => fixCallLink(ctx, names()))
   ctx.handle('btConnect', async (address: string) => {
     await sh('bluetoothctl', ['power', 'on'])
     const out = await sh('bluetoothctl', ['connect', address], 20000)

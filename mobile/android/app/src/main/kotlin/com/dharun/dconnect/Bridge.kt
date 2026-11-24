@@ -83,6 +83,7 @@ object Bridge {
             "status" -> result.success(status())
             "btInfo" -> result.success(btInfo())
             "btPair" -> result.success(BtPair.start(ctx, a("address") as String))
+            "btRefresh" -> result.success(BtPair.refresh(ctx, a("address") as String))
             "permissions" -> result.success(permissions())
             "keepAlive" -> {
                 val i = Intent(ctx, KeepAliveService::class.java).putExtra("pc", a("pc") as String?)

@@ -88,6 +88,9 @@ class Bridge {
           Native.call('mirrorStop');
         case 'mirror.keyframe':
           Native.call('mirrorKeyframe');
+        case 'bt.refresh':
+          final ok = await Native.call<bool>('btRefresh', {'address': d['address']});
+          if (m.id != null) link.reply(m, 'bt.refresh', {'ok': ok == true});
         case 'bt.pair':
           // ask for "Nearby devices" first if needed, then bond with the PC
           var r = await Native.map('btPair', {'address': d['address']});

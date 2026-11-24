@@ -65,6 +65,7 @@ export class Hub extends EventEmitter {
   start(): Promise<void> {
     this.server = https.createServer({ key: this.identity.key, cert: this.identity.cert })
     this.wss = new WebSocketServer({ server: this.server, maxPayload: 64 * 1024 * 1024 })
+    this.wss.on('error', () => {}) // a busy port is handled by start()'s retry, never an uncaught crash
     this.wss.on('connection', (ws, req) => this.accept(ws, req.socket.remoteAddress || ''))
     this.pingTimer = setInterval(() => this.ping(), 5000)
     return new Promise((resolve, reject) => {

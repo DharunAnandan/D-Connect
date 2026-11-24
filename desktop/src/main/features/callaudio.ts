@@ -10,6 +10,7 @@
 import { ChildProcess, execFile, spawn } from 'child_process'
 import type { CallState } from '@shared/protocol'
 import type { Ctx } from '../context'
+import { callLinkUp, fixCallLink } from './bluetooth'
 
 function sh(cmd: string, args: string[], timeout = 6000): Promise<string> {
   return new Promise((resolve) => execFile(cmd, args, { timeout, maxBuffer: 32 * 1024 * 1024 }, (err, out) => resolve(err ? '' : out)))
@@ -40,6 +41,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void } {
   let bridges: ChildProcess[] = []
   let state: CallState['state'] = 'idle'
   let busy = Promise.resolve()
+  let lastError = ''
 
   // the linked phone's Bluetooth address (by name), e.g. 18:AB:1D:B9:E5:AA
   const phoneAddress = async (): Promise<string | null> => {
@@ -87,7 +89,13 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void } {
   const toPc = async (): Promise<boolean> => {
     // make sure the phone's hands-free call link is open (phones don't always open it themselves)
     const addr = await phoneAddress()
-    if (addr) await sh('busctl', ['call', 'org.bluez', `/org/bluez/hci0/dev_${addr.replace(/:/g, '_')}`, 'org.bluez.Device1', 'ConnectProfile', 's', '0000111f-0000-1000-8000-00805f9b34fb'], 12000)
+    if (addr && !(await callLinkUp(addr))) {
+      const r = await fixCallLink(ctx, [ctx.hub.session?.device.name || ''])
+      if (!r.ok) {
+        lastError = r.message
+        return false
+      }
+    }
     await setPwProfile('audio-gateway')
     let n: { source?: PwObject; sink?: PwObject } = {}
     for (let i = 0; i < 24 && !(n.source && n.sink); i++) {
@@ -118,7 +126,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void } {
       if (r === 'pc') {
         const ok = await toPc()
         route = ok ? 'pc' : null
-        if (!ok) ctx.toast({ kind: 'info', title: 'Call audio stays on the phone', body: 'Pair the phone over Bluetooth in Settings → Take calls on this PC.' })
+        if (!ok) ctx.toast({ kind: 'info', title: 'Call audio stays on the phone', body: lastError || 'Pair the phone over Bluetooth in Settings → Take calls on this PC.', ttl: 15000 })
       } else if (r === 'phone') {
         await toPhone()
         route = 'phone'
