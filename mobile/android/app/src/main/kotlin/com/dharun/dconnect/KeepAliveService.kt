@@ -112,6 +112,13 @@ class KeepAliveService : Service() {
         if (number != null) lastNumber = number
         if (s == "idle") lastNumber = null
         current = if (s == "idle") null else m
+        // keep it across app restarts (Android only gives the number when the call starts)
+        getSharedPreferences("dc_call", MODE_PRIVATE).edit().apply {
+            if (s == "idle") clear() else {
+                putString("state", s); putString("number", m["number"] as String?); putString("name", m["name"] as String?)
+                putLong("since", (m["since"] as Long?) ?: 0L)
+            }
+        }.apply()
         Bridge.emit("call.state", m)
     }
 }

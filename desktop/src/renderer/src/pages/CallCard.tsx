@@ -11,7 +11,7 @@ import { sfx } from '@/lib/sfx'
 export function CallCard() {
   const [c, setC] = useState<CallState>({ state: 'idle' })
   const [muted, setMuted] = useState(false)
-  const [route, setRoute] = useState<'pc' | 'phone' | null>(null)
+  const [route, setRoute] = useState<'pc' | 'phone' | 'speaker' | null>(null)
   const [hint, setHint] = useState('')
   const [devs, setDevs] = useState<{ outputs: { name: string; label: string }[]; inputs: { name: string; label: string }[]; out: string | null; in: string | null } | null>(null)
   useEffect(() => {
@@ -58,7 +58,7 @@ export function CallCard() {
     return () => clearInterval(t)
   }, [])
 
-  const name = c.name || c.number || 'Unknown'
+  const name = c.name || c.number || (c.state === 'ringing' ? 'Incoming call' : 'Ongoing call')
   const live = c.state === 'offhook' || c.state === 'dialing'
   return (
     <div className="flex h-screen items-start justify-center p-4">
@@ -111,10 +111,10 @@ export function CallCard() {
             )}
             {live && (
               <div className="no-drag relative mx-auto mt-4 flex w-fit rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
-                {(['pc', 'phone'] as const).map((r) => (
-                  <button key={r} onClick={() => call('setCallRoute', r)} className={`relative flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${route === r ? 'text-ink-950' : 'text-white/60 hover:text-white'}`}>
+                {(['pc', 'phone', 'speaker'] as const).map((r) => (
+                  <button key={r} onClick={() => call('setCallRoute', r)} className={`relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${route === r ? 'text-ink-950' : 'text-white/60 hover:text-white'}`}>
                     {route === r && <motion.span layoutId="route" transition={{ type: 'spring', stiffness: 500, damping: 34 }} className="absolute inset-0 rounded-full bg-mint" />}
-                    <span className="relative flex items-center gap-1.5">{r === 'pc' ? <Laptop size={13} /> : <Smartphone size={13} />}{r === 'pc' ? 'On this PC' : 'On phone'}</span>
+                    <span className="relative flex items-center gap-1.5">{r === 'pc' ? <Laptop size={13} /> : r === 'phone' ? <Smartphone size={13} /> : <Volume2 size={13} />}{r === 'pc' ? 'This PC' : r === 'phone' ? 'Receiver' : 'Speaker'}</span>
                   </button>
                 ))}
               </div>

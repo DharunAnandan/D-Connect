@@ -17,7 +17,7 @@ function sh(cmd: string, args: string[], timeout = 6000): Promise<string> {
 }
 const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
-export type CallRoute = 'pc' | 'phone'
+export type CallRoute = 'pc' | 'phone' | 'speaker' // laptop · phone receiver · phone speaker
 
 interface PwObject {
   id: number
@@ -138,7 +138,9 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     const find = async (): Promise<number | null> => (await pwDump()).find((o) => o.info?.props?.['node.name'] === 'dconnect-call-speaker')?.id ?? null
     let id = await find()
     if (id === null) {
-      await sh('pw-cli', ['create-node', 'adapter', '{ factory.name=support.null-audio-sink node.name=dconnect-call-speaker node.description="D-Connect call speaker" media.class=Audio/Sink object.linger=true audio.position=[ MONO ] audio.rate=16000 }'])
+      // priority.driver 1: the phone's Bluetooth stream (2010) drives the timing, so the two
+      // clocks never fight (that made the call audio choppy)
+      await sh('pw-cli', ['create-node', 'adapter', '{ factory.name=support.null-audio-sink node.name=dconnect-call-speaker node.description="D-Connect call speaker" media.class=Audio/Sink object.linger=true audio.position=[ MONO ] audio.rate=16000 priority.driver=1 priority.session=1 }'])
       for (let i = 0; i < 10 && id === null; i++) {
         await wait(200)
         id = await find()
@@ -152,15 +154,16 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     const out = outDev ? [`device=${outDev}`] : []
     const inp = inDev ? [`device=${inDev}`] : []
     const spk = await virtualSpeaker()
-    if (spk !== null) startBridge(['pipewiresrc', `path=${spk}`, 'stream-properties=props,stream.capture.sink=true,node.name=dconnect-call-speaker-reader', 'do-timestamp=true', '!', 'audioconvert', '!', 'audioresample', '!', 'pulsesink', ...out, 'client-name=D-Connect call', 'latency-time=20000', 'buffer-time=80000'])
-    startBridge(['pulsesrc', ...inp, 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=80000', '!', 'audioconvert', '!', 'audioresample', '!', 'pipewiresink', 'mode=provide', 'stream-properties=props,media.class=Audio/Source,node.name=dconnect-call-mic'])
+    const callCaps = 'audio/x-raw,rate=16000,channels=1'
+    if (spk !== null) startBridge(['pipewiresrc', `path=${spk}`, 'stream-properties=props,stream.capture.sink=true,node.name=dconnect-call-speaker-reader,node.latency=320/16000', 'do-timestamp=true', '!', 'audioconvert', '!', 'audioresample', '!', callCaps, '!', 'queue', 'max-size-time=200000000', 'leaky=downstream', '!', 'pulsesink', ...out, 'client-name=D-Connect call', 'latency-time=20000', 'buffer-time=120000', 'provide-clock=false'])
+    startBridge(['pulsesrc', ...inp, 'client-name=D-Connect call mic', 'latency-time=20000', 'buffer-time=120000', '!', 'audioconvert', '!', 'audioresample', '!', callCaps, '!', 'queue', 'max-size-time=200000000', 'leaky=downstream', '!', 'pipewiresink', 'mode=provide', 'stream-properties=props,media.class=Audio/Source,node.name=dconnect-call-mic,audio.position=[ MONO ],node.latency=320/16000'])
     if (muted) setTimeout(() => applyMute(), 800)
   }
 
-  const toPhone = async (): Promise<void> => {
+  const toPhone = async (speaker = false): Promise<void> => {
     stopBridges()
     phoneWantedUntil = Date.now() + 6000 // don't re-bridge while the phone moves the audio away
-    const r: any = await ctx.hub.request('call.control', { action: 'audio-phone' }, 8000).catch(() => null)
+    const r: any = await ctx.hub.request('call.control', { action: speaker ? 'audio-speaker' : 'audio-phone' }, 8000).catch(() => null)
     // no screen control: dropping the hands-free audio link puts the call back on the phone
     if (r?.ok !== true) await setPwProfile('off')
   }
@@ -177,9 +180,9 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
         const ok = await toPc()
         route = ok ? 'pc' : null
         if (!ok) ctx.toast({ kind: 'info', title: 'Call audio stays on the phone', body: lastError || 'Pair the phone over Bluetooth in Settings → Take calls on this PC.', ttl: 15000 })
-      } else if (r === 'phone') {
-        await toPhone()
-        route = 'phone'
+      } else if (r === 'phone' || r === 'speaker') {
+        await toPhone(r === 'speaker')
+        route = r
       } else {
         await restore()
         route = null
@@ -227,6 +230,9 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
           route = 'phone'
           ctx.emit('call.route', route)
         }
+      } else if (audioHere && bridges.length && route !== 'pc') {
+        route = 'pc'
+        ctx.emit('call.route', route)
       }
     } finally {
       watching = false

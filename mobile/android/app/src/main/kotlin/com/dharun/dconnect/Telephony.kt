@@ -149,17 +149,21 @@ object Telephony {
             "merge" -> main.postDelayed({ svc.clickByLabel(listOf("merge", "merge calls", "conference")) }, 700)
             "audio-pc", "audio-phone", "audio-speaker" -> {
                 val choice = when (action) {
-                    "audio-pc" -> listOfNotNull(target?.lowercase(), "bluetooth")
-                    "audio-phone" -> listOf("phone", "earpiece", "handset")
+                    "audio-pc" -> listOfNotNull(target?.lowercase())
+                    "audio-phone" -> listOf("phone receiver", "receiver", "earpiece", "handset", "phone")
                     else -> listOf("speaker")
                 }
-                main.postDelayed({
-                    // the choice may already be on screen; otherwise open the Audio menu first
-                    if (!svc.clickByLabel(choice)) {
-                        svc.clickByLabel(listOf("audio", "audio route", "speaker", "bluetooth"))
-                        main.postDelayed({ svc.clickByLabel(choice) }, 700)
-                    }
-                }, 800)
+                // OnePlus/most dialers: the speaker button opens a menu (Speaker / Phone receiver /
+                // the PC) when a Bluetooth device is available. Retry while the call screen opens.
+                var tries = 0
+                fun attempt() {
+                    tries++
+                    if (svc.clickByLabel(choice)) return // menu already open
+                    if (svc.clickByLabel(listOf("audio output", "audio route", "audio", "speaker", "bluetooth"))) {
+                        main.postDelayed({ if (!svc.clickByLabel(choice) && tries < 5) main.postDelayed({ attempt() }, 600) }, 700)
+                    } else if (tries < 6) main.postDelayed({ attempt() }, 500)
+                }
+                main.postDelayed({ attempt() }, 600)
             }
             else -> return false
         }
@@ -186,9 +190,14 @@ object Telephony {
     fun currentCall(ctx: Context): Map<String, Any?> {
         KeepAliveService.current?.let { return it }
         val st = try { ctx.getSystemService(android.telephony.TelephonyManager::class.java).callState } catch (e: Exception) { 0 }
+        // saved by KeepAliveService when the call started (survives an app restart)
+        val saved = ctx.getSharedPreferences("dc_call", Context.MODE_PRIVATE)
+        if (st != android.telephony.TelephonyManager.CALL_STATE_IDLE && saved.contains("state")) {
+            return mapOf("state" to (saved.getString("state", null) ?: "offhook"), "number" to saved.getString("number", null), "name" to saved.getString("name", null), "since" to saved.getLong("since", 0L).takeIf { it > 0 })
+        }
         return when (st) {
             android.telephony.TelephonyManager.CALL_STATE_RINGING -> mapOf("state" to "ringing")
-            android.telephony.TelephonyManager.CALL_STATE_OFFHOOK -> mapOf("state" to "offhook", "since" to System.currentTimeMillis())
+            android.telephony.TelephonyManager.CALL_STATE_OFFHOOK -> mapOf("state" to "offhook")
             else -> mapOf("state" to "idle")
         }
     }
