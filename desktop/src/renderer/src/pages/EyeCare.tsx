@@ -38,7 +38,7 @@ export function EyeCare() {
         <Button variant="primary" icon={Play} onClick={() => call('eyeTake')}>Break now</Button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <Card strong className="relative flex items-center gap-8 overflow-hidden p-8">
           <div className="absolute -left-16 -top-16 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(53,224,255,0.20)_0%,transparent_70%)]" />
           <div className="relative">

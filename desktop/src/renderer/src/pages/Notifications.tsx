@@ -59,7 +59,7 @@ export function Notifications() {
                         <span className="text-[11px] text-white/30">{ago(n.time)}</span>
                       </div>
                       <div className="mt-0.5 font-semibold">{n.title}</div>
-                      <div className="selectable mt-0.5 whitespace-pre-wrap break-words text-sm text-white/70">{n.text}</div>
+                      <div className="selectable mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm text-white/70">{n.text}</div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {n.canReply && <Button size="sm" variant="soft" icon={Reply} onClick={() => { setReplying(replying === n.key ? null : n.key); setText('') }}>Reply</Button>}
                         {(n.actions || []).map((a, i) => (

@@ -34,7 +34,7 @@ export function Pair() {
   }, [])
 
   return (
-    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto grid h-full max-w-6xl grid-cols-[1.15fr_1fr] items-center gap-10 py-4">
+    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto grid h-full max-w-6xl grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] items-center gap-10 py-4">
       <motion.div variants={item}>
         <div className="mb-5 flex items-center gap-3">
           <Logo size={40} />

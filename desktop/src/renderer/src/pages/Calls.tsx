@@ -56,7 +56,7 @@ export function Calls() {
           <Button size="sm" variant="soft" onClick={() => go('/settings')}>Set up</Button>
         </Card>
       )}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[360px_1fr] xl:grid-cols-[400px_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[360px_minmax(0,1fr)] xl:grid-cols-[400px_minmax(0,1fr)]">
         <Card className="p-6">
           {sims.length > 1 && (
             <div className="mb-3 flex justify-center">

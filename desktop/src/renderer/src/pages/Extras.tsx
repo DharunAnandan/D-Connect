@@ -94,7 +94,7 @@ export function Extras() {
                   setAdding(false)
                 }}
               >
-                <div className="mt-3 grid grid-cols-[1fr_1.4fr_auto] gap-2">
+                <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-2">
                   <input className="field" placeholder="Name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
                   <input className="field font-mono text-xs" placeholder="Shell command" value={draft.cmd} onChange={(e) => setDraft({ ...draft, cmd: e.target.value })} />
                   <Button variant="primary" type="submit">Save</Button>

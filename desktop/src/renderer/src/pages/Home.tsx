@@ -72,7 +72,7 @@ export function Home() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr] 2xl:grid-cols-[1.6fr_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         {/* latest notifications */}
         <Card className="p-5">
           <div className="mb-3 flex items-center justify-between">

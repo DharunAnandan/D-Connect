@@ -127,7 +127,7 @@ export function Messages() {
                     <motion.div key={m.id} layout initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring}>
                       {showTime && <div className="my-3 text-center text-[11px] text-white/35">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {clock(m.date)}</div>}
                       <div className={`flex ${m.out ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`selectable max-w-[70%] whitespace-pre-wrap break-words rounded-[20px] px-4 py-2.5 text-[14px] leading-snug ${m.out ? 'rounded-br-md bg-[linear-gradient(135deg,#7c5cff,#4b9dff)] text-white shadow-[0_6px_20px_-8px_rgba(124,92,255,0.8)]' : 'rounded-bl-md bg-white/[0.07] text-white/90'}`}>
+                        <div className={`selectable max-w-[70%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-[20px] px-4 py-2.5 text-[14px] leading-snug ${m.out ? 'rounded-br-md bg-[linear-gradient(135deg,#7c5cff,#4b9dff)] text-white shadow-[0_6px_20px_-8px_rgba(124,92,255,0.8)]' : 'rounded-bl-md bg-white/[0.07] text-white/90'}`}>
                           {m.body}
                         </div>
                       </div>
