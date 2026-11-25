@@ -23,6 +23,15 @@ class NotifListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        // the phone's own dialer: its call notification isn't an "app call" for the PC (phone
+        // calls arrive as call state); it does tell us a merge or swap made on the phone itself
+        if (isDialer(sbn.packageName)) {
+            if (sbn.notification.category == Notification.CATEGORY_CALL) {
+                val ex = sbn.notification.extras
+                CallLines.onDialerNotification(ex.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: "", ex.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: "")
+            }
+            return
+        }
         val m = toMap(sbn) ?: return
         Bridge.emit("notif.posted", m)
     }
@@ -30,6 +39,12 @@ class NotifListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         Bridge.emit("notif.removed", mapOf("key" to sbn.key))
     }
+
+    private val dialers by lazy {
+        val def = try { getSystemService(android.telecom.TelecomManager::class.java)?.defaultDialerPackage } catch (_: Exception) { null }
+        setOfNotNull(def, "com.android.dialer", "com.google.android.dialer", "com.oplus.dialer", "com.android.incallui", "com.samsung.android.incallui", "com.samsung.android.dialer", "com.android.server.telecom", "com.oneplus.dialer", "com.coloros.dialer")
+    }
+    private fun isDialer(pkg: String) = pkg in dialers
 
     private fun toMap(sbn: StatusBarNotification): Map<String, Any?>? {
         val n = sbn.notification

@@ -33,7 +33,9 @@ export const DEFAULTS = {
   phoneAudioOnPc: true, // play the phone's media (Spotify, YouTube...) through this PC's speaker
   proximityLock: false,
   proximityGraceSec: 20,
-  lowBatteryAlert: 20,
+  lowBatteryAlert: 20, // alert when the phone drops to this % (0 = off)
+  chargeAlert: 100, // alert when charging reaches this % (0 = off), e.g. 80 to protect the battery
+  pcBatteryAlert: true, // also alert when this laptop's own battery runs low
   dndSync: true,
   commands: [] as { id: string; name: string; icon: string; cmd: string }[],
   // eye care (from side-eye)

@@ -16,7 +16,7 @@ import type { Ctx } from '../context'
 import { callLinkUp, fixCallLink } from './bluetooth'
 
 function sh(cmd: string, args: string[], timeout = 6000): Promise<string> {
-  return new Promise((resolve) => execFile(cmd, args, { timeout, maxBuffer: 32 * 1024 * 1024 }, (err, out) => resolve(err ? '' : out)))
+  return new Promise((resolve) => execFile(cmd, args, { timeout, maxBuffer: 32 * 1024 * 1024, env: { ...process.env, LC_ALL: 'C' } }, (err, out) => resolve(err ? '' : out)))
 }
 const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
@@ -404,6 +404,13 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
       phoneVolBefore = null
     }
   }
+  // the loopback's recording side must be the phone's music source, nothing else
+  const loopIsOnPhone = async (mod: string, srcIndex: string): Promise<boolean> => {
+    await wait(300)
+    const blocks = (await sh('pactl', ['list', 'source-outputs'])).split(/^Source Output #/m).slice(1)
+    const mine = blocks.filter((b) => new RegExp(`Owner Module: ${mod}\\b`).test(b))
+    return mine.length > 0 && mine.every((b) => new RegExp(`^\\s*Source: ${srcIndex}\\s*$`, 'm').test(b))
+  }
   let mediaBusy = false
   const phoneMedia = async (): Promise<void> => {
     if (mediaBusy) return
@@ -442,9 +449,17 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
         }
         return
       }
+      // only when the phone's music source really exists: on PipeWire (newer Ubuntu) a loopback
+      // from a missing source silently takes the default microphone instead, and you hear yourself
+      const srcIndex = (await sh('pactl', ['list', 'short', 'sources'])).split('\n').map((l) => l.split('\t')).find((c) => c[1] === src)?.[0]
+      if (!srcIndex) return
       const sink = (await sh('pactl', ['get-default-sink'])).trim()
       const id = (await sh('pactl', ['load-module', 'module-loopback', `source=${src}`, `sink=${sink}`, 'latency_msec=120', 'source_dont_move=true', "sink_input_properties='media.role=music application.name=dconnect-phone'"])).trim()
       mediaLoop = /^\d+$/.test(id) ? id : null
+      if (mediaLoop && !(await loopIsOnPhone(mediaLoop, srcIndex))) {
+        await sh('pactl', ['unload-module', mediaLoop]) // it grabbed something else (a mic): never keep that
+        mediaLoop = null
+      }
       if (mediaLoop) {
         await wait(300)
         await applyPhoneVolume()

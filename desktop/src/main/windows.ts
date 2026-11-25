@@ -86,7 +86,7 @@ export function fitToastWindow(win: BrowserWindow, height: number): void {
 export function createCallWindow(): BrowserWindow {
   const wa = screen.getPrimaryDisplay().workArea
   const W = 380
-  const H = 660
+  const H = 780 // room for a waiting call and a call on hold
   const win = new BrowserWindow({
     x: wa.x + wa.width - W - 24,
     y: wa.y + 24,

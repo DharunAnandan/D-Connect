@@ -15,11 +15,17 @@ export function messages(ctx: Ctx, openCall: (c: CallState) => void, closeCall: 
         body: data.body,
         reply: { kind: 'sms', address: data.address }
       })
+    } else if (type === 'call.route.result' && ['hold', 'swap', 'merge'].includes(data?.action) && !data.ok) {
+      // hold / swap / merge couldn't be pressed on the phone's call screen: say so on the card
+      ctx.emit('call.hint', `Couldn't ${data.action} from here: the phone's call screen had no ${data.action === 'hold' ? 'Hold' : data.action === 'swap' ? 'Swap' : 'Merge'} button. Use the phone for this one.`)
     } else if (type === 'call.state') {
       call = data
-      ctx.emit('call', call)
+      // the call card window merges in an app call waiting on top, and sends it to every window
       if (call.state === 'ringing' || call.state === 'offhook' || call.state === 'dialing') openCall(call)
-      else closeCall()
+      else {
+        ctx.emit('call', call)
+        closeCall()
+      }
     }
   })
   ctx.hub.on('disconnected', () => {

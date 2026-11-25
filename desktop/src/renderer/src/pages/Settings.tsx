@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Bell, Bluetooth, Mic, Cable, Clipboard, Copy, FolderDown, Headphones, Keyboard, Loader2, MousePointer2, Plus, Settings as Cog, Smartphone, Sparkles, Trash2, Volume2 } from 'lucide-react'
+import { BatteryCharging, BatteryFull, BatteryLow, Bell, Bluetooth, Laptop, Mic, Cable, Clipboard, Copy, FolderDown, Headphones, Keyboard, Loader2, MousePointer2, Plus, Settings as Cog, Smartphone, Sparkles, Trash2, Volume2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button, Card, PageHeader, Pill, Row, Toggle } from '@/components/ui'
 import { call, dc } from '@/lib/api'
@@ -175,6 +175,18 @@ export function Settings() {
         )}
       </Section>
 
+      <Section title="Battery alerts" icon={BatteryCharging}>
+        <Row icon={BatteryLow} title="Phone battery low" body={settings.lowBatteryAlert ? `Alert when the phone drops to ${settings.lowBatteryAlert}% and isn't charging.` : 'Off'}>
+          <Levels value={Number(settings.lowBatteryAlert ?? 20)} options={[0, 10, 15, 20, 30, 50]} onChange={(v) => setSetting('lowBatteryAlert', v)} />
+        </Row>
+        <Row icon={BatteryFull} title="Phone charged to" body={settings.chargeAlert === 0 ? 'Off' : (settings.chargeAlert ?? 100) >= 100 ? 'Alert when it is fully charged.' : `Alert when charging reaches ${settings.chargeAlert}%, so you can unplug it early and go easy on the battery.`}>
+          <Levels value={Number(settings.chargeAlert ?? 100)} options={[0, 80, 85, 90, 100]} onChange={(v) => setSetting('chargeAlert', v)} />
+        </Row>
+        <Row icon={Laptop} title="This laptop's battery low" body="Also alert when this PC's own battery drops to the same level and isn't charging.">
+          <Toggle on={settings.pcBatteryAlert !== false} onChange={(v) => setSetting('pcBatteryAlert', v)} />
+        </Row>
+      </Section>
+
       <Section title="Phone as remote" icon={MousePointer2}>
         <Row icon={Keyboard} title="Input method" body={input === 'uinput' ? 'Virtual input device (works on Wayland and X11)' : input === 'xdotool' ? 'xdotool (X11 only)' : input === 'sendinput' ? 'Windows SendInput' : 'Not available: allow access to /dev/uinput, or install xdotool on X11.'}>
           <Pill color={input && input !== 'none' ? 'mint' : 'rose'}>{input || '…'}</Pill>
@@ -193,6 +205,19 @@ export function Settings() {
         </Row>
       </Section>
     </motion.div>
+  )
+}
+
+// a row of small level buttons (0 = off)
+function Levels({ value, options, onChange }: { value: number; options: number[]; onChange: (v: number) => void }) {
+  return (
+    <div className="flex rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
+      {options.map((o) => (
+        <button key={o} onClick={() => onChange(o)} className={`rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums transition-colors ${value === o ? 'bg-white text-ink-950' : 'text-white/60 hover:text-white'}`}>
+          {o === 0 ? 'Off' : `${o}%`}
+        </button>
+      ))}
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
 // Incoming / ongoing call: a floating card with a pulsing avatar, answer and decline.
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Maximize2, Mic, MicOff, Minimize2, Pause, Phone, PhoneOff, Repeat, Smartphone, Volume2 } from 'lucide-react'
+import { Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Maximize2, Mic, MicOff, Minimize2, Pause, Phone, PhoneOff, Play, Repeat, Search, Smartphone, UserPlus, Volume2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { CallState } from '@shared/protocol'
 import { Avatar } from '@/components/ui'
@@ -36,17 +36,28 @@ export function CallCard() {
     setDevs((d) => (d ? { ...d, out, in: inp } : d))
     call('setCallDevices', out, inp)
   }
-  const [twoCalls, setTwoCalls] = useState(false)
   useEffect(() => {
     if (c.state === 'idle') {
-      setTwoCalls(false)
       setMuted(false)
+      setAdding(false)
     }
   }, [c.state])
   const control = async (action: 'hold' | 'swap' | 'merge'): Promise<void> => {
+    setHint('')
     const r = await call<{ ok: boolean }>('callControl', action)
-    setHint(r?.ok ? '' : 'Turn on Screen control on the phone (Settings → Screen control) to hold, swap and merge from here.')
+    if (!r?.ok) setHint('Turn on Screen control on the phone (Settings → Screen control) to hold, swap and merge from here.')
   }
+  useEffect(() => dc.on('call.hint', (h: string) => setHint(h)), [])
+  // every call the phone has going: the one in front, others on hold, one waiting
+  const lines = c.calls || []
+  const inCall = lines.filter((l) => l.status !== 'ringing')
+  // the call in front is the main card; the rest (on hold, or in a conference) get a row each
+  const front = inCall.findIndex((l) => l.number === c.number && (c.held ? l.status === 'held' : l.status !== 'held'))
+  const others = inCall.filter((_, i) => i !== (front < 0 ? 0 : front))
+  const conference = inCall.length > 1 && inCall.every((l) => l.conference)
+  const twoCalls = inCall.length > 1 && !conference
+  const waitingCall = c.waitingCall || null
+  const [adding, setAdding] = useState(false)
   useEffect(() => {
     call('callRoute').then(setRoute)
     return dc.on('call.route', (r) => {
@@ -60,17 +71,17 @@ export function CallCard() {
     return dc.on('call', setC)
   }, [])
   useEffect(() => {
-    if (c.state !== 'ringing') return
+    if (c.state !== 'ringing' && !c.waitingCall) return
     sfx.ring()
     const t = setInterval(() => sfx.ring(), 2600)
     return () => clearInterval(t)
-  }, [c.state])
+  }, [c.state, !!c.waitingCall])
   useEffect(() => {
     const t = setInterval(() => tick((x) => x + 1), 1000)
     return () => clearInterval(t)
   }, [])
 
-  const name = c.name || c.number || (c.state === 'ringing' ? 'Incoming call' : 'Ongoing call')
+  const name = conference ? `Conference · ${inCall.map((l) => (l.name || l.number || '').split(' ')[0]).join(', ')}` : c.name || c.number || (c.state === 'ringing' ? 'Incoming call' : 'Ongoing call')
   const live = c.state === 'offhook' || c.state === 'dialing'
   if (compact && live) {
     return (
@@ -121,6 +132,24 @@ export function CallCard() {
               </button>
             )}
             <div className="absolute -left-10 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(61,220,151,0.25)_0%,transparent_70%)]" />
+            <AnimatePresence>
+              {waitingCall && (
+                <motion.div key="waiting" initial={{ opacity: 0, y: -12, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -12, height: 0 }} className="no-drag relative -mt-3 mb-4 overflow-hidden">
+                  <div className="flex items-center gap-3 rounded-2xl bg-mint/10 p-3 text-left ring-1 ring-mint/30">
+                    <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
+                      <Avatar name={waitingCall.name || waitingCall.number || '?'} size={40} />
+                    </motion.div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-mint">Call waiting</div>
+                      <div className="truncate text-sm font-semibold">{waitingCall.name || waitingCall.number || 'Unknown'}</div>
+                      <div className="truncate text-[11px] text-white/50">Answer puts {c.name || c.number || 'this call'} on hold</div>
+                    </div>
+                    <button title="Decline" onClick={() => call('callReject')} className="grid h-10 w-10 place-items-center rounded-full bg-rose"><PhoneOff size={17} /></button>
+                    <button title="Answer and hold the current call" onClick={() => call('callAnswer')} className="grid h-10 w-10 place-items-center rounded-full bg-mint text-ink-950"><Phone size={17} fill="currentColor" /></button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.30)_0%,transparent_70%)]" />
             <div className="relative mx-auto grid h-32 w-32 place-items-center">
               {c.state === 'ringing' && [0, 1, 2].map((i) => <motion.span key={i} className="absolute inset-2 rounded-full border-2 border-mint/70" initial={{ scale: 0.8, opacity: 0.9 }} animate={{ scale: 1.6, opacity: 0 }} transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.6 }} />)}
@@ -128,20 +157,44 @@ export function CallCard() {
                 <Avatar name={name} src={c.photo ? `data:image/jpeg;base64,${c.photo}` : undefined} size={96} />
               </motion.div>
             </div>
-            <div className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-mint">{c.state === 'ringing' ? (c.waiting ? 'Call waiting' : 'Incoming call') : c.state === 'dialing' ? 'Calling…' : 'On call'}</div>
+            <div className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-mint">{c.state === 'ringing' ? (c.waiting ? 'Call waiting' : 'Incoming call') : c.state === 'dialing' ? 'Calling…' : c.held ? 'On hold' : conference ? 'Conference call' : 'On call'}</div>
             <div className="relative mt-1 truncate text-2xl font-bold">{name}</div>
             {c.name && c.number && <div className="relative text-sm text-white/55">{c.number}</div>}
             {live && c.since && <div className="relative mt-1 text-sm tabular-nums text-white/70">{duration((Date.now() - c.since) / 1000)}</div>}
             {c.state === 'ringing' && c.waiting && <div className="relative mt-2 text-xs text-white/60">Answering puts your current call on hold</div>}
+            {live && others.length > 0 && (
+              <div className="no-drag relative mx-auto mt-4 w-full max-w-[310px] space-y-1.5">
+                {others.map((l, i) => (
+                  <div key={(l.number || '') + i} className="flex items-center gap-2.5 rounded-2xl bg-white/[0.05] px-3 py-2 text-left ring-1 ring-white/10">
+                    <Avatar name={l.name || l.number || '?'} size={30} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold">{l.name || l.number || 'Call'}</div>
+                      <div className={`text-[10.5px] font-semibold ${l.status === 'held' ? 'text-amber' : 'text-mint'}`}>{l.status === 'held' ? 'On hold' : l.conference ? 'In the conference' : 'On call'}</div>
+                    </div>
+                    {l.status === 'held' && <button onClick={() => control('swap')} className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold hover:bg-white/15">Switch to</button>}
+                  </div>
+                ))}
+              </div>
+            )}
             {live && (
-              <div className="no-drag relative mx-auto mt-4 flex justify-center gap-2">
-                {[{ a: 'hold' as const, I: Pause, label: 'Hold' }, ...(twoCalls ? [{ a: 'swap' as const, I: Repeat, label: 'Swap' }, { a: 'merge' as const, I: Combine, label: 'Merge' }] : [])].map(({ a, I, label }) => (
+              <div className="no-drag relative mx-auto mt-4 flex flex-wrap justify-center gap-2">
+                {[
+                  { a: 'hold' as const, I: c.held ? Play : Pause, label: c.held ? 'Resume' : 'Hold', show: !twoCalls },
+                  { a: 'swap' as const, I: Repeat, label: 'Swap', show: twoCalls },
+                  { a: 'merge' as const, I: Combine, label: 'Merge', show: twoCalls }
+                ].filter((b) => b.show).map(({ a, I, label }) => (
                   <button key={a} onClick={() => control(a)} className="flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1.5 text-xs font-semibold text-white/80 ring-1 ring-white/10 hover:bg-white/[0.12]">
                     <I size={13} /> {label}
                   </button>
                 ))}
+                {!waitingCall && (
+                  <button onClick={() => setAdding(!adding)} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${adding ? 'bg-white text-ink-950 ring-white' : 'bg-white/[0.07] text-white/80 ring-white/10 hover:bg-white/[0.12]'}`}>
+                    <UserPlus size={13} /> Add call
+                  </button>
+                )}
               </div>
             )}
+            <AnimatePresence>{live && adding && <AddCall onDone={() => setAdding(false)} />}</AnimatePresence>
             {hint && <div className="relative mt-2 text-[11px] text-amber">{hint}</div>}
             {live && route === 'pc' && devs && (
               <div className="no-drag relative mx-auto mt-4 flex w-full max-w-[310px] flex-col gap-2">
@@ -181,7 +234,7 @@ export function CallCard() {
                 <PhoneOff size={26} />
               </motion.button>
               {c.state === 'ringing' && (
-                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }} animate={{ rotate: [0, -14, 14, -14, 14, 0] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }} title={c.waiting ? 'Answer and hold the current call' : 'Answer'} onClick={() => { if (c.waiting) setTwoCalls(true); call('callAnswer') }} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.9)]">
+                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }} animate={{ rotate: [0, -14, 14, -14, 14, 0] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }} title={c.waiting ? 'Answer and hold the current call' : 'Answer'} onClick={() => call('callAnswer')} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.9)]">
                   <Phone size={26} fill="currentColor" />
                 </motion.button>
               )}
@@ -190,6 +243,41 @@ export function CallCard() {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+// "Add call": type a number or find a contact; the current call goes on hold while it rings.
+function AddCall({ onDone }: { onDone: () => void }) {
+  const [q, setQ] = useState('')
+  const [all, setAll] = useState<{ name: string; number: string }[]>([])
+  useEffect(() => {
+    call<{ items: { name: string; number: string }[] }>('contacts', '').then((r) => setAll(r?.items || [])).catch(() => {})
+  }, [])
+  const needle = q.trim().toLowerCase()
+  const digits = needle.replace(/[^\d]/g, '')
+  const hits = needle ? all.filter((c) => c.name.toLowerCase().includes(needle) || (digits.length >= 2 && c.number.replace(/\D/g, '').includes(digits))).slice(0, 5) : []
+  const dial = (n: string): void => {
+    const num = n.replace(/[^\d+*#]/g, '')
+    if (!num) return
+    call('callDial', num)
+    onDone()
+  }
+  return (
+    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="no-drag relative mx-auto mt-3 w-full max-w-[310px] overflow-hidden text-left">
+      <div className="flex items-center gap-2 rounded-2xl bg-white/[0.07] px-3 py-2 ring-1 ring-white/10 focus-within:ring-cyan/50">
+        <Search size={14} className="text-white/40" />
+        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') dial(hits[0] && !/^[\d+*# ]+$/.test(q) ? hits[0].number : q); if (e.key === 'Escape') onDone() }} placeholder="Name or number" className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-white/35" />
+        {/^[\d+*# ]{3,}$/.test(q) && <button onClick={() => dial(q)} className="grid h-7 w-7 place-items-center rounded-full bg-mint text-ink-950"><Phone size={13} fill="currentColor" /></button>}
+      </div>
+      {hits.map((h) => (
+        <button key={h.name + h.number} onClick={() => dial(h.number)} className="mt-1 flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 hover:bg-white/[0.06]">
+          <Avatar name={h.name} size={28} />
+          <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-semibold">{h.name}</span><span className="block truncate text-[10.5px] text-white/45">{h.number}</span></span>
+          <Phone size={13} className="text-mint" />
+        </button>
+      ))}
+      <div className="mt-1.5 text-center text-[10.5px] text-white/40">Your current call goes on hold while the new one rings</div>
+    </motion.div>
   )
 }
 

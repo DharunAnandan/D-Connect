@@ -165,14 +165,23 @@ app.whenReady().then(async () => {
 
   // ---------------------------------------------------------------- call card
   let lastCall: CallState = { state: 'idle' }
+  // an app call (Teams, WhatsApp...) ringing while a phone call is going: shown as the waiting
+  // call on top of the phone call, not in place of it
+  let appWaiting: CallState['waitingCall'] = null
+  let phoneCall: CallState = { state: 'idle' }
   const openCall = (c: CallState): void => {
+    if (!c.app) phoneCall = c
+    if (appWaiting && !c.app && c.state !== 'ringing' && !c.waitingCall?.number) c = { ...c, waitingCall: appWaiting }
     lastCall = c
+    for (const w of allWindows()) w.webContents.send('evt', 'call', lastCall)
     if (!callWin || callWin.isDestroyed()) {
       callWin = createCallWindow()
       callWin.once('ready-to-show', () => callWin?.showInactive())
     } else callWin.showInactive()
   }
   const closeCall = (): void => {
+    phoneCall = { state: 'idle' }
+    appWaiting = null
     lastCall = { state: 'idle' }
     const w = callWin
     if (!w || w.isDestroyed()) return
@@ -180,11 +189,27 @@ app.whenReady().then(async () => {
     setTimeout(() => !w.isDestroyed() && lastCall.state === 'idle' && w.destroy(), 700)
   }
   ctx.handle('lastCall', () => lastCall)
+  // test only (DC_DEV_CONTROL): show the card with sample calls, no phone call needed
+  if (process.env.DC_DEV_CONTROL) {
+    ctx.handle('devFakeCall', (preset: string) => {
+      const t = Date.now() - 95000
+      const a = { number: '+910000000001', name: 'Sample One', since: t }
+      const b = { number: '+910000000002', name: 'Sample Two', since: t + 40000 }
+      const c: CallState =
+        preset === 'waiting' ? { state: 'offhook', ...a, waitingCall: b, calls: [{ ...a, status: 'active' }, { ...b, status: 'ringing' }] }
+        : preset === 'held' ? { state: 'offhook', ...b, calls: [{ ...a, status: 'held' }, { ...b, status: 'active' }] }
+        : preset === 'conf' ? { state: 'offhook', ...a, calls: [{ ...a, status: 'active', conference: true }, { ...b, status: 'active', conference: true }] }
+        : { state: 'idle' }
+      if (c.state === 'idle') return closeCall()
+      openCall(c)
+      setTimeout(() => emit('call', c), 600)
+    })
+  }
   // the call card can shrink to a small bar in the corner and grow back
   ctx.handle('callCompact', (on: boolean) => {
     if (!callWin || callWin.isDestroyed()) return
     const wa = screen.getPrimaryDisplay().workArea
-    const [W, H] = on ? [340, 84] : [380, 660]
+    const [W, H] = on ? [340, 84] : [380, 780]
     callWin.setBounds({ x: wa.x + wa.width - W - 24, y: wa.y + 24, width: W, height: H })
   })
 
@@ -193,18 +218,25 @@ app.whenReady().then(async () => {
   // or decline with the notification's own buttons.
   let appCallKey: string | null = null
   let appCallActions: string[] = []
+  const phoneLive = (): boolean => phoneCall.state === 'offhook' || phoneCall.state === 'dialing'
   notifications(ctx, (n) => {
     if (!n || !n.actions) {
       if (n && n.key === appCallKey) {
         appCallKey = null
-        closeCall()
+        if (appWaiting && phoneLive()) {
+          appWaiting = null
+          openCall({ ...phoneCall, waitingCall: phoneCall.waitingCall?.number ? phoneCall.waitingCall : null })
+        } else if (!phoneLive()) closeCall()
       }
       return
     }
     appCallKey = n.key
     appCallActions = n.actions
-    openCall({ state: 'ringing', name: n.title, number: n.app, app: n.app, key: n.key })
-    for (const w of allWindows()) w.webContents.send('evt', 'call', lastCall)
+    if (phoneLive()) {
+      // already on a phone call: the app call waits on top of it
+      appWaiting = { name: `${n.title} · ${n.app}`, number: undefined }
+      openCall(phoneCall)
+    } else openCall({ state: 'ringing', name: n.title, number: n.app, app: n.app, key: n.key })
   })
   const pressAppCall = (re: RegExp): boolean => {
     if (!appCallKey) return false
@@ -221,6 +253,10 @@ app.whenReady().then(async () => {
     ctx.handle('callAnswer', () => {
       if (pressAppCall(/answer|accept|pick up|join/i)) {
         audio.answeredHere()
+        if (appWaiting) {
+          appWaiting = null // answered the app call; the phone call stays on its card
+          return
+        }
         lastCall = { ...lastCall, state: 'offhook', since: Date.now() }
         for (const w of allWindows()) w.webContents.send('evt', 'call', lastCall)
         return
@@ -230,7 +266,10 @@ app.whenReady().then(async () => {
     ctx.handle('callReject', () => {
       if (pressAppCall(/decline|reject|dismiss|ignore/i)) {
         appCallKey = null
-        closeCall()
+        if (appWaiting && phoneLive()) {
+          appWaiting = null
+          openCall({ ...phoneCall, waitingCall: null })
+        } else closeCall()
         return
       }
       return reject()

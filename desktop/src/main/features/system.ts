@@ -2,6 +2,7 @@
 // sharing, battery alerts, DND sync, phone status.
 import { exec, execFile } from 'child_process'
 import crypto from 'crypto'
+import fs from 'fs'
 import { shell, powerSaveBlocker } from 'electron'
 import type { PhoneStatus, QuickCommand } from '@shared/protocol'
 import type { Ctx } from '../context'
@@ -70,22 +71,50 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
     }
   })
 
+  // this laptop's own battery (Linux): the same low-battery level as the phone
+  let pcLowAlerted = false
+  const pcBattery = (): { level: number; charging: boolean } | null => {
+    try {
+      const dir = fs.readdirSync('/sys/class/power_supply').find((d) => /^BAT/.test(d))
+      if (!dir) return null
+      const level = Number(fs.readFileSync(`/sys/class/power_supply/${dir}/capacity`, 'utf8').trim())
+      const st = fs.readFileSync(`/sys/class/power_supply/${dir}/status`, 'utf8').trim()
+      return Number.isFinite(level) ? { level, charging: /charging|full/i.test(st) && !/discharging/i.test(st) } : null
+    } catch {
+      return null
+    }
+  }
+  if (process.platform === 'linux') {
+    setInterval(() => {
+      const low = Number(ctx.store.get('lowBatteryAlert') ?? 20)
+      const b = ctx.store.get('pcBatteryAlert') !== false && low ? pcBattery() : null
+      if (!b) return
+      if (b.level <= low && !b.charging && !pcLowAlerted) {
+        pcLowAlerted = true
+        ctx.toast({ kind: 'battery', title: `Laptop battery low · ${b.level}%`, body: 'Plug in the charger.', ttl: 12000 })
+      }
+      if (b.charging || b.level > low + 3) pcLowAlerted = false
+    }, 60000)
+  }
+
   ctx.hub.on('message', (type, data) => {
     if (type === 'phone.status') {
       const prev = status
       status = data
       ctx.emit('status', status)
-      const low = ctx.store.get('lowBatteryAlert')
+      // battery alerts at the levels chosen in Settings
+      const low = Number(ctx.store.get('lowBatteryAlert') ?? 20)
       if (low && data.battery <= low && !data.charging && !lowAlerted) {
         lowAlerted = true
-        ctx.toast({ kind: 'battery', title: `Phone battery low · ${data.battery}%`, body: 'Time to plug it in.' })
+        ctx.toast({ kind: 'battery', title: `Phone battery low · ${data.battery}%`, body: data.battery <= 10 ? 'Plug it in soon, it may switch off.' : 'Time to plug it in.', ttl: 12000 })
       }
-      if (data.charging || data.battery > low + 5) lowAlerted = false
-      if (data.charging && data.battery >= 100 && !fullAlerted && prev?.battery !== undefined && prev.battery < 100) {
+      if (data.charging || data.battery > low + 3) lowAlerted = false
+      const target = Number(ctx.store.get('chargeAlert') ?? 100)
+      if (target && data.charging && data.battery >= target && !fullAlerted && prev?.battery !== undefined && prev.battery < target) {
         fullAlerted = true
-        ctx.toast({ kind: 'battery', title: 'Phone fully charged', body: 'You can unplug it now.' })
+        ctx.toast({ kind: 'battery', title: target >= 100 ? 'Phone fully charged' : `Phone charged to ${data.battery}%`, body: target >= 100 ? 'You can unplug it now.' : `It reached your ${target}% limit. Unplug it to go easy on the battery.`, ttl: 12000 })
       }
-      if (!data.charging) fullAlerted = false
+      if (!data.charging || data.battery < target - 3) fullAlerted = false
       if (ctx.store.get('dndSync') && prev && prev.dnd !== data.dnd) ctx.emit('dnd', data.dnd)
     } else if (type === 'commands.run') run(data.id)
     else if (type === 'find.pc') findPc(data.on !== false)

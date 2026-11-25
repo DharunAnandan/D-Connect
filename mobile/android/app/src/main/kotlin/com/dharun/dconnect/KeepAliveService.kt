@@ -50,6 +50,7 @@ class KeepAliveService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        CallLines.start(this)
         try {
             @Suppress("DEPRECATION")
             val mode = if (Build.VERSION.SDK_INT >= 29) android.net.wifi.WifiManager.WIFI_MODE_FULL_LOW_LATENCY else android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF
@@ -162,27 +163,21 @@ class KeepAliveService : Service() {
         val number = i.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
         // the broadcast comes twice (with and without the number): skip the empty one
         if (state == lastCallState && number == null) return
-        val s = when (state) {
-            TelephonyManager.EXTRA_STATE_RINGING -> "ringing"
-            TelephonyManager.EXTRA_STATE_OFFHOOK -> if (lastCallState == TelephonyManager.EXTRA_STATE_IDLE) "dialing" else "offhook"
-            else -> "idle"
-        }
-        val waiting = state == TelephonyManager.EXTRA_STATE_RINGING && callSince > 0L // a second call while on one
         if (state == TelephonyManager.EXTRA_STATE_OFFHOOK && callSince == 0L) callSince = System.currentTimeMillis()
         if (state == TelephonyManager.EXTRA_STATE_IDLE) callSince = 0L
         if (state == TelephonyManager.EXTRA_STATE_OFFHOOK) watchRoute() else stopRouteWatch()
         lastCallState = state
-        val m = mapOf("state" to s, "number" to (number ?: lastNumber), "name" to Telephony.contactName(this, number ?: lastNumber), "since" to if (callSince > 0) callSince else null, "waiting" to waiting)
-        if (number != null) lastNumber = number
-        if (s == "idle") lastNumber = null
-        current = if (s == "idle") null else m
-        // keep it across app restarts (Android only gives the number when the call starts)
+        if (number != null && state == TelephonyManager.EXTRA_STATE_RINGING && CallLines.snapshot() == null) lastNumber = number
+        if (state == TelephonyManager.EXTRA_STATE_IDLE) lastNumber = null
+        // every call as its own line (call waiting, hold, swap, merge), sent to the PC
+        CallLines.onPhoneState(state, number)
+        // keep the call in front across app restarts (Android only gives the number at the start)
+        val m = current
         getSharedPreferences("dc_call", MODE_PRIVATE).edit().apply {
-            if (s == "idle") clear() else {
-                putString("state", s); putString("number", m["number"] as String?); putString("name", m["name"] as String?)
+            if (m == null) clear() else {
+                putString("state", m["state"] as String?); putString("number", m["number"] as String?); putString("name", m["name"] as String?)
                 putLong("since", (m["since"] as Long?) ?: 0L)
             }
         }.apply()
-        Bridge.emit("call.state", m)
     }
 }

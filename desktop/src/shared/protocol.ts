@@ -88,9 +88,19 @@ export interface CallState {
   name?: string
   photo?: string
   since?: number
-  waiting?: boolean // a second call ringing while already on one
+  waiting?: boolean // (older phones) a second call ringing while already on one
+  held?: boolean // the call in front is on hold
+  waitingCall?: { number?: string; name?: string } | null // a second call ringing while on this one
+  calls?: CallLine[] // every call going on (active, on hold, ringing)
   app?: string // set for app calls (Teams, WhatsApp...): answered via the notification's buttons
   key?: string
+}
+export interface CallLine {
+  number?: string
+  name?: string
+  since?: number
+  status: 'ringing' | 'dialing' | 'active' | 'held'
+  conference?: boolean
 }
 export interface CallLogEntry {
   number: string

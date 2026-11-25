@@ -107,6 +107,26 @@ class ControlService : AccessibilityService() {
     // press the first button whose text or description matches (the phone's own call screen)
     var lastScreen = ""
 
+    // press the clickable control whose whole label is one of [labels] (not just containing it)
+    fun clickExact(labels: List<String>): Boolean {
+        val roots = windows.mapNotNull { it.root } + listOfNotNull(rootInActiveWindow)
+        for (root in roots) {
+            val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+            while (queue.isNotEmpty()) {
+                val n = queue.removeFirst()
+                val t = (n.text ?: n.contentDescription ?: "").toString().trim().lowercase()
+                if (t.isNotEmpty() && labels.any { t == it } && n.isEnabled) {
+                    var c: AccessibilityNodeInfo? = n
+                    while (c != null && !c.isClickable) c = c.parent
+                    if (c?.isEnabled != false && c?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true) return true
+                }
+                for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
+            }
+        }
+        clickByLabel(listOf("\u0000")) // records what the screen offers, for the report
+        return false
+    }
+
     // labels match the text, the description, or (as "id:name") the view id; nodes whose id is in
     // [skipIds] are ignored (e.g. the dialer's audio button, whose text is the current route)
     fun clickByLabel(labels: List<String>, skipIds: List<String> = emptyList()): Boolean {

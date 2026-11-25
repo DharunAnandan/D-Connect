@@ -123,6 +123,7 @@ object Telephony {
 
     @SuppressLint("MissingPermission")
     fun dial(ctx: Context, number: String, sim: Int? = null) {
+        CallLines.onDialed(number) // during a call this is "Add call": the current one goes on hold
         try {
             val tm = ctx.getSystemService(TelecomManager::class.java)
             val extras = Bundle()
@@ -151,9 +152,25 @@ object Telephony {
         try { ctx.getSystemService(TelecomManager::class.java).showInCallScreen(false) } catch (_: Exception) {}
         val main = android.os.Handler(android.os.Looper.getMainLooper())
         when (action) {
-            "hold" -> main.postDelayed({ svc.clickByLabel(listOf("hold", "resume", "unhold")) }, 700)
-            "swap" -> main.postDelayed({ svc.clickByLabel(listOf("swap", "switch calls", "switch")) }, 700)
-            "merge" -> main.postDelayed({ svc.clickByLabel(listOf("merge", "merge calls", "conference")) }, 700)
+            "hold", "swap", "merge" -> {
+                // the call screen's own buttons (OnePlus: a grid of labelled buttons). Labels are
+                // matched exactly so the "On hold" status text of the other call isn't pressed.
+                val labels = when (action) {
+                    "hold" -> listOf("hold", "resume", "unhold", "hold call", "resume call")
+                    "swap" -> listOf("swap", "swap calls", "switch calls", "switch")
+                    else -> listOf("merge", "merge calls", "conference", "merge call")
+                }
+                var tries = 0
+                fun attempt() {
+                    tries++
+                    if (svc.clickExact(labels)) {
+                        CallLines.onControl(action)
+                        report(action, true, "pressed")
+                    } else if (tries < 6) main.postDelayed({ attempt() }, 500)
+                    else report(action, false, "no ${labels.first()} button on the call screen: ${svc.lastScreen}")
+                }
+                main.postDelayed({ attempt() }, 700)
+            }
             "audio-pc", "audio-phone", "audio-speaker" -> {
                 // the call screen can only be pressed while it's on: wake it for a few seconds
                 try {
