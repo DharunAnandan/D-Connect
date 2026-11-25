@@ -10,9 +10,9 @@ import type { Ctx } from '../context'
 export const BUILTIN: QuickCommand[] = [
   { id: 'lock', name: 'Lock PC', icon: 'lock', builtin: true },
   { id: 'sleep', name: 'Sleep', icon: 'moon', builtin: true },
-  { id: 'mute', name: 'Mute audio', icon: 'volume-x', builtin: true },
+  { id: 'mute', name: 'Mute audio', icon: 'volume-x', builtin: true, toggle: true },
   { id: 'screenshot', name: 'Screenshot', icon: 'camera', builtin: true },
-  { id: 'awake', name: 'Keep awake', icon: 'coffee', builtin: true }
+  { id: 'awake', name: 'Keep awake', icon: 'coffee', builtin: true, toggle: true }
 ]
 
 export function lockPc(): void {
@@ -27,7 +27,27 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
   let fullAlerted = false
   let awakeId: number | null = null
 
-  const commands = (): QuickCommand[] => [...BUILTIN, ...ctx.store.get('commands').map((c) => ({ ...c, builtin: false }))]
+  // the switches' current state, so the phone shows ON / OFF
+  let pcMuted = false
+  const readMute = (): Promise<boolean> =>
+    new Promise((resolve) => {
+      if (process.platform !== 'linux') return resolve(false)
+      execFile('pactl', ['get-sink-mute', '@DEFAULT_SINK@'], { env: { ...process.env, LC_ALL: 'C' } }, (err, out) => resolve(!err && /yes/i.test(out)))
+    })
+  const stateOf = (id: string): boolean | undefined => (id === 'mute' ? pcMuted : id === 'awake' ? awakeId !== null : undefined)
+  const commands = (): QuickCommand[] => [...BUILTIN.map((c) => (c.toggle ? { ...c, on: stateOf(c.id) } : c)), ...ctx.store.get('commands').map((c) => ({ ...c, builtin: false }))]
+  const sendCommands = (): void => {
+    if (ctx.hub.session) ctx.hub.send('commands.list', { commands: commands().map(({ cmd, ...c }) => c) })
+  }
+  // mute can change from the keyboard or the top bar too: keep the phone's tile honest
+  setInterval(async () => {
+    if (!ctx.hub.session) return
+    const m = await readMute()
+    if (m !== pcMuted) {
+      pcMuted = m
+      sendCommands()
+    }
+  }, 4000)
 
   const run = (id: string): void => {
     if (id === 'lock') return lockPc()
@@ -37,7 +57,11 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
       return
     }
     if (id === 'mute') {
-      if (process.platform === 'linux') execFile('pactl', ['set-sink-mute', '@DEFAULT_SINK@', 'toggle'])
+      if (process.platform === 'linux')
+        execFile('pactl', ['set-sink-mute', '@DEFAULT_SINK@', 'toggle'], async () => {
+          pcMuted = await readMute()
+          sendCommands()
+        })
       return
     }
     if (id === 'screenshot') {
@@ -50,6 +74,7 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
         awakeId = null
       } else awakeId = powerSaveBlocker.start('prevent-display-sleep')
       ctx.toast({ kind: 'info', title: awakeId !== null ? 'PC will stay awake' : 'Keep awake is off' })
+      sendCommands()
       return
     }
     const c = ctx.store.get('commands').find((x) => x.id === id)

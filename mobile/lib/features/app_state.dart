@@ -12,7 +12,15 @@ class PcPlayer {
 
 class QuickCmd {
   final String id, name, icon;
-  QuickCmd(this.id, this.name, this.icon);
+  final bool toggle; // a switch (Mute audio, Keep awake) rather than a one-shot action
+  bool on;
+  QuickCmd(this.id, this.name, this.icon, {this.toggle = false, this.on = false});
+}
+
+class ClipItem {
+  final String text, from; // from: 'pc' | 'phone'
+  final int time;
+  ClipItem(this.text, this.from, this.time);
 }
 
 class Transfer {
@@ -32,6 +40,7 @@ class AppState extends ChangeNotifier {
 
   List<PcPlayer> pcPlayers = [];
   List<QuickCmd> commands = [];
+  List<ClipItem> clips = []; // clipboard history, shared by the PC
   final List<Transfer> transfers = [];
   bool clipboardSync = true;
 
@@ -41,7 +50,11 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     });
     Link.I.on('commands.list').listen((m) {
-      commands = ((m.data?['commands'] as List?) ?? []).map((e) => QuickCmd(e['id'], e['name'], e['icon'] ?? 'terminal')).toList();
+      commands = ((m.data?['commands'] as List?) ?? []).map((e) => QuickCmd(e['id'], e['name'], e['icon'] ?? 'terminal', toggle: e['toggle'] == true, on: e['on'] == true)).toList();
+      notifyListeners();
+    });
+    Link.I.on('clip.history').listen((m) {
+      clips = ((m.data?['items'] as List?) ?? []).map((e) => ClipItem(e['text'] ?? '', e['from'] ?? 'pc', (e['time'] as num?)?.toInt() ?? 0)).toList();
       notifyListeners();
     });
     Link.I.on('settings.sync').listen((m) {

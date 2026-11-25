@@ -121,7 +121,7 @@ export function ToastHost() {
                   <X size={14} />
                 </button>
               </div>
-              {(t.reply || t.actions?.length) && (
+              {(!!t.reply || !!t.actions?.length) && (
                 <div className="mt-3 flex gap-2 pl-[52px]">
                   {t.reply && replying !== t.id && (
                     <button onClick={() => { setReplying(t.id); call('toastFocus') }} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-white/15">Reply</button>

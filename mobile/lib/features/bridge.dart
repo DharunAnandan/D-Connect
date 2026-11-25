@@ -51,6 +51,8 @@ class Bridge {
           Native.call('callDial', {'number': d['number'], 'sim': d['sim']});
         case 'calls.sims':
           link.reply(m, 'calls.sims', {'sims': await Native.list('sims')});
+        case 'call.current':
+          if (m.id != null) link.reply(m, 'call.current', await Native.map('callCurrent'));
         case 'call.control':
           final ok = await Native.call<bool>('callControl', {'action': d['action'], 'target': d['target']});
           if (m.id != null) link.reply(m, 'call.control', {'ok': ok == true});
@@ -71,6 +73,11 @@ class Bridge {
           final text = d['text'] as String? ?? '';
           _lastClip = text;
           await Clipboard.setData(ClipboardData(text: text));
+        case 'clip.put':
+          // the PC picked an item for this phone: copy it here, don't send it back
+          _lastClip = d['text'] ?? '';
+          await Clipboard.setData(ClipboardData(text: _lastClip));
+          Native.call('toast', {'text': 'Copied from your PC'});
         case 'share.url':
           Native.openUri(d['url']);
         case 'share.text':
@@ -176,8 +183,9 @@ class Bridge {
         link.send('eye.screen', {'on': true});
         link.send('bt.info', await Native.map('btInfo'));
         // already on a call when the PC connected: show it there right away
+        // (and "no call" too, so a card left over from a call that ended meanwhile closes)
         final call = await Native.map('callCurrent');
-        if (call['state'] != null && call['state'] != 'idle') link.send('call.state', {...call, 'existing': true});
+        link.send('call.state', {...call, 'existing': true});
       } else {
         _statusTimer?.cancel();
         _statusTimer = null;
@@ -200,6 +208,9 @@ class Bridge {
     _lastClip = text;
     Link.I.send('clip.set', {'text': text});
   }
+
+  // copied from the history on purpose: not a new copy to send to the PC
+  static void markClip(String text) => _lastClip = text;
 
   static Future<void> sendClipboard() async {
     final d = await Clipboard.getData(Clipboard.kTextPlain);

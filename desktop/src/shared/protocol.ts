@@ -184,6 +184,8 @@ export interface QuickCommand {
   icon: string
   cmd?: string // shell command, for user commands
   builtin?: boolean
+  toggle?: boolean // a switch: Mute audio, Keep awake
+  on?: boolean // its current state
 }
 
 // ---------------------------------------------------------------- binary framing

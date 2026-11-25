@@ -5,6 +5,7 @@ import { Avatar, Button, Card, Pill, Ring } from '@/components/ui'
 import { call } from '@/lib/api'
 import { ago, size } from '@/lib/format'
 import { Boost } from './Sound'
+import { ClipboardCard } from '@/components/ClipboardCard'
 import { useApp } from '@/lib/store'
 import { list } from '@/theme/motion'
 
@@ -170,6 +171,8 @@ export function Home() {
               </div>
             </div>
           </Card>
+
+          <ClipboardCard />
         </div>
       </div>
     </motion.div>

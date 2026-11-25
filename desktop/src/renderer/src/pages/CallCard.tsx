@@ -1,7 +1,7 @@
 // Incoming / ongoing call: a floating card with a pulsing avatar, answer and decline.
 import { AnimatePresence, motion } from 'framer-motion'
 import { Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Maximize2, Mic, MicOff, Minimize2, Pause, Phone, PhoneOff, Play, Repeat, Search, Smartphone, UserPlus, Volume2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CallState } from '@shared/protocol'
 import { Avatar } from '@/components/ui'
 import { call, dc } from '@/lib/api'
@@ -58,6 +58,7 @@ export function CallCard() {
   const twoCalls = inCall.length > 1 && !conference
   const waitingCall = c.waitingCall || null
   const [adding, setAdding] = useState(false)
+  const [menu, setMenu] = useState<'out' | 'in' | null>(null) // one speaker/mic menu open at a time
   useEffect(() => {
     call('callRoute').then(setRoute)
     return dc.on('call.route', (r) => {
@@ -81,7 +82,7 @@ export function CallCard() {
     return () => clearInterval(t)
   }, [])
 
-  const name = conference ? `Conference · ${inCall.map((l) => (l.name || l.number || '').split(' ')[0]).join(', ')}` : c.name || c.number || (c.state === 'ringing' ? 'Incoming call' : 'Ongoing call')
+  const name = conference ? 'Conference call' : c.name || c.number || (c.state === 'ringing' ? 'Incoming call' : 'Ongoing call')
   const live = c.state === 'offhook' || c.state === 'dialing'
   if (compact && live) {
     return (
@@ -134,7 +135,7 @@ export function CallCard() {
             <div className="absolute -left-10 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(61,220,151,0.25)_0%,transparent_70%)]" />
             <AnimatePresence>
               {waitingCall && (
-                <motion.div key="waiting" initial={{ opacity: 0, y: -12, height: 0 }} animate={{ opacity: 1, y: 0, height: 'auto' }} exit={{ opacity: 0, y: -12, height: 0 }} className="no-drag relative -mt-3 mb-4 overflow-hidden">
+                <motion.div key="waiting" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="no-drag relative mt-3 mb-4">
                   <div className="flex items-center gap-3 rounded-2xl bg-mint/10 p-3 text-left ring-1 ring-mint/30">
                     <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
                       <Avatar name={waitingCall.name || waitingCall.number || '?'} size={40} />
@@ -157,12 +158,31 @@ export function CallCard() {
                 <Avatar name={name} src={c.photo ? `data:image/jpeg;base64,${c.photo}` : undefined} size={96} />
               </motion.div>
             </div>
-            <div className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-mint">{c.state === 'ringing' ? (c.waiting ? 'Call waiting' : 'Incoming call') : c.state === 'dialing' ? 'Calling…' : c.held ? 'On hold' : conference ? 'Conference call' : 'On call'}</div>
+            <div className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-mint">{c.state === 'ringing' ? (c.waiting ? 'Call waiting' : 'Incoming call') : c.state === 'dialing' ? 'Calling…' : c.held ? 'On hold' : conference ? `${inCall.length} people` : 'On call'}</div>
             <div className="relative mt-1 truncate text-2xl font-bold">{name}</div>
-            {c.name && c.number && <div className="relative text-sm text-white/55">{c.number}</div>}
+            {conference ? (
+              <div className="relative truncate text-sm text-white/55">{inCall.map((l) => l.name || l.number).join(' · ')}</div>
+            ) : (
+              c.name && c.number && <div className="relative text-sm text-white/55">{c.number}</div>
+            )}
             {live && c.since && <div className="relative mt-1 text-sm tabular-nums text-white/70">{duration((Date.now() - c.since) / 1000)}</div>}
             {c.state === 'ringing' && c.waiting && <div className="relative mt-2 text-xs text-white/60">Answering puts your current call on hold</div>}
-            {live && others.length > 0 && (
+            {live && conference && (
+              <div className="no-drag relative mx-auto mt-4 w-full max-w-[310px] rounded-2xl bg-white/[0.05] p-2 text-left ring-1 ring-white/10">
+                <div className="px-1.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">In this call · {inCall.length}</div>
+                {inCall.map((l, i) => (
+                  <div key={(l.number || '') + i} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5">
+                    <Avatar name={l.name || l.number || '?'} size={30} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold">{l.name || l.number || 'Caller'}</div>
+                      {l.name && l.number && <div className="truncate text-[10.5px] text-white/45">{l.number}</div>}
+                    </div>
+                    {l.since && <span className="text-[10.5px] tabular-nums text-white/40">{duration((Date.now() - l.since) / 1000)}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {live && !conference && others.length > 0 && (
               <div className="no-drag relative mx-auto mt-4 w-full max-w-[310px] space-y-1.5">
                 {others.map((l, i) => (
                   <div key={(l.number || '') + i} className="flex items-center gap-2.5 rounded-2xl bg-white/[0.05] px-3 py-2 text-left ring-1 ring-white/10">
@@ -198,8 +218,8 @@ export function CallCard() {
             {hint && <div className="relative mt-2 text-[11px] text-amber">{hint}</div>}
             {live && route === 'pc' && devs && (
               <div className="no-drag relative mx-auto mt-4 flex w-full max-w-[310px] flex-col gap-2">
-                <DevicePicker kind="out" value={devs.out} options={devs.outputs} onPick={(v) => pick(v, devs.in)} />
-                <DevicePicker kind="in" value={devs.in} options={devs.inputs} onPick={(v) => pick(devs.out, v)} />
+                <DevicePicker kind="out" value={devs.out} options={devs.outputs} onPick={(v) => pick(v, devs.in)} open={menu === 'out'} onOpen={(o) => setMenu(o ? 'out' : (m) => (m === 'out' ? null : m))} />
+                <DevicePicker kind="in" value={devs.in} options={devs.inputs} onPick={(v) => pick(devs.out, v)} open={menu === 'in'} onOpen={(o) => setMenu(o ? 'in' : (m) => (m === 'in' ? null : m))} />
               </div>
             )}
             {live && (
@@ -282,8 +302,28 @@ function AddCall({ onDone }: { onDone: () => void }) {
 }
 
 // A glass pill that opens an animated list of speakers / microphones.
-function DevicePicker({ kind, value, options, onPick }: { kind: 'out' | 'in'; value: string | null; options: { name: string; label: string }[]; onPick: (v: string | null) => void }) {
-  const [open, setOpen] = useState(false)
+function DevicePicker({ kind, value, options, onPick, open, onOpen }: { kind: 'out' | 'in'; value: string | null; options: { name: string; label: string }[]; onPick: (v: string | null) => void; open: boolean; onOpen: (o: boolean) => void }) {
+  const setOpen = onOpen
+  const box = useRef<HTMLDivElement>(null)
+  // a click anywhere outside this menu closes it
+  useEffect(() => {
+    if (!open) return
+    const away = (e: PointerEvent): void => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false)
+    }
+    const esc = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    const blur = (): void => setOpen(false)
+    document.addEventListener('pointerdown', away)
+    document.addEventListener('keydown', esc)
+    window.addEventListener('blur', blur)
+    return () => {
+      document.removeEventListener('pointerdown', away)
+      document.removeEventListener('keydown', esc)
+      window.removeEventListener('blur', blur)
+    }
+  }, [open])
   const all = [{ name: '', label: kind === 'out' ? 'Default speaker' : 'Default microphone' }, ...options]
   const current = all.find((o) => o.name === (value || '')) || all[0]
   const iconFor = (label: string, name: string) => {
@@ -293,7 +333,7 @@ function DevicePicker({ kind, value, options, onPick }: { kind: 'out' | 'in'; va
   }
   const CurIcon = iconFor(current.label, current.name)
   return (
-    <div className="relative">
+    <div ref={box} className="relative">
       <motion.button
         whileTap={{ scale: 0.98 }}
         onClick={() => setOpen(!open)}

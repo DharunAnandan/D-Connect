@@ -246,8 +246,13 @@ object Telephony {
     // The call going on right now, if any (e.g. the PC connected in the middle of a call).
     @SuppressLint("MissingPermission")
     fun currentCall(ctx: Context): Map<String, Any?> {
-        KeepAliveService.current?.let { return it }
         val st = try { ctx.getSystemService(android.telephony.TelephonyManager::class.java).callState } catch (e: Exception) { 0 }
+        // Android's live state wins: a call that ended while this app was frozen is over
+        if (st == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+            CallLines.reset()
+            return mapOf("state" to "idle")
+        }
+        KeepAliveService.current?.let { return it }
         // saved by KeepAliveService when the call started (survives an app restart)
         val saved = ctx.getSharedPreferences("dc_call", Context.MODE_PRIVATE)
         if (st != android.telephony.TelephonyManager.CALL_STATE_IDLE && saved.contains("state")) {

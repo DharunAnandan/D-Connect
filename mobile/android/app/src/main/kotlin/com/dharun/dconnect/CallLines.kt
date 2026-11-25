@@ -189,6 +189,16 @@ object CallLines {
         emit()
     }
 
+    // no call any more (the ending was missed while the app was frozen)
+    @Synchronized
+    fun reset() {
+        if (lines.isEmpty()) return
+        lines.clear()
+        lastState = TelephonyManager.EXTRA_STATE_IDLE
+        KeepAliveService.current = null
+        app?.getSharedPreferences("dc_call", Context.MODE_PRIVATE)?.edit()?.clear()?.apply()
+    }
+
     // what the PC's call card shows: the call in front (or the one ringing), plus all lines
     @Synchronized
     fun snapshot(): Map<String, Any?>? {

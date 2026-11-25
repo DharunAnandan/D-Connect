@@ -28,6 +28,17 @@ export function messages(ctx: Ctx, openCall: (c: CallState) => void, closeCall: 
       }
     }
   })
+  // while a call card is up, check with the phone now and then: if the call ended while the
+  // phone's app was asleep, its "ended" never came, and the card would stay forever
+  setInterval(async () => {
+    if (!ctx.hub.session || call.state === 'idle' || (call as any).app) return
+    const r: any = await ctx.hub.request('call.current', {}, 6000).catch(() => null)
+    if (r?.state === 'idle') {
+      call = { state: 'idle' }
+      ctx.emit('call', call)
+      closeCall()
+    }
+  }, 8000)
   ctx.hub.on('disconnected', () => {
     call = { state: 'idle' }
     ctx.emit('call', call)

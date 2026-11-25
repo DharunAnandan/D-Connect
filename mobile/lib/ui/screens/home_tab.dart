@@ -9,6 +9,7 @@ import '../../features/bridge.dart';
 import '../../features/eye.dart';
 import '../../features/files.dart';
 import '../../theme/tokens.dart';
+import '../widgets/clip_sheet.dart';
 import '../widgets/connect_scene.dart';
 import '../widgets/glass.dart';
 import '../widgets/ring.dart';
@@ -67,15 +68,43 @@ class HomeTab extends StatelessWidget {
                     Press(
                       onTap: () {
                         Link.I.send('commands.run', {'id': c.id});
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${c.name} ✓'), duration: const Duration(seconds: 1)));
+                        if (c.toggle) {
+                          // flip at once; the PC confirms the real state right after
+                          c.on = !c.on;
+                          app.notifyListeners();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${c.name} ✓'), duration: const Duration(seconds: 1)));
+                        }
                       },
-                      child: Glass(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Icon(_cmdIcon(c.icon), color: C.violetSoft),
-                          const SizedBox(height: 8),
-                          Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                        ]),
+                      child: AnimatedContainer(
+                        duration: M.med,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: c.toggle && c.on ? [BoxShadow(color: C.mint.withValues(alpha: .35), blurRadius: 18, spreadRadius: -4)] : const [],
+                        ),
+                        child: Glass(
+                          padding: const EdgeInsets.all(10),
+                          child: Stack(children: [
+                            Center(
+                              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                Icon(_cmdIcon(c.icon), color: c.toggle && c.on ? C.mint : C.violetSoft),
+                                const SizedBox(height: 8),
+                                Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                              ]),
+                            ),
+                            if (c.toggle)
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: AnimatedContainer(
+                                  duration: M.med,
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(color: c.on ? C.mint : Colors.white.withValues(alpha: .10), borderRadius: BorderRadius.circular(99)),
+                                  child: Text(c.on ? 'ON' : 'OFF', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, letterSpacing: .5, color: c.on ? C.ink950 : Colors.white60)),
+                                ),
+                              ),
+                          ]),
+                        ),
                       ),
                     ),
                 ],
@@ -105,10 +134,7 @@ class HomeTab extends StatelessWidget {
     }
   }
 
-  Future<void> _clip(BuildContext context) async {
-    await Bridge.sendClipboard();
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Clipboard sent to your PC'), duration: Duration(seconds: 1)));
-  }
+  Future<void> _clip(BuildContext context) => showClipSheet(context);
 
   Future<void> _shareLink(BuildContext context) async {
     final c = TextEditingController();
