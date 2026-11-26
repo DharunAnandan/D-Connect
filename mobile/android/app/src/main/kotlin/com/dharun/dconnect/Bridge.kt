@@ -95,6 +95,17 @@ object Bridge {
             "openSetting" -> { openSetting(a("which") as String); result.success(null) }
             "vibrate" -> { Haptics.vibrate(ctx, (a("pattern") as List<*>).map { (it as Number).toLong() }.toLongArray()); result.success(null) }
             "pcAlert" -> { Notifs.pcAlert(ctx, a("title") as String, a("body") as String? ?: "", a("tag") as String? ?: "pc"); result.success(null) }
+            "addTile" -> {
+                // Android 13+: the system's own "Add tile?" prompt; older phones add it by hand
+                if (Build.VERSION.SDK_INT >= 33) {
+                    val sb = ctx.getSystemService(android.app.StatusBarManager::class.java)
+                    sb.requestAddTileService(
+                        android.content.ComponentName(ctx, ClipTile::class.java), "D-Connect",
+                        android.graphics.drawable.Icon.createWithResource(ctx, R.drawable.ic_tile_clip),
+                        ctx.mainExecutor
+                    ) { code -> result.success(code) }
+                } else result.success(-1)
+            }
             "notifOpen" -> result.success(NotifListener.open(a("key") as String, a("window") == true))
             "linkState" -> {
                 KeepAliveService.linked = a("on") == true

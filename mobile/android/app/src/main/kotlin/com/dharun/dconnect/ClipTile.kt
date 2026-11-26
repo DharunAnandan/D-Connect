@@ -19,8 +19,8 @@ class ClipTile : TileService() {
         val t = qsTile ?: return
         val linked = KeepAliveService.linked
         t.state = if (linked) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        t.label = "Clipboard → PC"
-        if (Build.VERSION.SDK_INT >= 29) t.subtitle = if (linked) "D-Connect linked" else "Not linked"
+        t.label = "D-Connect"
+        if (Build.VERSION.SDK_INT >= 29) t.subtitle = if (linked) "Clipboard → PC" else "Not linked"
         t.updateTile()
     }
 

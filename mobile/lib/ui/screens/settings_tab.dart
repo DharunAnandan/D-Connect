@@ -102,6 +102,20 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
               _Perm(Icons.notifications_rounded, 'Show notifications', 'Eye breaks and the connection status', ok('notify'), () => _ask(Permission.notification)),
             ]),
           ),
+          const SectionTitle('Shortcuts'),
+          Glass(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            child: _Perm(Icons.dashboard_customize_rounded, 'Quick settings tile', 'Pull down the shade: tap D-Connect to send what you copied to the PC', false, () async {
+              final code = await Native.call<int>('addTile');
+              if (!context.mounted) return;
+              final msg = switch (code) {
+                1 || 2 => 'D-Connect tile is in your quick settings',
+                -1 => 'Pull down quick settings, tap the pencil, and drag D-Connect in',
+                _ => 'Not added',
+              };
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+            }),
+          ),
           const SectionTitle('About'),
           Glass(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
