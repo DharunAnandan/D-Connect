@@ -20,6 +20,7 @@ class ClipTile : TileService() {
         val linked = KeepAliveService.linked
         t.state = if (linked) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         t.label = "D-Connect"
+        t.icon = android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_tile_clip) // not the cached old one
         if (Build.VERSION.SDK_INT >= 29) t.subtitle = if (linked) "Clipboard → PC" else "Not linked"
         t.updateTile()
     }
@@ -54,5 +55,13 @@ class ClipSendActivity : Activity() {
         }
         finish()
         overridePendingTransition(0, 0)
+    }
+}
+
+// After D-Connect is updated, start it again by itself (the app starts its PC link when its
+// process starts), so it reconnects without being opened.
+class UpdatedReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: android.content.Context, intent: Intent) {
+        // nothing else to do: DConnectApp has already started the engine and the link
     }
 }
