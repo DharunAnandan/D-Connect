@@ -9,7 +9,7 @@ export const LINKS = {
 }
 
 // the oldest phone app this PC app works with (raise it when the protocol changes)
-export const MIN_PHONE_VERSION = '1.0.0'
+export const MIN_PHONE_VERSION = '0.1.3'
 
 // "1.2.10" vs "1.10.0": -1, 0, 1 (anything after a + or - is ignored)
 export function cmpVersion(a: string, b: string): number {
