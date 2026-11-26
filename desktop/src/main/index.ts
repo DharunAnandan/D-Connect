@@ -13,6 +13,7 @@ import { Hub, Session } from './hub'
 import { Store, type SettingKey } from './store'
 import { Usb } from './adb'
 import { devControl } from './devcontrol'
+import { lockNavigation, openUrlSafely } from './safety'
 import { createCallWindow, createMain, createMixerWindow, createToastWindow, fitToastWindow, showEyeBreak } from './windows'
 import { notifications, sendReply } from './features/notifications'
 import { messages } from './features/messages'
@@ -56,6 +57,8 @@ function icon(size = 256): Electron.NativeImage {
 function allWindows(): BrowserWindow[] {
   return BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed())
 }
+
+lockNavigation()
 
 app.whenReady().then(async () => {
   if (!firstInstance) return
@@ -173,7 +176,7 @@ app.whenReady().then(async () => {
       const i = arg.lastIndexOf(':')
       hub.send('notif.action', { key: arg.slice(0, i), index: +arg.slice(i + 1) })
     } else if (kind.startsWith('file-')) handlers.get('fileAction')!(kind.slice(5), arg)
-    else if (kind === 'open-url') shell.openExternal(arg)
+    else if (kind === 'open-url') openUrlSafely(arg)
     else if (kind === 'open-path') shell.openPath(arg)
     else if (kind === 'phone-setting') hub.send('open.setting', { which: arg })
     else if (kind === 'copy') clipboard.writeText(arg)

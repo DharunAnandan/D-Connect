@@ -8,6 +8,7 @@ import path from 'path'
 import type { PhoneStatus, QuickCommand } from '@shared/protocol'
 import type { Ctx } from '../context'
 import { pressKeys } from './input'
+import { openUrlSafely } from '../safety'
 import { screenRecorder } from './screenrec'
 
 export const BUILTIN: QuickCommand[] = [
@@ -256,7 +257,7 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
     else if (type === 'find.pc') findPc(data.on !== false)
     else if (type === 'share.url') {
       ctx.toast({ kind: 'link', title: 'Link from your phone', body: data.url, actions: [{ id: `open-url:${data.url}`, label: 'Open' }, { id: `copy:${data.url}`, label: 'Copy' }] })
-      if (data.open) shell.openExternal(data.url)
+      if (data.open) openUrlSafely(data.url) // web links only
     } else if (type === 'share.text') {
       ctx.toast({ kind: 'clip', title: 'Text from your phone', body: data.text, actions: [{ id: `copy:${data.text}`, label: 'Copy' }] })
     }

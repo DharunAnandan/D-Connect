@@ -98,8 +98,9 @@ export class Store extends EventEmitter {
   private save(): void {
     if (this.timer) clearTimeout(this.timer)
     this.timer = setTimeout(() => {
-      fs.mkdirSync(path.dirname(this.file), { recursive: true })
-      fs.writeFileSync(this.file + '.tmp', JSON.stringify(this.data, null, 2))
+      fs.mkdirSync(path.dirname(this.file), { recursive: true, mode: 0o700 })
+      // holds the phones' pairing keys: readable by this user only
+      fs.writeFileSync(this.file + '.tmp', JSON.stringify(this.data, null, 2), { mode: 0o600 })
       fs.renameSync(this.file + '.tmp', this.file)
     }, 300)
   }

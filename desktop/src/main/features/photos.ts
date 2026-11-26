@@ -1,6 +1,7 @@
 // Recent photos: thumbnails come in pages; a full photo comes as a file tagged "photo".
 import { shell } from 'electron'
 import type { Ctx } from '../context'
+import { isMedia, openFileSafely } from '../safety'
 import type { Transfer } from './files'
 
 export function photos(ctx: Ctx, onPhoto: (fn: (t: Transfer) => void) => void): void {
@@ -18,7 +19,7 @@ export function photos(ctx: Ctx, onPhoto: (fn: (t: Transfer) => void) => void): 
   ctx.handle('photoFetch', (id: string, open = true) =>
     new Promise<string>((resolve) => {
       waiting.set(id, (p) => {
-        if (open) shell.openPath(p)
+        if (open) (isMedia(p) ? openFileSafely(p) : shell.showItemInFolder(p)) // only pictures/videos open by themselves
         resolve(p)
       })
       ctx.hub.send('photos.fetch', { id })

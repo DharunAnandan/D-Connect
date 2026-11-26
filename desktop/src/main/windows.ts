@@ -1,3 +1,4 @@
+import { openUrlSafely } from './safety'
 // Every window D-Connect opens: the app, the toast stack, the call card and the eye break.
 import path from 'path'
 import { BrowserWindow, ipcMain, screen, shell } from 'electron'
@@ -31,7 +32,7 @@ export function createMain(icon: Electron.NativeImage, show: boolean): BrowserWi
   })
   win.once('ready-to-show', () => show && win.show())
   win.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    openUrlSafely(url)
     return { action: 'deny' }
   })
   load(win, 'index', '/')

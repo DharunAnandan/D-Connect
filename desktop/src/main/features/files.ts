@@ -6,6 +6,7 @@ import path from 'path'
 import { app, shell } from 'electron'
 import { Channel, FileOffer } from '@shared/protocol'
 import type { Ctx } from '../context'
+import { openFileSafely } from '../safety'
 
 const CHUNK = 256 * 1024
 const HIGH_WATER = 4 * 1024 * 1024
@@ -176,7 +177,7 @@ export function files(ctx: Ctx): { onPhoto: (fn: (t: Transfer) => void) => void 
       if (t) t.state = 'cancelled'
       ctx.hub.send('file.cancel', { fid })
       push(true)
-    } else if (action === 'open' && t?.path) shell.openPath(t.path)
+    } else if (action === 'open' && t?.path) openFileSafely(t.path) // apps/scripts: shown, not run
     else if (action === 'show' && t?.path) shell.showItemInFolder(t.path)
     else if (action === 'delete' && t) {
       // delete a received file from disk (never a file you sent from this PC)
