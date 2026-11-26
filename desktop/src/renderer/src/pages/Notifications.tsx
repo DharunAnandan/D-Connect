@@ -98,6 +98,7 @@ export function Notifications() {
                               <div key={i} className="whitespace-pre-wrap text-sm text-white/75 [overflow-wrap:anywhere]">
                                 {m.from && m.from !== n.title && <span className="mr-1.5 text-[11px] font-semibold text-white/45">{m.from}</span>}
                                 {m.text}
+                                {m.image && <img src={`data:image/jpeg;base64,${m.image}`} className="mt-1.5 max-h-48 max-w-[260px] rounded-xl object-cover ring-1 ring-white/10" />}
                               </div>
                             )
                           )}
@@ -105,6 +106,7 @@ export function Notifications() {
                       ) : (
                         <div className="selectable mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm text-white/70">{n.text}</div>
                       )}
+                      {n.picture && !(n.thread || []).some((m) => m.image) && <img src={`data:image/jpeg;base64,${n.picture}`} className="mt-2 max-h-56 max-w-[320px] rounded-xl object-cover ring-1 ring-white/10" />}
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Button size="sm" variant="soft" icon={ExternalLink} onClick={() => call('notifOpen', n.key, n.pkg, n.app)}>Open</Button>
                         {n.canReply && <Button size="sm" variant="soft" icon={Reply} onClick={() => { setReplying(replying === n.key ? null : n.key); setText('') }}>Reply</Button>}

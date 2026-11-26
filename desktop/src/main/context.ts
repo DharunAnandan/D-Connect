@@ -8,6 +8,7 @@ export interface Toast {
   title: string
   body?: string
   icon?: string // data url
+  image?: string // data url: a picture in the message (a shared post, a photo)
   app?: string
   reply?: { kind: 'notif' | 'sms'; key?: string; address?: string }
   actions?: { id: string; label: string }[]

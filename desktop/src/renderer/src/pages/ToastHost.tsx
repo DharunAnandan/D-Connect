@@ -7,6 +7,7 @@ import { call, dc } from '@/lib/api'
 import { sfx } from '@/lib/sfx'
 
 interface T {
+  image?: string // a picture in the message
   id: string
   kind: string
   title: string
@@ -134,6 +135,7 @@ export function ToastHost() {
                   {t.app && <div className="text-[10.5px] font-semibold uppercase tracking-wider text-white/45">{t.app}</div>}
                   <div className="truncate text-[14px] font-semibold">{t.title}</div>
                   {t.body && <div className="line-clamp-3 whitespace-pre-line text-[13px] leading-snug text-white/70">{t.body}</div>}
+                  {t.image && <img src={t.image} className="mt-2 max-h-36 max-w-full rounded-xl object-cover ring-1 ring-white/10" />}
                 </button>
                 <button onClick={() => remove(t.id)} title="Close" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/50 transition hover:bg-white/10 hover:text-white">
                   <X size={14} />

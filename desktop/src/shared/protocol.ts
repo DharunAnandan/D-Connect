@@ -64,7 +64,8 @@ export interface PhoneNotification {
   actions?: string[]
   category?: string // 'call' for app calls (Teams, WhatsApp...)
   fromMe?: boolean // the newest message in this chat is your own reply
-  thread?: { from?: string; text: string; me?: boolean; time?: number }[] // chat apps: the last few messages
+  thread?: { from?: string; text: string; me?: boolean; time?: number; image?: string }[] // chat apps: the last few messages
+  picture?: string // base64 JPEG: a photo or shared post in the notification
 }
 
 // ---------------------------------------------------------------- messages / calls

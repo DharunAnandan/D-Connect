@@ -77,12 +77,22 @@ class NotifListener : NotificationListenerService() {
                 fun mine(m: androidx.core.app.NotificationCompat.MessagingStyle.Message) = m.person == null || (me != null && m.person?.name?.toString() == me)
                 convo = style.conversationTitle?.toString() ?: style.messages.lastOrNull { !mine(it) }?.person?.name?.toString()
                 fromMe = mine(style.messages.last())
-                for (m in style.messages.takeLast(6)) thread.add(mapOf("from" to if (mine(m)) "You" else (m.person?.name?.toString() ?: convo), "text" to (m.text?.toString() ?: ""), "me" to mine(m), "time" to m.timestamp))
+                for (m in style.messages.takeLast(6)) thread.add(mapOf(
+                    "from" to if (mine(m)) "You" else (m.person?.name?.toString() ?: convo),
+                    "text" to (m.text?.toString() ?: ""), "me" to mine(m), "time" to m.timestamp,
+                    // a photo or shared post attached to the message: a small preview, when the app lets us read it
+                    "image" to if (m.dataMimeType?.startsWith("image/") == true && m.dataUri != null) thumb(m.dataUri!!) else null
+                ))
             }
         } catch (_: Exception) {}
+        // a notification with a big picture (a shared post, a photo...)
+        val picture = try {
+            (ex.getParcelable(Notification.EXTRA_PICTURE) as? Bitmap)?.let { small(it) }
+        } catch (_: Exception) { null }
         return mapOf(
             "key" to sbn.key,
             "pkg" to sbn.packageName,
+            "picture" to (picture ?: thread.lastOrNull { it["image"] != null }?.get("image")),
             "app" to appLabel(sbn.packageName),
             "title" to (convo ?: title),
             "text" to (thread.lastOrNull { it["me"] != true }?.get("text") as String? ?: text),
@@ -95,6 +105,19 @@ class NotifListener : NotificationListenerService() {
             "actions" to actions.filter { it.remoteInputs.isNullOrEmpty() }.map { it.title.toString() }.take(5)
         )
     }
+
+    // a picture as a small JPEG (base64) for the PC
+    private fun small(b: Bitmap, max: Int = 360): String {
+        val k = max.toFloat() / maxOf(b.width, b.height)
+        val s = if (k < 1) Bitmap.createScaledBitmap(b, (b.width * k).toInt().coerceAtLeast(1), (b.height * k).toInt().coerceAtLeast(1), true) else b
+        val o = java.io.ByteArrayOutputStream()
+        s.compress(Bitmap.CompressFormat.JPEG, 78, o)
+        return android.util.Base64.encodeToString(o.toByteArray(), android.util.Base64.NO_WRAP)
+    }
+
+    private fun thumb(uri: android.net.Uri): String? = try {
+        contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) }?.let { small(it) }
+    } catch (_: Exception) { null } // the app didn't share it
 
     private fun appLabel(pkg: String): String = labels.getOrPut(pkg) {
         try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() } catch (e: Exception) { pkg }

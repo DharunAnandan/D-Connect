@@ -30,6 +30,7 @@ export function notifications(ctx: Ctx, appCall: (n: PhoneNotification | null) =
           // a chat: its last few lines, your replies marked
           body: n.thread && n.thread.length > 1 ? n.thread.slice(-3).map((m) => `${m.me ? 'You' : m.from && m.from !== n.title ? m.from : ''}${m.me || (m.from && m.from !== n.title) ? ': ' : ''}${m.text}`).join('\n') : n.text,
           icon: n.icon ? `data:image/png;base64,${n.icon}` : undefined,
+          image: n.picture ? `data:image/jpeg;base64,${n.picture}` : undefined,
           reply: n.canReply ? { kind: 'notif', key: n.key } : undefined,
           meta: { key: n.key, pkg: n.pkg, app: n.app },
           actions: (n.actions || []).slice(0, 2).map((label, i) => ({ id: `notif-action:${n.key}:${i}`, label }))
