@@ -6,14 +6,20 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 
-function adbPath(): string | null {
+// adb: the copy bundled with the Windows installer, an Android SDK, or whatever is on PATH
+export function adbPath(): string {
   const candidates = [
+    process.platform === 'win32' && process.resourcesPath && path.join(process.resourcesPath, 'win', 'adb', 'adb'),
     process.env.ANDROID_HOME && path.join(process.env.ANDROID_HOME, 'platform-tools', 'adb'),
+    process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Android', 'Sdk', 'platform-tools', 'adb'),
     path.join(os.homedir(), 'Android', 'Sdk', 'platform-tools', 'adb'),
     '/usr/bin/adb',
     '/usr/local/bin/adb'
   ].filter(Boolean) as string[]
-  for (const c of candidates) if (fs.existsSync(c) || fs.existsSync(c + '.exe')) return c
+  for (const c of candidates) {
+    if (fs.existsSync(c + '.exe')) return c + '.exe'
+    if (fs.existsSync(c)) return c
+  }
   return 'adb' // let PATH decide
 }
 

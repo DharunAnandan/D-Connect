@@ -14,6 +14,7 @@ import path from 'path'
 import { app } from 'electron'
 import type { Ctx } from '../context'
 import { callLinkUp, fixCallLink } from './bluetooth'
+import { winCallAudio } from './winaudio'
 
 function sh(cmd: string, args: string[], timeout = 6000): Promise<string> {
   return new Promise((resolve) => execFile(cmd, args, { timeout, maxBuffer: 32 * 1024 * 1024, env: { ...process.env, LC_ALL: 'C' } }, (err, out) => resolve(err ? '' : out)))
@@ -37,6 +38,7 @@ async function pwDump(): Promise<PwObject[]> {
 }
 
 export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: boolean) => void } {
+  if (process.platform === 'win32') return winCallAudio(ctx) // Windows: its own (winaudio.ts)
   if (process.platform !== 'linux') return { answeredHere: () => {}, setMuted: () => {} }
 
   let here = false

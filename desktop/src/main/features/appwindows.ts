@@ -13,6 +13,7 @@ import net from 'net'
 import path from 'path'
 import { app, BrowserWindow, screen } from 'electron'
 import type { Ctx } from '../context'
+import { adbPath } from '../adb'
 
 const SERVER_VERSION = '3.3.4'
 const REMOTE_JAR = '/data/local/tmp/dconnect-scrcpy.jar'
@@ -23,11 +24,7 @@ function resource(name: string): string {
   return path.join(base, name)
 }
 
-function adbBin(): string {
-  const cands = [process.env.ANDROID_HOME && path.join(process.env.ANDROID_HOME, 'platform-tools', 'adb'), path.join(app.getPath('home'), 'Android', 'Sdk', 'platform-tools', 'adb'), '/usr/bin/adb']
-  for (const c of cands) if (c && fs.existsSync(c)) return c
-  return 'adb'
-}
+const adbBin = (): string => adbPath()
 
 function run(args: string[], timeout = 15000): Promise<{ code: number; out: string }> {
   return new Promise((resolve) =>

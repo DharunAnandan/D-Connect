@@ -42,6 +42,13 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm, cache-dependency-path: desktop/package-lock.json }
       - run: npm ci
+      - name: adb for Windows (app windows and USB mode)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://dl.google.com/android/repository/platform-tools-latest-windows.zip -OutFile pt.zip
+          Expand-Archive pt.zip -DestinationPath pt
+          New-Item -ItemType Directory -Force resources-win/adb | Out-Null
+          Copy-Item pt/platform-tools/adb.exe, pt/platform-tools/AdbWinApi.dll, pt/platform-tools/AdbWinUsbApi.dll, pt/platform-tools/NOTICE.txt resources-win/adb/
       - run: npx electron-vite build
       - run: npx electron-builder --win nsis --x64 --publish never
       - uses: softprops/action-gh-release@v2

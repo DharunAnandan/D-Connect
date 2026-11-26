@@ -74,7 +74,15 @@ export function Settings() {
         {!bt ? (
           <div className="shimmer my-3 h-20 rounded-xl" />
         ) : bt.platform !== 'linux' ? (
-          <div className="py-3 text-sm text-muted">On Windows you can answer and decline calls here; audio stays on the phone for now.</div>
+          <div className="space-y-2 py-3 text-sm text-muted">
+            <p>On Windows, set it up once:</p>
+            <ol className="list-decimal space-y-1 pl-5 text-white/75">
+              <li>Pair {conn.device?.name || 'your phone'} in <b>Windows Settings → Bluetooth &amp; devices → Add device</b>.</li>
+              <li>On the phone, open Bluetooth settings → this PC → turn on <b>Phone calls</b> and <b>Media audio</b>.</li>
+              <li>Pick <b>This PC</b> on the call card during a call; the caller plays on your speaker and your mic goes to the call (with noise suppression).</li>
+            </ol>
+            <p>Phone music plays here too when <b>Home → On your phone → This PC</b> is chosen (Windows 10 version 2004 or newer).</p>
+          </div>
         ) : (
           <>
             {/* three steps, each ticks green when done */}

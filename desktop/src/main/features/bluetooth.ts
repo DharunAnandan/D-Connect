@@ -7,6 +7,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { Ctx } from '../context'
+import { adbPath } from '../adb'
 
 function sh(cmd: string, args: string[], timeout = 6000): Promise<string> {
   return new Promise((resolve) => execFile(cmd, args, { timeout }, (err, out, errOut) => resolve(err ? '' : out + errOut)))
@@ -363,7 +364,7 @@ export function bluetooth(ctx: Ctx): void {
   let autoBusy = false
   let autoFails = 0
   // adb from the Android SDK when it isn't on PATH (apps started from the menu often lack it)
-  const ADB = [path.join(os.homedir(), 'Android', 'Sdk', 'platform-tools', 'adb'), '/usr/bin/adb'].find((p) => fs.existsSync(p)) || 'adb'
+  const ADB = adbPath()
   const adbSerial = async (): Promise<string | null> => {
     const out = await sh(ADB, ['devices', '-l'])
     const model = (ctx.hub.session?.device.model || '').toLowerCase().replace(/[^a-z0-9]/g, '')

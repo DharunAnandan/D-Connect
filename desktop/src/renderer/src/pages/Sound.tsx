@@ -6,7 +6,7 @@ import { call } from '@/lib/api'
 import { list, spring } from '@/theme/motion'
 
 interface MixerApp { id: string; name: string; icon?: string; volume: number; muted: boolean; phone?: boolean }
-interface Mixer { supported: boolean; output: { name: string; label: string; volume: number; muted: boolean } | null; apps: MixerApp[] }
+interface Mixer { supported: boolean; max?: number; output: { name: string; label: string; volume: number; muted: boolean } | null; apps: MixerApp[] }
 
 function useMixer() {
   const [mx, setMx] = useState<Mixer | null>(null)
@@ -45,13 +45,13 @@ export function MiniMixer() {
           {mx?.output && (
             <div className="rounded-2xl bg-white/[0.05] p-3 ring-1 ring-white/[0.06]">
               <div className="mb-1 flex items-center gap-2 text-[13px] font-semibold"><Speaker size={14} className="text-pink" /><span className="min-w-0 flex-1 truncate">This PC</span><Big v={mx.output.volume} muted={mx.output.muted} small /></div>
-              <Boost value={mx.output.volume} muted={mx.output.muted} onChange={(v) => set('output', { id: '' }, v)} onMute={() => mute('output', '', !mx.output!.muted)} />
+              <Boost max={mx.max} value={mx.output.volume} muted={mx.output.muted} onChange={(v) => set('output', { id: '' }, v)} onMute={() => mute('output', '', !mx.output!.muted)} />
             </div>
           )}
           {mx?.apps.map((a) => (
             <div key={a.id} className="rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.05]">
               <div className="mb-1 flex items-center gap-2 text-[13px] font-semibold"><span className={a.phone ? 'text-pink' : 'text-cyan'}><AppIcon a={a} /></span><span className="min-w-0 flex-1 truncate">{a.name}</span><Big v={a.volume} muted={a.muted} small /></div>
-              <Boost value={a.volume} muted={a.muted} onChange={(v) => set('app', a, v)} onMute={() => mute('app', a.id, !a.muted)} />
+              <Boost max={mx.max} value={a.volume} muted={a.muted} onChange={(v) => set('app', a, v)} onMute={() => mute('app', a.id, !a.muted)} />
             </div>
           ))}
           {mx && !mx.apps.length && <div className="py-4 text-center text-xs text-white/45">No app is playing sound right now.</div>}
@@ -67,7 +67,7 @@ export function Sound() {
 
   return (
     <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
-      <PageHeader icon={Volume2} title="Sound" subtitle="Volume booster: turn this PC or any app up to 300%" />
+      <PageHeader icon={Volume2} title="Sound" subtitle={mx?.max === 100 ? "This PC's and each app's volume" : 'Volume booster: turn this PC or any app up to 300%'} />
 
       {mx && !mx.supported ? (
         <Empty icon={VolumeX} title="Not available here" body="The volume booster needs PulseAudio or PipeWire on Linux." />
@@ -83,11 +83,11 @@ export function Sound() {
               </div>
               <Big v={mx?.output?.volume ?? 100} muted={mx?.output?.muted} />
             </div>
-            {mx?.output && <Boost value={mx.output.volume} muted={mx.output.muted} onChange={(v) => set('output', { id: '' }, v)} onMute={() => mute('output', '', !mx.output!.muted)} />}
+            {mx?.output && <Boost max={mx.max} value={mx.output.volume} muted={mx.output.muted} onChange={(v) => set('output', { id: '' }, v)} onMute={() => mute('output', '', !mx.output!.muted)} />}
             <div className="relative mt-5 flex gap-2">
-              {[100, 150, 200, 300].map((p) => (
+              {(mx?.max === 100 ? [25, 50, 75, 100] : [100, 150, 200, 300]).map((p) => (
                 <button key={p} onClick={() => set('output', { id: '' }, p)} className={`flex-1 rounded-xl py-2 text-xs font-semibold ring-1 transition-colors ${mx?.output?.volume === p ? 'bg-white text-ink-950 ring-white' : 'bg-white/[0.05] text-white/70 ring-white/10 hover:bg-white/10'}`}>
-                  {p === 100 ? 'Normal' : `${p}%`}
+                  {p === 100 && mx?.max !== 100 ? 'Normal' : `${p}%`}
                 </button>
               ))}
             </div>
@@ -107,7 +107,7 @@ export function Sound() {
                       <div className="min-w-0 flex-1 truncate text-sm font-semibold">{a.name}</div>
                       <Big v={a.volume} muted={a.muted} small />
                     </div>
-                    <Boost value={a.volume} muted={a.muted} onChange={(v) => set('app', a, v)} onMute={() => mute('app', a.id, !a.muted)} />
+                    <Boost max={mx.max} value={a.volume} muted={a.muted} onChange={(v) => set('app', a, v)} onMute={() => mute('app', a.id, !a.muted)} />
                   </motion.div>
                 ))}
               </div>
@@ -136,9 +136,10 @@ function Big({ v, muted, small }: { v: number; muted?: boolean; small?: boolean 
 }
 
 // 0-300% slider: the part past 100% glows as "boost"
-export const MAX = 300
+export const DEFAULT_MAX = 300
 
-export function Boost({ value, muted, onChange, onMute }: { value: number; muted?: boolean; onChange: (v: number) => void; onMute?: () => void }) {
+export function Boost({ value, muted, onChange, onMute, max: MAXV }: { value: number; muted?: boolean; onChange: (v: number) => void; onMute?: () => void; max?: number }) {
+  const MAX = MAXV || DEFAULT_MAX
   const Icon = muted ? VolumeX : value > 100 ? Volume2 : Volume1
   const pct = Math.min(MAX, value) / (MAX / 100)
   return (

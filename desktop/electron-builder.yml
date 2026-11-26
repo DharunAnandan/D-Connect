@@ -17,6 +17,11 @@ appImage:
   artifactName: D-Connect-${version}-linux-x86_64.${ext}
 win:
   target: nsis
+  # adb for app windows and USB mode (downloaded by the release workflow; Apache-2.0)
+  extraResources:
+    - from: resources-win
+      to: win
+      filter: ['**/*']
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

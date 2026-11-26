@@ -8,6 +8,7 @@ import path from 'path'
 import type { PhoneStatus, QuickCommand } from '@shared/protocol'
 import type { Ctx } from '../context'
 import { pressKeys } from './input'
+import { screenRecorder } from './screenrec'
 
 export const BUILTIN: QuickCommand[] = [
   { id: 'lock', name: 'Lock PC', icon: 'lock', builtin: true },
@@ -54,9 +55,20 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
   let castFile = ''
   const toggleRecording = async (): Promise<void> => {
     if (process.platform === 'win32') {
-      if (!pressKeys(['leftmeta', 'leftalt', 'r'])) return
-      recording = !recording
-      ctx.toast({ kind: 'info', title: recording ? 'Screen recording started' : 'Screen recording saved', body: recording ? 'Tap Screen record again to stop.' : 'Saved in Videos → Captures.', ttl: 5000 })
+      try {
+        if (!recording) {
+          await screenRecorder.start()
+          recording = true
+          ctx.toast({ kind: 'info', title: 'Screen recording started', body: 'The whole screen. Tap Screen record again to stop.', ttl: 5000 })
+        } else {
+          const file = await screenRecorder.stop()
+          recording = false
+          ctx.toast({ kind: 'info', title: 'Screen recording saved', body: file ? path.basename(file) + ' in Videos → D-Connect' : 'Saved in Videos → D-Connect.', ttl: 8000, actions: file ? [{ id: `open-path:${path.dirname(file)}`, label: 'Show folder' }] : undefined })
+        }
+      } catch {
+        recording = false
+        ctx.toast({ kind: 'info', title: "Couldn't record the screen", body: 'Windows refused the screen capture.' })
+      }
       return sendCommands()
     }
     try {
@@ -165,7 +177,24 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
 
   // this laptop's own battery (Linux): the same low-battery level as the phone
   let pcLowAlerted = false
+  // Windows: read through PowerShell every minute (Win32_Battery: 2 = on mains)
+  let winBattery: { level: number; charging: boolean } | null = null
+  if (process.platform === 'win32') {
+    const readWin = (): void => {
+      execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', 'Get-CimInstance Win32_Battery | Select-Object -First 1 EstimatedChargeRemaining,BatteryStatus | ConvertTo-Json -Compress'], { timeout: 15000, windowsHide: true }, (err, out) => {
+        try {
+          const b = JSON.parse(out)
+          winBattery = !err && b && Number.isFinite(b.EstimatedChargeRemaining) ? { level: b.EstimatedChargeRemaining, charging: b.BatteryStatus !== 1 } : null
+        } catch {
+          winBattery = null
+        }
+      })
+    }
+    readWin()
+    setInterval(readWin, 60000)
+  }
   const pcBattery = (): { level: number; charging: boolean } | null => {
+    if (process.platform === 'win32') return winBattery
     try {
       const dir = fs.readdirSync('/sys/class/power_supply').find((d) => /^BAT/.test(d))
       if (!dir) return null
@@ -183,7 +212,7 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
     ctx.toast({ kind: 'battery', title, body, ttl: 12000 })
     if (ctx.store.get('pcAlertsToPhone') !== false && ctx.hub.session) ctx.hub.send('pc.alert', { tag, title, body })
   }
-  if (process.platform === 'linux') {
+  if (process.platform === 'linux' || process.platform === 'win32') {
     setInterval(() => {
       if (ctx.store.get('pcBatteryAlert') === false) return
       const b = pcBattery()
@@ -238,7 +267,7 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
   ctx.handle('shareUrl', (url: string) => ctx.hub.send('share.url', { url }))
   ctx.handle('shareText', (text: string) => ctx.hub.send('share.text', { text }))
   ctx.handle('setPhoneDnd', (on: boolean) => ctx.hub.send('dnd.set', { on }))
-  ctx.handle('pcBattery', () => (process.platform === 'linux' ? pcBattery() : null))
+  ctx.handle('pcBattery', () => pcBattery())
   ctx.handle('commands', () => commands())
   ctx.handle('runCommand', (id: string) => run(id))
   ctx.handle('saveCommand', (c: { id?: string; name: string; icon: string; cmd: string }) => {

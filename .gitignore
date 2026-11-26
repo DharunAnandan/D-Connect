@@ -2,6 +2,7 @@
 desktop/node_modules/
 desktop/out/
 desktop/dist/
+desktop/resources-win/
 
 # ---------- mobile (Flutter) — mobile/.gitignore covers the Flutter build itself
 mobile/build/
