@@ -28,7 +28,12 @@ class NotifListener : NotificationListenerService() {
         if (isDialer(sbn.packageName)) {
             if (sbn.notification.category == Notification.CATEGORY_CALL) {
                 val ex = sbn.notification.extras
-                CallLines.onDialerNotification(ex.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: "", ex.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: "")
+                CallLines.onDialerNotification(
+                    ex.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: "",
+                    ex.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: "",
+                    ex.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false),
+                    sbn.notification.`when`
+                )
             }
             return
         }

@@ -81,6 +81,19 @@ export function CallCard() {
       setSwitching(null)
     })
   }, [])
+  // an outgoing call was picked up: a soft chime and a short "Connected"
+  const [justAnswered, setJustAnswered] = useState(false)
+  const prevState = useRef(c.state)
+  useEffect(() => {
+    if (prevState.current === 'dialing' && c.state === 'offhook') {
+      sfx.connect()
+      setJustAnswered(true)
+      const t = setTimeout(() => setJustAnswered(false), 2500)
+      prevState.current = c.state
+      return () => clearTimeout(t)
+    }
+    prevState.current = c.state
+  }, [c.state])
   const [, tick] = useState(0)
   useEffect(() => {
     call('lastCall').then(setC)
@@ -168,19 +181,20 @@ export function CallCard() {
             </AnimatePresence>
             <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.30)_0%,transparent_70%)]" />
             <div className="relative mx-auto grid h-32 w-32 place-items-center">
-              {c.state === 'ringing' && [0, 1, 2].map((i) => <motion.span key={i} className="absolute inset-2 rounded-full border-2 border-mint/70" initial={{ scale: 0.8, opacity: 0.9 }} animate={{ scale: 1.6, opacity: 0 }} transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.6 }} />)}
+              {(c.state === 'ringing' || c.state === 'dialing') && [0, 1, 2].map((i) => <motion.span key={i} className="absolute inset-2 rounded-full border-2 border-mint/70" initial={{ scale: 0.8, opacity: 0.9 }} animate={{ scale: 1.6, opacity: 0 }} transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.6 }} />)}
               <motion.div animate={c.state === 'ringing' ? { scale: [1, 1.05, 1] } : {}} transition={{ duration: 1.2, repeat: Infinity }}>
                 <Avatar name={name} src={c.photo ? `data:image/jpeg;base64,${c.photo}` : undefined} size={96} />
               </motion.div>
             </div>
-            <div className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-mint">{c.state === 'ringing' ? (c.waiting ? 'Call waiting' : 'Incoming call') : c.state === 'dialing' ? 'Calling…' : c.held ? 'On hold' : conference ? `${inCall.length} people` : 'On call'}</div>
+            <div className="relative mt-4 text-[11px] font-semibold uppercase tracking-[0.25em] text-mint">{c.state === 'ringing' ? (c.waiting ? 'Call waiting' : 'Incoming call') : c.state === 'dialing' ? 'Calling… ringing' : justAnswered ? 'Connected' : c.held ? 'On hold' : conference ? `${inCall.length} people` : 'On call'}</div>
             <div className="relative mt-1 truncate text-2xl font-bold">{name}</div>
             {conference ? (
               <div className="relative truncate text-sm text-white/55">{inCall.map((l) => l.name || l.number).join(' · ')}</div>
             ) : (
               c.name && c.number && <div className="relative text-sm text-white/55">{c.number}</div>
             )}
-            {live && c.since && <div className="relative mt-1 text-sm tabular-nums text-white/70">{duration((Date.now() - c.since) / 1000)}</div>}
+            {live && c.state !== 'dialing' && c.since && <div className="relative mt-1 text-sm tabular-nums text-white/70">{duration((Date.now() - c.since) / 1000)}</div>}
+            {c.state === 'dialing' && <div className="relative mt-1 text-sm text-white/55">Waiting for them to pick up</div>}
             {c.state === 'ringing' && c.waiting && <div className="relative mt-2 text-xs text-white/60">Answering puts your current call on hold</div>}
             {live && conference && (
               <div className="no-drag relative mx-auto mt-4 w-full max-w-[310px] rounded-2xl bg-white/[0.05] p-2 text-left ring-1 ring-white/10">

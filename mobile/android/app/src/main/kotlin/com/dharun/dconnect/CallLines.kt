@@ -170,7 +170,19 @@ object CallLines {
     // The dialer's ongoing-call notification names the call in front, or says "Conference call"
     // after a merge: follow merges and swaps made on the phone itself.
     @Synchronized
-    fun onDialerNotification(title: String, text: String) {
+    fun onDialerNotification(title: String, text: String, chrono: Boolean = false, whenMs: Long = 0L) {
+        // An outgoing call: the notification says "Calling…" while it rings, then shows a running
+        // timer (or "Ongoing call") once the other person picks up. That's the answer.
+        lines.firstOrNull { it.status == "dialing" }?.let { d ->
+            val t = "$title $text".lowercase()
+            val stillCalling = Regex("calling|dialing|dialling|ringing|connecting|outgoing").containsMatchIn(t)
+            if (!stillCalling && (chrono || Regex("ongoing|current call|on call|in call|active call|\\b\\d{1,2}:\\d{2}\\b").containsMatchIn(t))) {
+                d.status = "active"
+                d.since = if (chrono && whenMs > 0 && whenMs <= System.currentTimeMillis() + 2000) whenMs else System.currentTimeMillis()
+                emit()
+            }
+            return
+        }
         val inCall = lines.filter { it.status == "active" || it.status == "held" }
         if (inCall.size < 2) return
         val t = "$title $text".lowercase()
