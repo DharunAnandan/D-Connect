@@ -1,3 +1,5 @@
+import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 import { useApp } from '@/lib/store'
 
 // Behind the app, in the theme's colours. Styles (Settings → Experience → Background):
@@ -7,12 +9,34 @@ import { useApp } from '@/lib/store'
 //  solid:  the plain theme colour
 const c = (name: string, a = 1): string => `rgb(var(--c-${name}) / ${a})`
 
+const AUTO = ['aurora', 'mesh', 'stars']
+
+// "auto": Aurora, Mesh and Starry in turn, 10 s each, cross-fading
 export function Background({ tint = 'default' }: { tint?: 'default' | 'eye' }) {
-  const style = useApp((s) => s.settings.bgStyle as string | undefined) || 'aurora'
+  const chosen = useApp((s) => s.settings.bgStyle as string | undefined) || 'auto'
+  const [tick, setTick] = useState(() => Math.floor(Date.now() / 10000))
+  useEffect(() => {
+    if (chosen !== 'auto') return
+    const t = setInterval(() => setTick(Math.floor(Date.now() / 10000)), 1000)
+    return () => clearInterval(t)
+  }, [chosen])
+  const style = chosen === 'auto' ? AUTO[tick % AUTO.length] : chosen
+  return (
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-ink-900">
+      <AnimatePresence initial={false}>
+        <motion.div key={style} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 2, ease: 'easeInOut' }}>
+          <Layer style={style} tint={tint} />
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function Layer({ style, tint }: { style: string; tint: 'default' | 'eye' }) {
   const names = tint === 'eye' ? ['cyan', 'mint', 'violet'] : ['violet', 'cyan', 'pink']
   const glow = (n: string, a = 1): string => `radial-gradient(circle, ${c(n, a)} 0%, ${c(n, 0)} 68%)`
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-ink-900">
+    <div className="absolute inset-0 overflow-hidden bg-ink-900">
       {style === 'aurora' && (
         <>
           <div className="aurora-blob" style={{ width: '46vw', height: '46vw', left: '-10vw', top: '-14vw', background: glow(names[0]), animation: 'drift1 26s ease-in-out infinite' }} />

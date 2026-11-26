@@ -32,7 +32,7 @@ export const DEFAULTS = {
   theme: 'auto', // colour theme: auto (blends through all) | aurora | sunset | ocean | forest | graphite
   navStyle: 'dock', // dock | sidebar
   dockPos: 'left', // left | bottom
-  bgStyle: 'aurora', // aurora | mesh | stars | solid
+  bgStyle: 'auto', // auto (aurora, mesh, starry in turn) | aurora | mesh | stars | solid
   notifOpenInWindow: true, // clicking a phone notification opens that app in a window on this PC
   callNoiseAi: true, // RNNoise on the laptop mic during calls (after the WebRTC filter)
   callNoiseVad: 60, // RNNoise voice threshold %: higher cuts more background, too high clips soft speech

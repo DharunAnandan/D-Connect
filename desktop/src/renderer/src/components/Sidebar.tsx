@@ -45,7 +45,7 @@ function DockItem({ to, label, Icon, active, badge, mouse, horizontal, onClick }
   )
   return (
     <button ref={ref} onClick={onClick} title={label} className={`group relative flex shrink-0 flex-col items-center ${horizontal ? 'px-1' : 'w-full py-1'}`}>
-      <motion.span style={{ scale, transformOrigin: horizontal ? '50% 100%' : '0% 50%' }} className="relative grid h-10 w-12 place-items-center rounded-2xl">
+      <motion.span style={{ scale, transformOrigin: horizontal ? '50% 100%' : '50% 50%' }} className="relative grid h-10 w-12 place-items-center rounded-2xl">
         {active && <motion.span layoutId="dock-active" transition={spring} className="absolute inset-0 rounded-2xl bg-[linear-gradient(120deg,rgb(var(--c-violet)/0.34),rgb(var(--c-cyan)/0.18))] ring-1 ring-white/[0.12]" />}
         {!active && <span className="absolute inset-0 rounded-2xl opacity-0 transition group-hover:bg-white/[0.06] group-hover:opacity-100" />}
         <Icon size={19} className={`relative ${active ? 'text-white' : 'text-white/60 group-hover:text-white'}`} />
@@ -113,7 +113,7 @@ function Dock({ route, go }: { route: string; go: (r: string) => void }) {
   return (
     <aside className="flex w-[84px] shrink-0 flex-col items-center px-1.5 pb-3" onMouseMove={(e) => mouse.set(e.clientY)} onMouseLeave={() => mouse.set(Infinity)}>
       <div className="mb-3 mt-1">{phone}</div>
-      <nav className="flex w-full flex-1 flex-col items-center gap-0.5 overflow-visible">
+      <nav className="no-scrollbar flex min-h-0 w-full flex-1 flex-col items-center gap-0.5 overflow-y-auto overflow-x-hidden py-2">
         {items.slice(0, -1).map((n) => (
           <DockItem key={n.to} to={n.to} label={n.label} Icon={n.Icon} active={isActive(n.to)} badge={n.to === '/notifications' ? notifs.length : 0} mouse={mouse} horizontal={false} onClick={() => go(n.to)} />
         ))}

@@ -1,5 +1,5 @@
 // Incoming / ongoing call: a floating card with a pulsing avatar, answer and decline.
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useMotionValue, useTransform } from 'framer-motion'
 import { BellOff, Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Maximize2, Mic, MicOff, Minimize2, MessageSquare, Pause, Phone, PhoneOff, Play, Repeat, Search, Smartphone, UserPlus, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { CallState } from '@shared/protocol'
@@ -57,6 +57,7 @@ export function CallCard() {
     if (!r?.ok) setHint('Turn on Screen control on the phone (Settings → Screen control) to hold, swap and merge from here.')
   }
   useEffect(() => dc.on('call.hint', (h: string) => setHint(h)), [])
+  useEffect(() => dc.on('call.minimise', (on: boolean) => void setSize(on)), []) // tray / tests
   // every call the phone has going: the one in front, others on hold, one waiting
   const lines = c.calls || []
   const inCall = lines.filter((l) => l.status !== 'ringing')
@@ -135,7 +136,7 @@ export function CallCard() {
   const live = c.state === 'offhook' || c.state === 'dialing'
   if (compact && live) {
     return (
-      <div className="flex h-screen items-start p-2">
+      <div className="flex h-screen flex-col items-stretch p-2">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -160,6 +161,7 @@ export function CallCard() {
             <Maximize2 size={14} />
           </button>
         </motion.div>
+        <HangingPhone onPull={() => void setSize(false)} />
       </div>
     )
   }
@@ -360,6 +362,86 @@ export function CallCard() {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  )
+}
+
+// A phone handset hanging under the minimised call bar on a curly cord. It sways; grab it and
+// it swings and springs back. Pull it down hard (far or fast) and the full call card comes back.
+function HangingPhone({ onPull }: { onPull: () => void }) {
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const [gone, setGone] = useState(false)
+  const AX = 46 // where the cord hangs from (under the avatar)
+  const REST = 46 // handset top at rest, below the anchor
+  // the cord: a curly line from the bar to the handset, stretching with it
+  const cord = useTransform([x, y], ([dx, dy]: number[]) => {
+    const ex = AX + dx
+    const ey = REST + dy
+    // a coiled cord: little loops along the line from the bar to the handset
+    const n = 14
+    let d = `M ${AX} 0`
+    for (let i = 1; i <= n; i++) {
+      const t = i / n
+      const px = AX + (ex - AX) * t
+      const py = ey * t
+      const side = (i % 2 ? 1 : -1) * 4.2 * (1 - t * 0.35)
+      d += ` Q ${(px + side).toFixed(1)} ${(py - ey / n / 2).toFixed(1)} ${px.toFixed(1)} ${py.toFixed(1)}`
+    }
+    return d
+  })
+  return (
+    <div className="no-drag relative h-[112px] w-full">
+      <svg className="pointer-events-none absolute left-0 top-0 h-full w-full overflow-visible">
+        <motion.path d={cord} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={3.4} strokeLinejoin="round" strokeLinecap="round" transform="translate(1 1.5)" />
+        <motion.path d={cord} fill="none" style={{ stroke: 'rgb(var(--c-cyan-soft) / 0.85)' }} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <motion.div
+        drag
+        dragSnapToOrigin
+        dragElastic={0.6}
+        dragConstraints={{ left: -30, right: 230, top: -30, bottom: 120 }}
+        dragTransition={{ bounceStiffness: 260, bounceDamping: 9 }}
+        style={{ x, y, left: AX - 19, top: REST - 6, transformOrigin: '50% 0%' }}
+        animate={gone ? { y: -90, scale: 0.6, opacity: 0 } : { rotate: [-7, 7, -7] }}
+        transition={gone ? { duration: 0.35 } : { duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+        whileDrag={{ scale: 1.12, rotate: 0 }}
+        // while it's held, the window reaches further down so the handset never leaves it
+        onDragStart={() => call('callCompact', true, true)}
+        onDragEnd={(_, info) => {
+          // a firm pull down: far or fast
+          if (info.offset.y > 45 || info.velocity.y > 700) {
+            setGone(true)
+            setTimeout(onPull, 280)
+          } else setTimeout(() => call('callCompact', true, false), 650) // after it springs back
+        }}
+        title="Pull down to open the call"
+        className="absolute cursor-grab active:cursor-grabbing"
+      >
+        <svg width="40" height="52" viewBox="0 0 24 24" className="overflow-visible drop-shadow-[0_8px_14px_rgba(0,0,0,0.55)]" style={{ filter: 'drop-shadow(0 0 10px rgb(var(--c-cyan) / 0.45))' }}>
+          <defs>
+            <linearGradient id="hs" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" style={{ stopColor: 'rgb(var(--c-violet-soft))' }} />
+              <stop offset="0.5" style={{ stopColor: 'rgb(var(--c-cyan))' }} />
+              <stop offset="1" style={{ stopColor: 'rgb(var(--c-mint))' }} />
+            </linearGradient>
+            <linearGradient id="hs-gloss" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#fff" stopOpacity="0.75" />
+              <stop offset="0.55" stopColor="#fff" stopOpacity="0" />
+            </linearGradient>
+            <clipPath id="hs-clip"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></clipPath>
+          </defs>
+          {/* a telephone handset, turned to hang straight down from its cord: glossy body, light on top, fine rim */}
+          <g transform="rotate(-45 12 12)">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" fill="url(#hs)" />
+            <g clipPath="url(#hs-clip)">
+              <rect x="0" y="0" width="24" height="11" fill="url(#hs-gloss)" transform="rotate(45 12 12)" />
+            </g>
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="rgba(11,16,32,0.55)" strokeWidth="0.55" />
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="0.3" transform="translate(-0.25 -0.25)" />
+          </g>
+        </svg>
+      </motion.div>
     </div>
   )
 }

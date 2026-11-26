@@ -45,6 +45,10 @@ export function devControl(getMain: () => BrowserWindow | null, rpc: (name: stri
           const [name, ...args] = arg.split(' ')
           const r = await rpc(name, ...args.map((a) => (a === 'true' ? true : a === 'false' ? false : isNaN(+a) ? a : +a)))
           fs.writeFileSync(path.join(dir, `rpc-${name}.json`), JSON.stringify(r ?? null, null, 2))
+        } else if (cmd === 'evalall') {
+          const out: Record<string, any> = {}
+          for (const w of BrowserWindow.getAllWindows()) if (w.isVisible()) out[`${w.id}:${w.webContents.getURL().split('#')[1] || '/'}`] = await w.webContents.executeJavaScript(arg).catch((e) => String(e))
+          fs.writeFileSync(path.join(dir, 'evalall.json'), JSON.stringify(out, null, 2))
         } else if (cmd === 'eval') {
           const r = await main!.webContents.executeJavaScript(arg)
           fs.writeFileSync(path.join(dir, 'eval.json'), JSON.stringify(r ?? null))

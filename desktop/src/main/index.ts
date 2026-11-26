@@ -213,6 +213,7 @@ app.whenReady().then(async () => {
       toast({ id: 'dev2', kind: 'notification', app: 'Sample Photos', title: 'Someone liked your post', body: 'Pink app icon, pink banner.', icon: icon('#e1306c'), ttl: 20000 })
       toast({ id: 'dev3', kind: 'notification', app: 'Sample Messenger', title: 'New message', body: 'Blue app icon, blue banner.', icon: icon('#2aabee'), ttl: 20000 })
     })
+    ctx.handle('devMinimise', (on: boolean) => emit('call.minimise', on))
     ctx.handle('devFakeCall', (preset: string) => {
       const t = Date.now() - 95000
       const a = { number: '+910000000001', name: 'Sample One', since: t }
@@ -230,10 +231,10 @@ app.whenReady().then(async () => {
   // the call card can shrink to a small bar in the corner and grow back
   // Shrink / grow where the card is now (it may have been dragged): the right edge and the top
   // stay put, and it stays on the screen it's on.
-  ctx.handle('callCompact', (on: boolean) => {
+  ctx.handle('callCompact', (on: boolean, tall = false) => {
     if (!callWin || callWin.isDestroyed()) return
     const b = callWin.getBounds()
-    const [W, H] = on ? [340, 84] : [380, 780]
+    const [W, H] = on ? [340, tall ? 360 : 204] : [380, 780] // minimised: the bar plus the hanging handset (taller while it's being pulled)
     const wa = screen.getDisplayMatching(b).workArea
     const x = Math.min(Math.max(b.x + b.width - W, wa.x), wa.x + wa.width - W)
     const y = Math.min(Math.max(b.y, wa.y), wa.y + wa.height - H)

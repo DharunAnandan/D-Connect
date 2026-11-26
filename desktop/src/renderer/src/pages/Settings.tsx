@@ -207,10 +207,10 @@ export function Settings() {
             ))}
           </div>
         </Row>
-        <Row icon={Sparkles} title="Background" body="Behind every page, in the theme's colours.">
+        <Row icon={Sparkles} title="Background" body="Behind every page, in the theme's colours. Auto changes between Aurora, Mesh and Starry.">
           <div className="flex rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
-            {[{ v: 'aurora', l: 'Aurora' }, { v: 'mesh', l: 'Mesh' }, { v: 'stars', l: 'Starry' }, { v: 'solid', l: 'Solid' }].map((o) => (
-              <button key={o.v} onClick={() => setSetting('bgStyle', o.v)} className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${(settings.bgStyle || 'aurora') === o.v ? 'bg-white text-ink-950' : 'text-white/60 hover:text-white'}`}>{o.l}</button>
+            {[{ v: 'auto', l: 'Auto' }, { v: 'aurora', l: 'Aurora' }, { v: 'mesh', l: 'Mesh' }, { v: 'stars', l: 'Starry' }, { v: 'solid', l: 'Solid' }].map((o) => (
+              <button key={o.v} onClick={() => setSetting('bgStyle', o.v)} className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${(settings.bgStyle || 'auto') === o.v ? 'bg-white text-ink-950' : 'text-white/60 hover:text-white'}`}>{o.l}</button>
             ))}
           </div>
         </Row>

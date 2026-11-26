@@ -228,3 +228,7 @@ textarea,
   0%, 100% { opacity: 0.15; }
   50% { opacity: 0.45; }
 }
+
+/* scrolls, without showing a scrollbar (the dock) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
