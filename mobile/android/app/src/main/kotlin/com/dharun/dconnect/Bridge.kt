@@ -95,6 +95,7 @@ object Bridge {
             "openSetting" -> { openSetting(a("which") as String); result.success(null) }
             "vibrate" -> { Haptics.vibrate(ctx, (a("pattern") as List<*>).map { (it as Number).toLong() }.toLongArray()); result.success(null) }
             "pcAlert" -> { Notifs.pcAlert(ctx, a("title") as String, a("body") as String? ?: "", a("tag") as String? ?: "pc"); result.success(null) }
+            "notifOpen" -> result.success(NotifListener.open(a("key") as String, a("window") == true))
             "linkState" -> {
                 KeepAliveService.linked = a("on") == true
                 try { android.service.quicksettings.TileService.requestListeningState(ctx, android.content.ComponentName(ctx, ClipTile::class.java)) } catch (_: Exception) {}

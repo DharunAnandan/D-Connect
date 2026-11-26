@@ -152,6 +152,31 @@ class NotifListener : NotificationListenerService() {
             }
         }
 
+        // Open what the notification opens (the WhatsApp chat...): its own tap action. With
+        // [onAppWindow], on the PC's app-window screen (scrcpy's virtual display) instead of the
+        // phone's own screen, so it shows up in the D-Connect window on the laptop.
+        fun open(key: String, onAppWindow: Boolean): String {
+            val sbn = find(key) ?: return "gone"
+            val pi = sbn.notification.contentIntent ?: return "no-action"
+            return try {
+                var options: Bundle? = null
+                if (onAppWindow && android.os.Build.VERSION.SDK_INT >= 26) {
+                    val dm = Bridge.ctx.getSystemService(android.hardware.display.DisplayManager::class.java)
+                    val d = dm.displays.firstOrNull { it.displayId != android.view.Display.DEFAULT_DISPLAY && it.name.contains("scrcpy", ignoreCase = true) }
+                    if (d != null) {
+                        val o = android.app.ActivityOptions.makeBasic().setLaunchDisplayId(d.displayId)
+                        if (android.os.Build.VERSION.SDK_INT >= 34) o.setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                        options = o.toBundle()
+                    }
+                }
+                pi.send(Bridge.ctx, 0, null, null, null, null, options)
+                if (onAppWindow && options == null) "no-window" else "ok"
+            } catch (e: Exception) {
+                android.util.Log.w("DConnect", "open failed: $e")
+                "failed"
+            }
+        }
+
         fun action(key: String, index: Int) {
             val sbn = find(key) ?: return
             val list = sbn.notification.actions?.filter { it.remoteInputs.isNullOrEmpty() } ?: return

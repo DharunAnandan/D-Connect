@@ -131,7 +131,15 @@ export function appWindows(ctx: Ctx): void {
     if (!w.win.isDestroyed()) w.win.destroy()
   }
 
-  const open = async (pkg: string, label: string): Promise<{ ok: boolean; message?: string }> => {
+  const open = async (pkg: string, label: string): Promise<{ ok: boolean; message?: string; reused?: boolean }> => {
+    // already open: bring that window to the front
+    for (const w of wins.values()) {
+      if (w.pkg === pkg && !w.win.isDestroyed()) {
+        w.win.show()
+        w.win.focus()
+        return { ok: true, reused: true }
+      }
+    }
     const { serial, error } = await serialForPhone()
     if (!serial) return { ok: false, message: error }
     // the server deletes its own file when it exits (cleanup), so copy it every time (90 KB)

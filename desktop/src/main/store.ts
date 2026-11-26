@@ -29,6 +29,7 @@ export const DEFAULTS = {
   // usb
   usbAuto: true,
   // extras
+  notifOpenInWindow: true, // clicking a phone notification opens that app in a window on this PC
   callNoiseAi: true, // RNNoise on the laptop mic during calls (after the WebRTC filter)
   callNoiseVad: 60, // RNNoise voice threshold %: higher cuts more background, too high clips soft speech
   phoneAudioVolume: 100, // loudness of the phone's music on this PC (0-200%)

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bell, BellOff, CheckCheck, Reply, Send, X } from 'lucide-react'
+import { Bell, BellOff, CheckCheck, ExternalLink, Reply, Send, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Avatar, Button, Card, Empty, PageHeader } from '@/components/ui'
 import { call } from '@/lib/api'
@@ -106,6 +106,7 @@ export function Notifications() {
                         <div className="selectable mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm text-white/70">{n.text}</div>
                       )}
                       <div className="mt-3 flex flex-wrap gap-2">
+                        <Button size="sm" variant="soft" icon={ExternalLink} onClick={() => call('notifOpen', n.key, n.pkg, n.app)}>Open</Button>
                         {n.canReply && <Button size="sm" variant="soft" icon={Reply} onClick={() => { setReplying(replying === n.key ? null : n.key); setText('') }}>Reply</Button>}
                         {(n.actions || []).map((a, i) => (
                           <Button key={a} size="sm" variant="ghost" onClick={() => call('notifAction', n.key, i)}>{a}</Button>

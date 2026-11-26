@@ -143,7 +143,22 @@ app.whenReady().then(async () => {
     toastWin?.focus()
   })
   ctx.handle('toastsEmpty', () => toastWin?.hide())
+  // Clicking a phone notification: open that app in its own window on this PC and go straight to
+  // what the notification is about (the chat...). Needs app windows (USB debugging); otherwise
+  // the Notifications page.
+  const openNotification = async (key: string, pkg: string, app: string): Promise<void> => {
+    if (store.get('notifOpenInWindow') !== false && pkg) {
+      const r: any = await handlers.get('openPhoneApp')?.(pkg, app).catch(() => null)
+      if (r?.ok) {
+        setTimeout(() => hub.request('notif.open', { key, window: true }, 6000).catch(() => null), r.reused ? 200 : 2800)
+        return
+      }
+    }
+    focusMain('/notifications')
+  }
+  ctx.handle('notifOpen', (key: string, pkg: string, app: string) => openNotification(key, pkg, app))
   ctx.handle('toastOpen', (t: Toast) => {
+    if (t.kind === 'notification' && t.meta?.key) return void openNotification(t.meta.key, t.meta.pkg, t.meta.app)
     const route = t.kind === 'sms' ? '/messages' : t.kind === 'notification' ? '/notifications' : t.kind === 'file' ? '/files' : '/'
     focusMain(route)
   })

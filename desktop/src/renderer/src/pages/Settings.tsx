@@ -177,6 +177,9 @@ export function Settings() {
         <Row icon={Bell} title="Desktop toasts" body="Show phone notifications in the corner of your screen.">
           <Toggle on={settings.notifyToasts !== false} onChange={(v) => setSetting('notifyToasts', v)} />
         </Row>
+        <Row icon={Smartphone} title="Open notifications in an app window" body="Clicking a phone notification opens that app here, right at that chat or post (needs USB debugging, like Apps).">
+          <Toggle on={settings.notifOpenInWindow !== false} onChange={(v) => setSetting('notifOpenInWindow', v)} />
+        </Row>
         <Row icon={Clipboard} title="Shared clipboard" body="Copy on one, paste on the other.">
           <Toggle on={settings.clipboardSync !== false} onChange={(v) => setSetting('clipboardSync', v)} />
         </Row>
