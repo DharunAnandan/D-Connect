@@ -86,10 +86,18 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     await sh('pw-cli', ['set-param', String(device.id), 'Profile', `{ index: ${p.index}, save: false }`])
   }
 
+  let rnnModules: string[] = [] // the RNNoise stage's modules (see startRnnoise)
   const stopBridges = (): void => {
     for (const b of bridges) b.kill()
     // unload this bridge's voice processing (not a newer one started right after)
     const mod = ecModule
+    if (!bridging && rnnModules.length) {
+      const rnn = rnnModules.reverse()
+      rnnModules = []
+      setTimeout(async () => {
+        for (const m of rnn) await sh('pactl', ['unload-module', m])
+      }, 300)
+    }
     if (mod && !bridging) {
       ecModule = null
       setTimeout(() => sh('pactl', ['unload-module', mod]), 300)
@@ -218,11 +226,54 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     ).trim()
     if (!/^\d+$/.test(id)) return null
     ecModule = id
-    return { sink: 'dconnect_call_speaker_ec', source: 'dconnect_call_mic_clean' }
+    // then RNNoise (a neural network trained on speech): keeps your voice, drops voices in the
+    // room, traffic, typing and clatter that the WebRTC filter lets through
+    const rnn = ctx.store.get('callNoiseAi') !== false ? await startRnnoise('dconnect_call_mic_clean') : null
+    return { sink: 'dconnect_call_speaker_ec', source: rnn || 'dconnect_call_mic_clean' }
   }
   const stopVoiceProcessing = async (): Promise<void> => {
+    for (const m of rnnModules.reverse()) await sh('pactl', ['unload-module', m])
+    rnnModules = []
     if (ecModule) await sh('pactl', ['unload-module', ecModule])
     ecModule = null
+  }
+
+  // RNNoise, bundled with the app (LADSPA plugin, GPL-3.0: resources/rnnoise). Copied to a fixed
+  // place first: the AppImage's own path changes every launch. mic -> RNNoise -> a virtual mic.
+  const rnnPlugin = (): string | null => {
+    try {
+      const base = app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources') : path.join(app.getAppPath(), 'resources')
+      const src = path.join(base, 'rnnoise', 'librnnoise_ladspa.so')
+      if (!fs.existsSync(src)) return null
+      const dst = path.join(app.getPath('userData'), 'rnnoise', 'librnnoise_ladspa.so')
+      if (!fs.existsSync(dst) || fs.statSync(dst).size !== fs.statSync(src).size) {
+        fs.mkdirSync(path.dirname(dst), { recursive: true })
+        fs.copyFileSync(src, dst)
+      }
+      return dst
+    } catch {
+      return null
+    }
+  }
+  const startRnnoise = async (from: string): Promise<string | null> => {
+    const plugin = rnnPlugin()
+    if (!plugin) return null
+    const load = async (args: string[]): Promise<string | null> => {
+      const id = (await sh('pactl', ['load-module', ...args])).trim()
+      if (!/^\d+$/.test(id)) return null
+      rnnModules.push(id)
+      return id
+    }
+    const out = await load(['module-null-sink', 'sink_name=dconnect_call_mic_ai', 'rate=48000', 'channels=1', `sink_properties='device.description="D-Connect call mic (AI noise removal)"'`])
+    const fx = out && (await load(['module-ladspa-sink', 'sink_name=dconnect_call_ai_in', 'sink_master=dconnect_call_mic_ai', 'label=noise_suppressor_mono', `plugin=${plugin}`, `control=${ctx.store.get('callNoiseVad') ?? 60},200,0,0,0`]))
+    const loop = fx && (await load(['module-loopback', `source=${from}`, 'sink=dconnect_call_ai_in', 'channels=1', 'latency_msec=10', 'source_dont_move=true', 'sink_dont_move=true']))
+    if (!loop) {
+      for (const m of rnnModules.reverse()) await sh('pactl', ['unload-module', m])
+      rnnModules = []
+      routeLog('RNNoise unavailable: using the WebRTC filter only')
+      return null
+    }
+    return 'dconnect_call_mic_ai.monitor'
   }
 
   let bridging: Promise<void> | null = null

@@ -3,7 +3,8 @@
 import { exec, execFile } from 'child_process'
 import crypto from 'crypto'
 import fs from 'fs'
-import { shell, powerSaveBlocker } from 'electron'
+import { app, shell, powerSaveBlocker } from 'electron'
+import path from 'path'
 import type { PhoneStatus, QuickCommand } from '@shared/protocol'
 import type { Ctx } from '../context'
 import { pressKeys } from './input'
@@ -13,7 +14,9 @@ export const BUILTIN: QuickCommand[] = [
   { id: 'sleep', name: 'Sleep', icon: 'moon', builtin: true },
   { id: 'mute', name: 'Mute audio', icon: 'volume-x', builtin: true, toggle: true },
   { id: 'screenshot', name: 'Screenshot', icon: 'camera', builtin: true },
+  { id: 'shotarea', name: 'Screenshot area', icon: 'crop', builtin: true },
   { id: 'record', name: 'Screen record', icon: 'video', builtin: true, toggle: true },
+  { id: 'recarea', name: 'Record area', icon: 'crop', builtin: true },
   { id: 'awake', name: 'Keep awake', icon: 'coffee', builtin: true, toggle: true }
 ]
 
@@ -38,6 +41,46 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
     })
   let recording = false
   const stateOf = (id: string): boolean | undefined => (id === 'mute' ? pcMuted : id === 'awake' ? awakeId !== null : id === 'record' ? recording : undefined)
+  // Full-screen recording. Linux: GNOME's own recorder service, started and stopped over one
+  // D-Bus connection that stays open (the service ends a recording when its caller goes away).
+  // Windows: the Xbox Game Bar shortcut.
+  let castBus: any = null
+  const castIface = async (): Promise<any> => {
+    const dbus = await import('dbus-next')
+    castBus = castBus || dbus.sessionBus()
+    const obj = await castBus.getProxyObject('org.gnome.Shell.Screencast', '/org/gnome/Shell/Screencast')
+    return obj.getInterface('org.gnome.Shell.Screencast')
+  }
+  let castFile = ''
+  const toggleRecording = async (): Promise<void> => {
+    if (process.platform === 'win32') {
+      if (!pressKeys(['leftmeta', 'leftalt', 'r'])) return
+      recording = !recording
+      ctx.toast({ kind: 'info', title: recording ? 'Screen recording started' : 'Screen recording saved', body: recording ? 'Tap Screen record again to stop.' : 'Saved in Videos → Captures.', ttl: 5000 })
+      return sendCommands()
+    }
+    try {
+      const iface = await castIface()
+      if (!recording) {
+        const dir = path.join(app.getPath('videos'), 'Screencasts')
+        fs.mkdirSync(dir, { recursive: true })
+        const dbus = await import('dbus-next')
+        const [ok, file] = await iface.Screencast(path.join(dir, 'D-Connect %d %t.webm'), { 'draw-cursor': new dbus.Variant('b', true) })
+        if (!ok) throw new Error('refused')
+        castFile = file
+        recording = true
+        ctx.toast({ kind: 'info', title: 'Screen recording started', body: 'The whole screen. Tap Screen record again to stop.', ttl: 5000 })
+      } else {
+        await iface.StopScreencast()
+        recording = false
+        ctx.toast({ kind: 'info', title: 'Screen recording saved', body: castFile ? path.basename(castFile) + ' in Videos → Screencasts' : 'Saved in Videos → Screencasts.', ttl: 8000, actions: castFile ? [{ id: `open-path:${path.dirname(castFile)}`, label: 'Show folder' }] : undefined })
+      }
+    } catch {
+      recording = false
+      ctx.toast({ kind: 'info', title: "Couldn't record the screen", body: 'This desktop has no GNOME screen recorder. Use Record area instead.' })
+    }
+    sendCommands()
+  }
   const commands = (): QuickCommand[] => [...BUILTIN.map((c) => (c.toggle ? { ...c, on: stateOf(c.id) } : c)), ...ctx.store.get('commands').map((c) => ({ ...c, builtin: false }))]
   const sendCommands = (): void => {
     if (ctx.hub.session) ctx.hub.send('commands.list', { commands: commands().map(({ cmd, ...c }) => c) })
@@ -76,19 +119,20 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
         : { kind: 'info', title: "Couldn't take a screenshot", body: 'Allow D-Connect to use the virtual keyboard: Settings → Phone as remote.' })
       return
     }
+    if (id === 'shotarea') {
+      // the desktop's own screenshot panel: drag the area you want (Linux: GNOME's Print key)
+      const ok = pressKeys(process.platform === 'win32' ? ['leftmeta', 'leftshift', 's'] : ['print'])
+      if (!ok) ctx.toast({ kind: 'info', title: "Couldn't open the screenshot panel", body: 'Allow D-Connect to use the virtual keyboard: Settings → Phone as remote.' })
+      return
+    }
+    if (id === 'recarea') {
+      // GNOME's recording panel: pick an area or a window, then press its record button
+      if (process.platform === 'win32') return void ctx.toast({ kind: 'info', title: 'Record area', body: 'Use Screen record on Windows (records the whole screen).' })
+      pressKeys(['leftctrl', 'leftshift', 'leftalt', 'r'])
+      return
+    }
     if (id === 'record') {
-      let ok: boolean
-      if (process.platform === 'win32') ok = pressKeys(['leftmeta', 'leftalt', 'r']) // Xbox Game Bar
-      else {
-        // GNOME: this shortcut opens the recorder (Enter starts it), and stops a recording
-        ok = pressKeys(['leftctrl', 'leftshift', 'leftalt', 'r'])
-        if (ok && !recording) setTimeout(() => pressKeys(['enter']), 900)
-      }
-      if (ok) {
-        recording = !recording
-        ctx.toast({ kind: 'info', title: recording ? 'Screen recording started' : 'Screen recording saved', body: recording ? 'Tap Screen record again on your phone to stop.' : process.platform === 'win32' ? 'Saved in Videos → Captures.' : 'Saved in Videos → Screencasts.', ttl: 5000 })
-        sendCommands()
-      }
+      void toggleRecording()
       return
     }
     if (id === 'awake') {

@@ -151,6 +151,21 @@ export function Settings() {
         )}
       </Section>
 
+      <Section title="Call voice" icon={Mic}>
+        <Row icon={Sparkles} title="AI noise removal" body="On calls taken on this PC, an AI filter (RNNoise) keeps your voice and removes background voices, traffic, fans and typing.">
+          <Toggle on={settings.callNoiseAi !== false} onChange={(v) => setSetting('callNoiseAi', v)} />
+        </Row>
+        {settings.callNoiseAi !== false && (
+          <Row icon={Mic} title="Strength" body="Strong removes more noise; if the start of your words gets cut, go lighter. Applies from the next call.">
+            <div className="flex rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
+              {[{ v: 40, l: 'Light' }, { v: 60, l: 'Normal' }, { v: 80, l: 'Strong' }].map((o) => (
+                <button key={o.v} onClick={() => setSetting('callNoiseVad', o.v)} className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${Number(settings.callNoiseVad ?? 60) === o.v ? 'bg-white text-ink-950' : 'text-white/60 hover:text-white'}`}>{o.l}</button>
+              ))}
+            </div>
+          </Row>
+        )}
+      </Section>
+
       <Section title="Connection" icon={Cable}>
         <Row icon={Cable} title="USB connection" body={usb?.available === false ? 'adb was not found. Install Android platform-tools to use USB.' : usb?.devices.length ? `Phone on USB: ${usb.devices.map((d) => `${d.model} (${d.state})`).join(', ')}` : 'Plug the phone in with USB debugging on, and it connects over the cable.'}>
           <Toggle on={settings.usbAuto !== false} onChange={(v) => setSetting('usbAuto', v)} />
