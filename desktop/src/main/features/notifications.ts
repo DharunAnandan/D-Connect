@@ -11,7 +11,9 @@ export function notifications(ctx: Ctx, appCall: (n: PhoneNotification | null) =
       const n = data as PhoneNotification
       // WhatsApp & co. reuse one notification per chat: a new message changes its text/time
       const prev = list.get(n.key)
-      const isNew = !prev || (n.text !== prev.text && n.time >= prev.time)
+      // a chat whose newest message is your own reply: update it, no alert
+      const lastThread = (x?: PhoneNotification): string => JSON.stringify(x?.thread?.slice(-1) || x?.text || '')
+      const isNew = !n.fromMe && (!prev || ((n.text !== prev.text || lastThread(n) !== lastThread(prev)) && n.time >= prev.time))
       list.set(n.key, n)
       push()
       // Teams / WhatsApp / ... calls: the call card, not a toast
@@ -25,7 +27,8 @@ export function notifications(ctx: Ctx, appCall: (n: PhoneNotification | null) =
           kind: 'notification',
           app: n.app,
           title: n.title || n.app,
-          body: n.text,
+          // a chat: its last few lines, your replies marked
+          body: n.thread && n.thread.length > 1 ? n.thread.slice(-3).map((m) => `${m.me ? 'You' : m.from && m.from !== n.title ? m.from : ''}${m.me || (m.from && m.from !== n.title) ? ': ' : ''}${m.text}`).join('\n') : n.text,
           icon: n.icon ? `data:image/png;base64,${n.icon}` : undefined,
           reply: n.canReply ? { kind: 'notif', key: n.key } : undefined,
           actions: (n.actions || []).slice(0, 2).map((label, i) => ({ id: `notif-action:${n.key}:${i}`, label }))

@@ -146,6 +146,12 @@ class Bridge {
       final type = e['type'] as String?;
       final data = e['data'];
       switch (type) {
+        case 'clip.tile':
+          // sent from the quick-settings tile
+          if (data is String && data.isNotEmpty) {
+            _lastClip = data;
+            link.send('clip.set', {'text': data});
+          }
         case 'notif.posted':
         case 'notif.removed':
         case 'sms.received':

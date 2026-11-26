@@ -63,6 +63,8 @@ export interface PhoneNotification {
   canReply?: boolean
   actions?: string[]
   category?: string // 'call' for app calls (Teams, WhatsApp...)
+  fromMe?: boolean // the newest message in this chat is your own reply
+  thread?: { from?: string; text: string; me?: boolean; time?: number }[] // chat apps: the last few messages
 }
 
 // ---------------------------------------------------------------- messages / calls

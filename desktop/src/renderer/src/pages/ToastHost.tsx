@@ -133,7 +133,7 @@ export function ToastHost() {
                 <button className="min-w-0 flex-1 text-left" onClick={() => { call('toastOpen', t); remove(t.id) }}>
                   {t.app && <div className="text-[10.5px] font-semibold uppercase tracking-wider text-white/45">{t.app}</div>}
                   <div className="truncate text-[14px] font-semibold">{t.title}</div>
-                  {t.body && <div className="line-clamp-3 text-[13px] leading-snug text-white/70">{t.body}</div>}
+                  {t.body && <div className="line-clamp-3 whitespace-pre-line text-[13px] leading-snug text-white/70">{t.body}</div>}
                 </button>
                 <button onClick={() => remove(t.id)} title="Close" className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white/50 transition hover:bg-white/10 hover:text-white">
                   <X size={14} />

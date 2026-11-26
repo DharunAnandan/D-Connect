@@ -83,6 +83,7 @@ class KeepAliveService : Service() {
     }
 
     override fun onDestroy() {
+        linked = false
         try { unregisterReceiver(receiver) } catch (_: Exception) {}
         try { wifi?.release() } catch (_: Exception) {}
         super.onDestroy()
@@ -94,6 +95,7 @@ class KeepAliveService : Service() {
         // the call in progress (for a PC that connects mid-call)
         @Volatile var current: Map<String, Any?>? = null
         @Volatile var lastNumber: String? = null
+        @Volatile var linked = false // linked to a PC right now (set by the app; shown on the quick-settings tile)
     }
 
     // Report where the call's audio really is (the PC over Bluetooth, the receiver, the

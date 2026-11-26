@@ -269,11 +269,13 @@ class Link extends ChangeNotifier {
     _attempt = 0;
     notifyListeners();
     Native.keepAlive(true, pc!.name);
+    Native.call('linkState', {'on': true});
     return true;
   }
 
   void _onClosed() {
     _ws = null;
+    Native.call('linkState', {'on': false});
     for (final c in _pending.values) {
       if (!c.isCompleted) c.completeError('disconnected');
     }

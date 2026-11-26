@@ -64,12 +64,30 @@ class NotifListener : NotificationListenerService() {
         if (title.isBlank() && text.isBlank()) return null
         val actions = n.actions ?: emptyArray()
         val canReply = actions.any { a -> a.remoteInputs?.any { it.allowFreeFormInput } == true }
+        // Chat apps (WhatsApp, Telegram...) keep the conversation inside the notification: who
+        // said what, your replies included. Send the last few messages and the chat's name, so a
+        // reply you sent shows under the message it answers instead of as a new "You" alert.
+        var convo: String? = null
+        var fromMe = false
+        val thread = mutableListOf<Map<String, Any?>>()
+        try {
+            val style = androidx.core.app.NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(n)
+            if (style != null && style.messages.isNotEmpty()) {
+                val me = style.user.name?.toString()
+                fun mine(m: androidx.core.app.NotificationCompat.MessagingStyle.Message) = m.person == null || (me != null && m.person?.name?.toString() == me)
+                convo = style.conversationTitle?.toString() ?: style.messages.lastOrNull { !mine(it) }?.person?.name?.toString()
+                fromMe = mine(style.messages.last())
+                for (m in style.messages.takeLast(6)) thread.add(mapOf("from" to if (mine(m)) "You" else (m.person?.name?.toString() ?: convo), "text" to (m.text?.toString() ?: ""), "me" to mine(m), "time" to m.timestamp))
+            }
+        } catch (_: Exception) {}
         return mapOf(
             "key" to sbn.key,
             "pkg" to sbn.packageName,
             "app" to appLabel(sbn.packageName),
-            "title" to title,
-            "text" to text,
+            "title" to (convo ?: title),
+            "text" to (thread.lastOrNull { it["me"] != true }?.get("text") as String? ?: text),
+            "fromMe" to fromMe,
+            "thread" to thread,
             "time" to sbn.postTime,
             "icon" to appIcon(sbn.packageName),
             "canReply" to canReply,

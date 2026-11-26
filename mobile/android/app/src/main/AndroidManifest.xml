@@ -82,6 +82,23 @@
         </activity>
 
         <service
+            android:name=".ClipTile"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_clip"
+            android:label="Clipboard → PC"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <activity
+            android:name=".ClipSendActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <service
             android:name=".KeepAliveService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />

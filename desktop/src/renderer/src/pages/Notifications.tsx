@@ -85,7 +85,26 @@ export function Notifications() {
                         <span className="text-[11px] text-white/30">{ago(n.time)}</span>
                       </div>
                       <div className="mt-0.5 font-semibold">{n.title}</div>
-                      <div className="selectable mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm text-white/70">{n.text}</div>
+                      {n.thread && n.thread.length > 1 ? (
+                        // a chat: the last messages, with your replies tucked under the message they answer
+                        <div className="selectable mt-1 space-y-1">
+                          {n.thread.map((m, i) =>
+                            m.me ? (
+                              <div key={i} className="ml-5 flex items-start gap-1.5 border-l-2 border-mint/40 pl-2.5 text-sm text-white/60 [overflow-wrap:anywhere]">
+                                <span className="shrink-0 text-[11px] font-semibold text-mint">You</span>
+                                <span className="whitespace-pre-wrap">{m.text}</span>
+                              </div>
+                            ) : (
+                              <div key={i} className="whitespace-pre-wrap text-sm text-white/75 [overflow-wrap:anywhere]">
+                                {m.from && m.from !== n.title && <span className="mr-1.5 text-[11px] font-semibold text-white/45">{m.from}</span>}
+                                {m.text}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      ) : (
+                        <div className="selectable mt-0.5 whitespace-pre-wrap [overflow-wrap:anywhere] text-sm text-white/70">{n.text}</div>
+                      )}
                       <div className="mt-3 flex flex-wrap gap-2">
                         {n.canReply && <Button size="sm" variant="soft" icon={Reply} onClick={() => { setReplying(replying === n.key ? null : n.key); setText('') }}>Reply</Button>}
                         {(n.actions || []).map((a, i) => (
