@@ -61,6 +61,19 @@ object Notifs {
         ctx.getSystemService(NotificationManager::class.java).notify(EYE_ID, n)
     }
 
+    // an alert from the PC (e.g. its battery is low), as a normal phone notification
+    fun pcAlert(ctx: Context, title: String, body: String, tag: String) {
+        val n = NotificationCompat.Builder(ctx, ALERT)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_low_battery)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(openApp(ctx, req = 40))
+            .setAutoCancel(true)
+            .build()
+        ctx.getSystemService(NotificationManager::class.java).notify(1000 + (tag.hashCode() and 0xfff), n)
+    }
+
     fun link(ctx: Context, uri: String) {
         val pi = PendingIntent.getActivity(ctx, uri.hashCode(), Intent(Intent.ACTION_VIEW, Uri.parse(uri)), PendingIntent.FLAG_IMMUTABLE)
         val n = NotificationCompat.Builder(ctx, ALERT)

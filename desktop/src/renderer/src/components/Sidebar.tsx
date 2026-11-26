@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
 import { call, useLive } from '@/lib/api'
-import { Bell, Bluetooth, Check, ChevronsUpDown, Eye, LayoutGrid, FolderUp, Home, Image, MessageSquare, MonitorSmartphone, Phone, Settings, Sparkles, Volume2 } from 'lucide-react'
+import { Bell, Bluetooth, Check, ChevronsUpDown, Eye, LayoutGrid, FolderUp, Home, Image, MessageSquare, MonitorSmartphone, Phone, Settings, Sparkles, Volume2, BatteryMedium } from 'lucide-react'
 import { useApp } from '@/lib/store'
 import { spring } from '@/theme/motion'
 import { BatteryPill } from './Battery'
@@ -16,6 +16,7 @@ export const NAV = [
   { to: '/mirror', label: 'Screen', icon: MonitorSmartphone },
   { to: '/apps', label: 'Apps', icon: LayoutGrid },
   { to: '/sound', label: 'Sound', icon: Volume2 },
+  { to: '/battery', label: 'Battery', icon: BatteryMedium },
   { to: '/extras', label: 'Extras', icon: Sparkles },
   { to: '/eye', label: 'Eye Care', icon: Eye }
 ]

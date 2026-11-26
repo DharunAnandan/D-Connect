@@ -6,12 +6,14 @@ import fs from 'fs'
 import { shell, powerSaveBlocker } from 'electron'
 import type { PhoneStatus, QuickCommand } from '@shared/protocol'
 import type { Ctx } from '../context'
+import { pressKeys } from './input'
 
 export const BUILTIN: QuickCommand[] = [
   { id: 'lock', name: 'Lock PC', icon: 'lock', builtin: true },
   { id: 'sleep', name: 'Sleep', icon: 'moon', builtin: true },
   { id: 'mute', name: 'Mute audio', icon: 'volume-x', builtin: true, toggle: true },
   { id: 'screenshot', name: 'Screenshot', icon: 'camera', builtin: true },
+  { id: 'record', name: 'Screen record', icon: 'video', builtin: true, toggle: true },
   { id: 'awake', name: 'Keep awake', icon: 'coffee', builtin: true, toggle: true }
 ]
 
@@ -34,7 +36,8 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
       if (process.platform !== 'linux') return resolve(false)
       execFile('pactl', ['get-sink-mute', '@DEFAULT_SINK@'], { env: { ...process.env, LC_ALL: 'C' } }, (err, out) => resolve(!err && /yes/i.test(out)))
     })
-  const stateOf = (id: string): boolean | undefined => (id === 'mute' ? pcMuted : id === 'awake' ? awakeId !== null : undefined)
+  let recording = false
+  const stateOf = (id: string): boolean | undefined => (id === 'mute' ? pcMuted : id === 'awake' ? awakeId !== null : id === 'record' ? recording : undefined)
   const commands = (): QuickCommand[] => [...BUILTIN.map((c) => (c.toggle ? { ...c, on: stateOf(c.id) } : c)), ...ctx.store.get('commands').map((c) => ({ ...c, builtin: false }))]
   const sendCommands = (): void => {
     if (ctx.hub.session) ctx.hub.send('commands.list', { commands: commands().map(({ cmd, ...c }) => c) })
@@ -64,8 +67,28 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
         })
       return
     }
+    // Screenshot and screen recording go through the desktop's own shortcuts (GNOME on Wayland
+    // doesn't let other apps take them directly): pressed on the virtual keyboard.
     if (id === 'screenshot') {
-      if (process.platform === 'linux') execFile('gnome-screenshot', [], (e) => e && execFile('gdbus', ['call', '--session', '--dest', 'org.gnome.Shell.Screenshot', '--object-path', '/org/gnome/Shell/Screenshot', '--method', 'org.gnome.Shell.Screenshot.Screenshot', 'false', 'true', '']))
+      const ok = pressKeys(process.platform === 'win32' ? ['leftmeta', 'print'] : ['leftshift', 'print'])
+      ctx.toast(ok
+        ? { kind: 'info', title: 'Screenshot taken', body: process.platform === 'win32' ? 'Saved in Pictures → Screenshots.' : 'Saved in Pictures → Screenshots, and copied to the clipboard.', ttl: 5000 }
+        : { kind: 'info', title: "Couldn't take a screenshot", body: 'Allow D-Connect to use the virtual keyboard: Settings → Phone as remote.' })
+      return
+    }
+    if (id === 'record') {
+      let ok: boolean
+      if (process.platform === 'win32') ok = pressKeys(['leftmeta', 'leftalt', 'r']) // Xbox Game Bar
+      else {
+        // GNOME: this shortcut opens the recorder (Enter starts it), and stops a recording
+        ok = pressKeys(['leftctrl', 'leftshift', 'leftalt', 'r'])
+        if (ok && !recording) setTimeout(() => pressKeys(['enter']), 900)
+      }
+      if (ok) {
+        recording = !recording
+        ctx.toast({ kind: 'info', title: recording ? 'Screen recording started' : 'Screen recording saved', body: recording ? 'Tap Screen record again on your phone to stop.' : process.platform === 'win32' ? 'Saved in Videos → Captures.' : 'Saved in Videos → Screencasts.', ttl: 5000 })
+        sendCommands()
+      }
       return
     }
     if (id === 'awake') {
@@ -109,16 +132,31 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
       return null
     }
   }
+  let pcFullAlerted = false
+  let pcPrev: number | null = null
+  // the laptop's battery alerts: on this PC, and on the phone too when that's on
+  const pcAlert = (tag: string, title: string, body: string): void => {
+    ctx.toast({ kind: 'battery', title, body, ttl: 12000 })
+    if (ctx.store.get('pcAlertsToPhone') !== false && ctx.hub.session) ctx.hub.send('pc.alert', { tag, title, body })
+  }
   if (process.platform === 'linux') {
     setInterval(() => {
-      const low = Number(ctx.store.get('lowBatteryAlert') ?? 20)
-      const b = ctx.store.get('pcBatteryAlert') !== false && low ? pcBattery() : null
+      if (ctx.store.get('pcBatteryAlert') === false) return
+      const b = pcBattery()
       if (!b) return
-      if (b.level <= low && !b.charging && !pcLowAlerted) {
+      const low = Number(ctx.store.get('pcLowAlert') ?? 20)
+      if (low && b.level <= low && !b.charging && !pcLowAlerted) {
         pcLowAlerted = true
-        ctx.toast({ kind: 'battery', title: `Laptop battery low · ${b.level}%`, body: 'Plug in the charger.', ttl: 12000 })
+        pcAlert('pc-low', `Laptop battery low · ${b.level}%`, 'Plug in the laptop charger.')
       }
       if (b.charging || b.level > low + 3) pcLowAlerted = false
+      const target = Number(ctx.store.get('pcChargeAlert') ?? 0)
+      if (target && b.charging && b.level >= target && !pcFullAlerted && pcPrev !== null && pcPrev < target) {
+        pcFullAlerted = true
+        pcAlert('pc-full', target >= 100 ? 'Laptop fully charged' : `Laptop charged to ${b.level}%`, target >= 100 ? 'You can unplug the charger.' : `It reached your ${target}% limit. Unplug it to go easy on the battery.`)
+      }
+      if (!b.charging || b.level < target - 3) pcFullAlerted = false
+      pcPrev = b.level
     }, 60000)
   }
 
@@ -156,6 +194,7 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
   ctx.handle('shareUrl', (url: string) => ctx.hub.send('share.url', { url }))
   ctx.handle('shareText', (text: string) => ctx.hub.send('share.text', { text }))
   ctx.handle('setPhoneDnd', (on: boolean) => ctx.hub.send('dnd.set', { on }))
+  ctx.handle('pcBattery', () => (process.platform === 'linux' ? pcBattery() : null))
   ctx.handle('commands', () => commands())
   ctx.handle('runCommand', (id: string) => run(id))
   ctx.handle('saveCommand', (c: { id?: string; name: string; icon: string; cmd: string }) => {

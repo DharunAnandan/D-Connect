@@ -45,7 +45,7 @@ function xdotoolBackend(): Backend | null {
     execFile('xdotool', args, () => {})
   }
   const btn: Record<string, string> = { left: '1', middle: '2', right: '3' }
-  const keymap: Record<string, string> = { enter: 'Return', backspace: 'BackSpace', esc: 'Escape', tab: 'Tab', space: 'space', up: 'Up', down: 'Down', left: 'Left', right: 'Right', home: 'Home', end: 'End', pageup: 'Prior', pagedown: 'Next', delete: 'Delete', volumeup: 'XF86AudioRaiseVolume', volumedown: 'XF86AudioLowerVolume', mute: 'XF86AudioMute', playpause: 'XF86AudioPlay', nextsong: 'XF86AudioNext', previoussong: 'XF86AudioPrev', leftctrl: 'ctrl', leftalt: 'alt', leftshift: 'shift', leftmeta: 'super', f5: 'F5' }
+  const keymap: Record<string, string> = { enter: 'Return', backspace: 'BackSpace', esc: 'Escape', tab: 'Tab', space: 'space', up: 'Up', down: 'Down', left: 'Left', right: 'Right', home: 'Home', end: 'End', pageup: 'Prior', pagedown: 'Next', delete: 'Delete', volumeup: 'XF86AudioRaiseVolume', volumedown: 'XF86AudioLowerVolume', mute: 'XF86AudioMute', playpause: 'XF86AudioPlay', nextsong: 'XF86AudioNext', previoussong: 'XF86AudioPrev', leftctrl: 'ctrl', leftalt: 'alt', leftshift: 'shift', leftmeta: 'super', f5: 'F5', print: 'Print' }
   let acc = 0
   return {
     name: 'xdotool',
@@ -76,7 +76,7 @@ public class DC { [DllImport("user32.dll")] public static extern void mouse_even
 [DllImport("user32.dll")] public static extern void keybd_event(byte k, byte s, int f, int e); }
 "@
 `)
-  const vk: Record<string, number> = { enter: 0x0d, backspace: 0x08, esc: 0x1b, tab: 0x09, space: 0x20, left: 0x25, up: 0x26, right: 0x27, down: 0x28, home: 0x24, end: 0x23, pageup: 0x21, pagedown: 0x22, delete: 0x2e, volumeup: 0xaf, volumedown: 0xae, mute: 0xad, playpause: 0xb3, nextsong: 0xb0, previoussong: 0xb1, leftctrl: 0x11, leftshift: 0x10, leftalt: 0x12, leftmeta: 0x5b, f5: 0x74, v: 0x56 }
+  const vk: Record<string, number> = { enter: 0x0d, backspace: 0x08, esc: 0x1b, tab: 0x09, space: 0x20, left: 0x25, up: 0x26, right: 0x27, down: 0x28, home: 0x24, end: 0x23, pageup: 0x21, pagedown: 0x22, delete: 0x2e, volumeup: 0xaf, volumedown: 0xae, mute: 0xad, playpause: 0xb3, nextsong: 0xb0, previoussong: 0xb1, leftctrl: 0x11, leftshift: 0x10, leftalt: 0x12, leftmeta: 0x5b, f5: 0x74, v: 0x56, print: 0x2c, r: 0x52 }
   const flags: Record<string, [number, number]> = { left: [0x02, 0x04], right: [0x08, 0x10], middle: [0x20, 0x40] }
   const run = (s: string): void => {
     ps.stdin.write(s + '\n')
@@ -103,9 +103,18 @@ public class DC { [DllImport("user32.dll")] public static extern void mouse_even
   }
 }
 
+// press a key combination on this PC (for PC actions like screenshot and screen recording)
+export let pressKeys: (keys: string[]) => boolean = () => false
+
 export function remoteInput(ctx: Ctx): void {
   let backend: Backend | null = null
   const get = (): Backend | null => (backend = backend || windowsBackend() || uinputBackend() || xdotoolBackend())
+  pressKeys = (keys) => {
+    const b = get()
+    if (!b) return false
+    b.send(keys.length === 1 ? { t: 'key', k: keys[0] } : { t: 'combo', k: keys })
+    return true
+  }
 
   const send = async (m: any): Promise<void> => {
     const b = get()

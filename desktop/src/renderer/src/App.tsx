@@ -22,6 +22,7 @@ import { Pair } from './pages/Pair'
 import { Photos } from './pages/Photos'
 import { Settings } from './pages/Settings'
 import { Sound } from './pages/Sound'
+import { Battery } from './pages/Battery'
 
 const PAGES: Record<string, () => React.JSX.Element> = {
   '/': Home,
@@ -33,6 +34,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   '/mirror': Mirror,
   '/apps': Apps,
   '/sound': Sound,
+  '/battery': Battery,
   '/extras': Extras,
   '/eye': EyeCare,
   '/settings': Settings,

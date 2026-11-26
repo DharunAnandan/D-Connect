@@ -94,6 +94,7 @@ object Bridge {
             }
             "openSetting" -> { openSetting(a("which") as String); result.success(null) }
             "vibrate" -> { Haptics.vibrate(ctx, (a("pattern") as List<*>).map { (it as Number).toLong() }.toLongArray()); result.success(null) }
+            "pcAlert" -> { Notifs.pcAlert(ctx, a("title") as String, a("body") as String? ?: "", a("tag") as String? ?: "pc"); result.success(null) }
             "toast" -> { Toast.makeText(ctx, a("text") as String, Toast.LENGTH_SHORT).show(); result.success(null) }
             "eyeNotification" -> { Notifs.eyeBreak(ctx, (a("seconds") as Number).toInt()); result.success(null) }
             "eyeNotificationCancel" -> { Notifs.cancel(ctx, Notifs.EYE_ID); result.success(null) }

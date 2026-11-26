@@ -142,12 +142,54 @@ class Link extends ChangeNotifier {
       if (!_running) return;
       if (await _connect(pc!, h)) return;
     }
+    // Not at any address we know, and network discovery found nothing: that's the PC on this
+    // phone's own hotspot (Android picks a new address range each time and doesn't discover
+    // there), or a PC whose address changed. Look for the port on our local networks. Only a PC
+    // with the paired certificate is accepted, so a stranger's machine can't answer.
+    if (_attempt % 3 == 0) {
+      for (final h in await _scanLocal(pc!.port)) {
+        if (!_running || hosts.contains(h)) continue;
+        if (await _connect(pc!, h)) return;
+      }
+    }
     if (!_running) return;
     state = LinkState.searching;
     notifyListeners();
     _attempt++;
     final wait = Duration(milliseconds: min(15000, 1500 * _attempt));
     _retry = Timer(wait, _loop);
+  }
+
+  // Every address on this phone's local IPv4 networks (Wi-Fi, its hotspot, USB tethering) with
+  // something listening on [port]. A /24 takes about half a second.
+  Future<List<String>> _scanLocal(int port) async {
+    final found = <String>[];
+    try {
+      final mine = <String>{};
+      final bases = <String>{};
+      for (final i in await NetworkInterface.list(type: InternetAddressType.IPv4)) {
+        if (RegExp(r'^(rmnet|ccmni|lo|dummy|tun|ppp|v4-)').hasMatch(i.name)) continue; // mobile data, VPN
+        for (final a in i.addresses) {
+          final p = a.address.split('.');
+          final private = p.length == 4 && (p[0] == '10' || (p[0] == '192' && p[1] == '168') || (p[0] == '172' && (int.tryParse(p[1]) ?? 0) >= 16 && (int.tryParse(p[1]) ?? 0) <= 31));
+          if (!private) continue;
+          mine.add(a.address);
+          bases.add('${p[0]}.${p[1]}.${p[2]}');
+        }
+      }
+      for (final b in bases) {
+        final probes = <Future<String?>>[
+          for (var n = 1; n < 255; n++)
+            if (!mine.contains('$b.$n'))
+              Socket.connect('$b.$n', port, timeout: const Duration(milliseconds: 600)).then<String?>((s) {
+                s.destroy();
+                return '$b.$n';
+              }).catchError((_) => null),
+        ];
+        found.addAll((await Future.wait(probes)).whereType<String>());
+      }
+    } catch (_) {}
+    return found;
   }
 
   Future<bool> _connect(PairedPc target, String host, {String? token}) async {

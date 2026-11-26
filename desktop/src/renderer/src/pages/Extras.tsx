@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Camera, Coffee, Link2, Lock, Moon, MoonStar, Music2, Pause, Play, Plus, Radar, Send, ShieldCheck, SkipBack, SkipForward, Sparkles, Terminal, Trash2, Type, VolumeX } from 'lucide-react'
+import { Camera, Coffee, Link2, Lock, Moon, MoonStar, Music2, Pause, Play, Plus, Radar, Send, ShieldCheck, SkipBack, SkipForward, Sparkles, Terminal, Trash2, Type, Video, VolumeX } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { QuickCommand } from '@shared/protocol'
 import { Button, Card, Empty, PageHeader, Row, Toggle } from '@/components/ui'
@@ -7,7 +7,7 @@ import { call } from '@/lib/api'
 import { useApp } from '@/lib/store'
 import { list } from '@/theme/motion'
 
-const ICONS: Record<string, any> = { lock: Lock, moon: Moon, 'volume-x': VolumeX, camera: Camera, coffee: Coffee, terminal: Terminal }
+const ICONS: Record<string, any> = { lock: Lock, moon: Moon, 'volume-x': VolumeX, camera: Camera, coffee: Coffee, video: Video, terminal: Terminal }
 
 export function Extras() {
   const { conn, settings, setSetting, pcMedia, status } = useApp()

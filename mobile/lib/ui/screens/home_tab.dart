@@ -124,6 +124,7 @@ class HomeTab extends StatelessWidget {
         'volume-x' => Icons.volume_off_rounded,
         'camera' => Icons.screenshot_monitor_rounded,
         'coffee' => Icons.coffee_rounded,
+        'video' => Icons.videocam_rounded,
         _ => Icons.terminal_rounded,
       };
 

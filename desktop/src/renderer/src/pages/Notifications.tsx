@@ -7,6 +7,20 @@ import { ago } from '@/lib/format'
 import { useApp } from '@/lib/store'
 import { spring } from '@/theme/motion'
 
+// fixed filters by kind of app (the package names cover the usual variants)
+const GROUPS: { id: string; label: string; color: string; match: RegExp }[] = [
+  { id: 'sms', label: 'SMS', color: '#35e0ff', match: /(\.mms|messaging|\.sms|com\.android\.messaging|com\.oneplus\.mms|com\.coloros\.mms|truecaller)/i },
+  { id: 'whatsapp', label: 'WhatsApp', color: '#25d366', match: /^com\.whatsapp(\.w4b)?$/ },
+  { id: 'instagram', label: 'Instagram', color: '#e1306c', match: /^com\.instagram\./ },
+  { id: 'facebook', label: 'Facebook', color: '#1877f2', match: /^com\.facebook\.(katana|orca|lite|mlite)/ },
+  { id: 'telegram', label: 'Telegram', color: '#2aabee', match: /(org\.telegram|org\.thunderdog\.challegram|telegram)/i },
+  { id: 'snapchat', label: 'Snapchat', color: '#fffc00', match: /^com\.snapchat\./ },
+  { id: 'gmail', label: 'Gmail', color: '#ea4335', match: /^com\.google\.android\.gm$/ },
+  { id: 'x', label: 'X / Twitter', color: '#e7e9ea', match: /^com\.twitter\./ },
+  { id: 'youtube', label: 'YouTube', color: '#ff0033', match: /^com\.google\.android\.youtube/ }
+]
+const groupOf = (pkg: string): string | null => GROUPS.find((g) => g.match.test(pkg))?.id ?? null
+
 export function Notifications() {
   const { notifs, conn, settings } = useApp()
   const [replying, setReplying] = useState<string | null>(null)
@@ -23,7 +37,10 @@ export function Notifications() {
     }
     return [...m.values()].sort((a, b) => b.count - a.count)
   }, [notifs])
-  const shown = filter ? notifs.filter((n) => n.pkg === filter) : notifs
+  // filter: null = all, "g:<group>" = a kind of app, otherwise one app's package
+  const shown = !filter ? notifs : filter.startsWith('g:') ? notifs.filter((n) => groupOf(n.pkg) === filter.slice(2)) : notifs.filter((n) => n.pkg === filter)
+  const groupCount = (id: string): number => notifs.filter((n) => groupOf(n.pkg) === id).length
+  const otherApps = apps.filter((a) => !groupOf(a.pkg))
 
   if (!conn.connected) return <Empty icon={Bell} title="Connect your phone" body="Phone notifications show up here and as desktop toasts." />
 
@@ -32,19 +49,28 @@ export function Notifications() {
       <PageHeader icon={Bell} title="Notifications" subtitle={`${notifs.length} from your phone`}>
         <Button size="sm" variant="soft" icon={CheckCheck} disabled={!notifs.length} onClick={() => call('notifClear')}>Clear all</Button>
       </PageHeader>
-      {apps.length > 0 && (
-        <div className="mb-5 flex flex-wrap gap-2">
-          <Chip active={!filter} onClick={() => setFilter(null)}>All · {notifs.length}</Chip>
-          {apps.map((a) => (
-            <Chip key={a.pkg} active={filter === a.pkg} onClick={() => setFilter(filter === a.pkg ? null : a.pkg)}>
-              {a.icon && <img src={`data:image/png;base64,${a.icon}`} className="h-4 w-4" />}
-              {a.app} · {a.count}
+      <div className="mb-5 flex flex-wrap items-center gap-2">
+        <Chip active={!filter} onClick={() => setFilter(null)}>All · {notifs.length}</Chip>
+        {GROUPS.map((g) => {
+          const n = groupCount(g.id)
+          const id = 'g:' + g.id
+          return (
+            <Chip key={g.id} active={filter === id} dim={n === 0} onClick={() => setFilter(filter === id ? null : id)}>
+              <span className="h-2 w-2 rounded-full" style={{ background: g.color }} />
+              {g.label}{n ? ` · ${n}` : ''}
             </Chip>
-          ))}
-        </div>
-      )}
+          )
+        })}
+        {otherApps.length > 0 && <span className="mx-1 h-5 w-px bg-white/10" />}
+        {otherApps.map((a) => (
+          <Chip key={a.pkg} active={filter === a.pkg} onClick={() => setFilter(filter === a.pkg ? null : a.pkg)}>
+            {a.icon && <img src={`data:image/png;base64,${a.icon}`} className="h-4 w-4" />}
+            {a.app} · {a.count}
+          </Chip>
+        ))}
+      </div>
       {shown.length === 0 ? (
-        <Empty icon={CheckCheck} title="All caught up" body="New notifications from your phone will land here." />
+        <Empty icon={CheckCheck} title={!filter ? 'All caught up' : `Nothing from ${filter.startsWith('g:') ? GROUPS.find((g) => 'g:' + g.id === filter)?.label : apps.find((a) => a.pkg === filter)?.app || 'this app'}`} body="New notifications from your phone will land here." />
       ) : (
         <motion.div layout className="space-y-2.5">
           <AnimatePresence initial={false}>
@@ -105,9 +131,9 @@ export function Notifications() {
   )
 }
 
-function Chip({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
+function Chip({ active, children, onClick, dim }: { active: boolean; children: React.ReactNode; onClick: () => void; dim?: boolean }) {
   return (
-    <motion.button whileTap={{ scale: 0.94 }} onClick={onClick} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ring-1 transition-colors ${active ? 'bg-white/[0.12] text-white ring-white/20' : 'bg-white/[0.03] text-white/60 ring-white/[0.06] hover:text-white'}`}>
+    <motion.button whileTap={{ scale: 0.94 }} onClick={onClick} className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ring-1 transition-colors ${active ? 'bg-white/[0.12] text-white ring-white/20' : dim ? 'bg-transparent text-white/30 ring-white/[0.05] hover:text-white/60' : 'bg-white/[0.03] text-white/60 ring-white/[0.06] hover:text-white'}`}>
       {children}
     </motion.button>
   )

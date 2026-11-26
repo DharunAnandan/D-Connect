@@ -36,6 +36,9 @@ export const DEFAULTS = {
   lowBatteryAlert: 20, // alert when the phone drops to this % (0 = off)
   chargeAlert: 100, // alert when charging reaches this % (0 = off), e.g. 80 to protect the battery
   pcBatteryAlert: true, // also alert when this laptop's own battery runs low
+  pcLowAlert: 20, // the laptop's low level (0 = off)
+  pcChargeAlert: 0, // alert when the laptop charges to this % (0 = off)
+  pcAlertsToPhone: true, // laptop battery alerts also show on the phone
   dndSync: true,
   commands: [] as { id: string; name: string; icon: string; cmd: string }[],
   // eye care (from side-eye)

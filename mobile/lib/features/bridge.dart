@@ -73,6 +73,8 @@ class Bridge {
           final text = d['text'] as String? ?? '';
           _lastClip = text;
           await Clipboard.setData(ClipboardData(text: text));
+        case 'pc.alert':
+          Native.call('pcAlert', {'title': d['title'] ?? 'Your PC', 'body': d['body'] ?? '', 'tag': d['tag'] ?? 'pc'});
         case 'clip.put':
           // the PC picked an item for this phone: copy it here, don't send it back
           _lastClip = d['text'] ?? '';
