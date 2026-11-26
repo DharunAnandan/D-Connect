@@ -149,6 +149,13 @@ class Bridge {
       final type = e['type'] as String?;
       final data = e['data'];
       switch (type) {
+        case 'link.toggle':
+          // the quick-settings tile: turn D-Connect on (find the PC and connect) or off
+          if (data == 'on') {
+            Link.I.goOnline();
+          } else {
+            Link.I.goOffline();
+          }
         case 'clip.tile':
           // sent from the quick-settings tile
           if (data is String && data.isNotEmpty) {

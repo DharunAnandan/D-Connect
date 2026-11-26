@@ -33,6 +33,9 @@ class Link extends ChangeNotifier {
 
   WebSocket? _ws;
   bool _running = false;
+  // Offline: the user turned D-Connect off (app switch or the quick-settings tile). Nothing
+  // connects or searches until they turn it back on.
+  bool offline = false;
   Timer? _retry;
   int _attempt = 0;
   nsd.Discovery? _discovery;
@@ -64,9 +67,33 @@ class Link extends ChangeNotifier {
     deviceName = prefs.getString('deviceName') ?? info['name'] ?? 'Android';
     model = info['model'] ?? '';
     android = info['android'] ?? '';
+    await prefs.reload(); // the tile may have changed it while the app wasn't running
+    offline = prefs.getBool('offline') ?? false;
     state = pc == null ? LinkState.unpaired : LinkState.searching;
     notifyListeners();
-    if (pc != null) start();
+    if (pc != null && !offline) start();
+  }
+
+  // turn D-Connect off: disconnect from every PC and stop looking until it's turned on again
+  Future<void> goOffline() async {
+    offline = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('offline', true);
+    stop();
+    Native.call('linkState', {'on': false});
+    if (pc != null) Native.keepAlive(false, pc!.name);
+    state = pc == null ? LinkState.unpaired : LinkState.searching;
+    notifyListeners();
+  }
+
+  // turn it back on: look for the PC and connect
+  Future<void> goOnline() async {
+    offline = false;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('offline', false);
+    notifyListeners();
+    _attempt = 0;
+    start();
   }
 
   Future<void> _savePc() async {
@@ -82,6 +109,10 @@ class Link extends ChangeNotifier {
   // Connects with the one-time token from the QR. Resolves true once the PC accepted us.
   Future<bool> pair(PairPayload p) async {
     stop();
+    if (offline) {
+      offline = false; // pairing means you want it on
+      (await SharedPreferences.getInstance()).setBool('offline', false);
+    }
     final candidate = PairedPc(id: p.id, name: p.name, hosts: p.hosts, port: p.port, fp: p.fp, key: '');
     state = LinkState.connecting;
     error = null;
@@ -111,7 +142,7 @@ class Link extends ChangeNotifier {
 
   // ---------------------------------------------------------------- the loop
   void start() {
-    if (_running || pc == null) return;
+    if (_running || pc == null || offline) return;
     _running = true;
     _startDiscovery();
     _loop();
@@ -127,7 +158,7 @@ class Link extends ChangeNotifier {
 
   // the app came to the front or the network changed: try now
   void nudge() {
-    if (!_running || connected || standby || state == LinkState.connecting) return;
+    if (offline || !_running || connected || standby || state == LinkState.connecting) return;
     _retry?.cancel();
     _attempt = 0;
     _loop();

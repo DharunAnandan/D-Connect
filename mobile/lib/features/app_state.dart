@@ -41,6 +41,9 @@ class AppState extends ChangeNotifier {
   List<PcPlayer> pcPlayers = [];
   List<QuickCmd> commands = [];
   List<ClipItem> clips = []; // clipboard history, shared by the PC
+
+  // something changed in place (e.g. a PC action switch flipped): redraw
+  void changed() => notifyListeners();
   final List<Transfer> transfers = [];
   bool clipboardSync = true;
 

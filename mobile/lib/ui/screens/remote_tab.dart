@@ -5,9 +5,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'dart:async';
 
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/connection.dart';
 import '../../features/app_state.dart';

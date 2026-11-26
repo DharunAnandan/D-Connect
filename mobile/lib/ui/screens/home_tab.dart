@@ -5,7 +5,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/connection.dart';
 import '../../core/native.dart';
 import '../../features/app_state.dart';
-import '../../features/bridge.dart';
 import '../../features/eye.dart';
 import '../../features/files.dart';
 import '../../theme/tokens.dart';
@@ -71,7 +70,7 @@ class HomeTab extends StatelessWidget {
                         if (c.toggle) {
                           // flip at once; the PC confirms the real state right after
                           c.on = !c.on;
-                          app.notifyListeners();
+                          app.changed();
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${c.name} ✓'), duration: const Duration(seconds: 1)));
                         }
@@ -183,9 +182,34 @@ class _Header extends StatelessWidget {
           const Text('D-Connect', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -.5)),
         ]),
       ),
-      Press(
-        onTap: () => Native.openSetting('app'),
-        child: Container(width: 44, height: 44, decoration: BoxDecoration(gradient: C.aurora, borderRadius: BorderRadius.circular(14)), child: const Center(child: Text('D', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: C.ink850)))),
+      // On / off for D-Connect (same as the quick-settings tile)
+      ListenableBuilder(
+        listenable: Link.I,
+        builder: (context, _) {
+          final link = Link.I;
+          final on = !link.offline;
+          final label = link.offline ? 'Offline' : link.connected ? 'Online' : 'Searching';
+          final dot = link.offline ? Colors.white38 : link.connected ? C.mint : C.amber;
+          return Press(
+            onTap: () => link.offline ? link.goOnline() : link.goOffline(),
+            child: AnimatedContainer(
+              duration: M.med,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: on ? C.mint.withValues(alpha: .12) : Colors.white.withValues(alpha: .06),
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: on ? C.mint.withValues(alpha: .45) : Colors.white.withValues(alpha: .12)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 9, height: 9, decoration: BoxDecoration(color: dot, shape: BoxShape.circle, boxShadow: [if (on) BoxShadow(color: dot.withValues(alpha: .7), blurRadius: 8)])),
+                const SizedBox(width: 8),
+                Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: on ? Colors.white : Colors.white60)),
+                const SizedBox(width: 8),
+                Icon(Icons.power_settings_new_rounded, size: 17, color: on ? C.mint : Colors.white54),
+              ]),
+            ),
+          );
+        },
       ),
     ]);
   }

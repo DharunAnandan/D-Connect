@@ -58,12 +58,13 @@ export function Logo({ size = 28 }: { size?: number }) {
         </linearGradient>
       </defs>
       <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#lg-a)" />
-      {/* a computer with a D on its screen, and a phone in front */}
-      <path d="M35 39H14a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4h26a4 4 0 0 1 4 4v3" fill="none" stroke="#0b1020" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M27 39v5M20 45.5h13" fill="none" stroke="#0b1020" strokeWidth="4" strokeLinecap="round" />
-      <path d="M19 20.5h4c4.2 0 7 2.6 7 6s-2.8 6-7 6h-4z" fill="none" stroke="#0b1020" strokeWidth="3.2" strokeLinejoin="round" />
-      <path fillRule="evenodd" fill="#0b1020" d="M41.5 25h8a3.5 3.5 0 0 1 3.5 3.5v19a3.5 3.5 0 0 1-3.5 3.5h-8a3.5 3.5 0 0 1-3.5-3.5v-19a3.5 3.5 0 0 1 3.5-3.5zM41.9 29.2h7.2a1.6 1.6 0 0 1 1.6 1.6v14.4a1.6 1.6 0 0 1-1.6 1.6h-7.2a1.6 1.6 0 0 1-1.6-1.6v-14.4a1.6 1.6 0 0 1 1.6-1.6zM43.75 26.6h3.5a.55 .55 0 0 1 0 1.1h-3.5a.55 .55 0 0 1 0-1.1z" />
-      <rect x="40.3" y="29.2" width="10.4" height="17.6" rx="1.6" fill="#fff" fillOpacity="0.9" />
+      {/* a laptop with a D on its screen, and a phone beside it */}
+      <g transform="translate(3 1)">
+        <path d="M8 39V21a4 4 0 0 1 4-4h20a4 4 0 0 1 4 4v18" fill="none" stroke="#0b1020" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4 41.5h36" fill="none" stroke="#0b1020" strokeWidth="4" strokeLinecap="round" />
+        <path d="M18 23.5h3.5c3.6 0 6 2.2 6 5s-2.4 5-6 5h-3.5z" fill="none" stroke="#0b1020" strokeWidth="3" strokeLinejoin="round" />
+        <path fillRule="evenodd" fill="#0b1020" d="M45.2 24h6.6a3.2 3.2 0 0 1 3.2 3.2v19.6a3.2 3.2 0 0 1-3.2 3.2h-6.6a3.2 3.2 0 0 1-3.2-3.2v-19.6a3.2 3.2 0 0 1 3.2-3.2zM45.6 28.2h5.8a1.4 1.4 0 0 1 1.4 1.4v15a1.4 1.4 0 0 1-1.4 1.4h-5.8a1.4 1.4 0 0 1-1.4-1.4v-15a1.4 1.4 0 0 1 1.4-1.4zM47 25.5h3a.5 .5 0 0 1 0 1h-3a.5 .5 0 0 1 0-1z" />
+      </g>
     </svg>
   )
 }
