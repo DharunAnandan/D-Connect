@@ -28,6 +28,12 @@ object CallLines {
     private var logSeen = 0L
     private var lastState = TelephonyManager.EXTRA_STATE_IDLE
 
+    // a real (cellular / SIM) call is going: Telecom's "managed" calls, not Teams/WhatsApp
+    @android.annotation.SuppressLint("MissingPermission")
+    fun inPhoneCall(): Boolean = try {
+        app?.getSystemService(android.telecom.TelecomManager::class.java)?.isInManagedCall ?: true
+    } catch (_: Exception) { true }
+
     private fun digits(n: String?) = (n ?: "").filter { it.isDigit() }.takeLast(10)
     private fun same(a: String?, b: String?) = digits(a).isNotEmpty() && digits(a) == digits(b)
     private fun name(n: String?) = app?.let { Telephony.contactName(it, n) }
@@ -40,7 +46,7 @@ object CallLines {
             @Suppress("DEPRECATION")
             val st = ctx.getSystemService(TelephonyManager::class.java).callState
             val p = ctx.getSharedPreferences("dc_call", Context.MODE_PRIVATE)
-            if (st == TelephonyManager.CALL_STATE_OFFHOOK && lines.isEmpty()) {
+            if (st == TelephonyManager.CALL_STATE_OFFHOOK && lines.isEmpty() && inPhoneCall()) {
                 val n = p.getString("number", null)
                 lines.add(Line(n, p.getString("name", null) ?: name(n), p.getLong("since", 0L).takeIf { it > 0 } ?: System.currentTimeMillis(), "active"))
                 lastState = TelephonyManager.EXTRA_STATE_OFFHOOK
@@ -56,6 +62,13 @@ object CallLines {
     // the phone's legacy call-state broadcast (fires twice: once without the number)
     @Synchronized
     fun onPhoneState(state: String, number: String?) {
+        // Teams / WhatsApp / Meet calls also flip Android's legacy call state to "off-hook" (and
+        // sometimes "ringing" with no number). Only real phone calls are ours: the PC shows app
+        // calls from their own notification.
+        if (state != TelephonyManager.EXTRA_STATE_IDLE && number == null && !inPhoneCall()) {
+            if (lines.isNotEmpty() && lines.none { it.number != null }) { lines.clear(); emit() }
+            return
+        }
         val now = System.currentTimeMillis()
         val prev = lastState
         lastState = state

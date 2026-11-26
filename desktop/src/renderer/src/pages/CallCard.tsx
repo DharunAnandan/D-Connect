@@ -259,7 +259,10 @@ export function CallCard() {
                 ))}
               </div>
             )}
-            {live && (
+            {live && c.app && (
+              <div className="relative mt-2 text-[11px] text-white/45">{c.app} call · hold, add call and merge are in {c.app} itself</div>
+            )}
+            {live && !c.app && (
               <div className="no-drag relative mx-auto mt-4 flex flex-wrap justify-center gap-2">
                 {[
                   { a: 'hold' as const, I: c.held ? Play : Pause, label: c.held ? 'Resume' : 'Hold', show: !twoCalls },
@@ -277,7 +280,7 @@ export function CallCard() {
                 )}
               </div>
             )}
-            <AnimatePresence>{live && adding && <AddCall onDone={() => setAdding(false)} />}</AnimatePresence>
+            <AnimatePresence>{live && !c.app && adding && <AddCall onDone={() => setAdding(false)} />}</AnimatePresence>
             {hint && <div className="relative mt-2 text-[11px] text-amber">{hint}</div>}
             {live && controlOff && (
               <div className="no-drag relative mx-auto mt-3 flex max-w-[310px] items-center gap-2 rounded-2xl bg-amber/10 px-3 py-2 text-left text-[11.5px] text-amber ring-1 ring-amber/25">

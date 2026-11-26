@@ -49,7 +49,7 @@ class NotifListener : NotificationListenerService() {
         val def = try { getSystemService(android.telecom.TelecomManager::class.java)?.defaultDialerPackage } catch (_: Exception) { null }
         setOfNotNull(def, "com.android.dialer", "com.google.android.dialer", "com.oplus.dialer", "com.android.incallui", "com.samsung.android.incallui", "com.samsung.android.dialer", "com.android.server.telecom", "com.oneplus.dialer", "com.coloros.dialer")
     }
-    private fun isDialer(pkg: String) = pkg in dialers
+    fun isDialer(pkg: String) = pkg in dialers
 
     private fun toMap(sbn: StatusBarNotification): Map<String, Any?>? {
         val n = sbn.notification
@@ -176,6 +176,11 @@ class NotifListener : NotificationListenerService() {
                 "failed"
             }
         }
+
+        // the ongoing call notification of an app call (Teams, WhatsApp, Meet...)
+        fun appCallKey(): String? = try {
+            instance?.activeNotifications?.firstOrNull { it.notification.category == Notification.CATEGORY_CALL && it.isOngoing && it.packageName != instance?.packageName && !(instance?.isDialer(it.packageName) ?: false) }?.key
+        } catch (_: Exception) { null }
 
         fun action(key: String, index: Int) {
             val sbn = find(key) ?: return

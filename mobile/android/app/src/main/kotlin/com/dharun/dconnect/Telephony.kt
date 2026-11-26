@@ -207,20 +207,27 @@ object Telephony {
                 // The dialer's audio button shows the *current* route ("Phone receiver", "Speaker",
                 // the PC's name...), so find it by id. With Bluetooth connected it opens a menu
                 // (Speaker / Phone receiver / the PC): pick from that menu, never the button itself.
+                // An app call (Teams, WhatsApp...): its own call screen, brought forward through its
+                // "tap to return to the call" notification, with its own audio button.
+                val appCall = !CallLines.inPhoneCall()
+                if (appCall) NotifListener.appCallKey()?.let { NotifListener.open(it, false) }
                 val button = listOf("audio_button", "audioButton", "audio_route_button", "speakerButton", "speaker_button")
-                val opener = button.map { "id:${it.lowercase()}" } + listOf("audio output", "audio route", "bluetooth")
+                val opener = button.map { "id:${it.lowercase()}" } + listOf("audio output", "audio route", "bluetooth") +
+                    (if (appCall) listOf("audio options", "audio device", "audio", "sound output", "speaker") else emptyList())
+                // app calls name the receiver "Phone"
+                val picks = if (appCall && action == "audio-phone") choice + listOf("phone") else choice
                 val skip = button.map { it.lowercase() } + listOf("audio_image", "audio_icon")
                 var tries = 0
                 fun attempt() {
                     tries++
-                    if (svc.clickByLabel(choice, skip)) return report(action, true, "picked") // menu already open
+                    if (svc.clickByLabel(picks, skip)) return report(action, true, "picked") // menu already open
                     if (svc.clickByLabel(opener)) {
                         main.postDelayed({
-                            if (svc.clickByLabel(choice, skip)) report(action, true, "picked from menu")
+                            if (svc.clickByLabel(picks, skip)) report(action, true, "picked from menu")
                             else if (tries < 4) {
                                 svc.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK) // close a wrong menu
                                 main.postDelayed({ attempt() }, 700)
-                            } else report(action, false, "menu had no ${choice.joinToString("/")}: ${svc.lastScreen}")
+                            } else report(action, false, "menu had no ${picks.joinToString("/")}: ${svc.lastScreen}")
                         }, 800)
                     } else if (tries < 6) main.postDelayed({ attempt() }, 500)
                     else report(action, false, "no audio button on screen: ${svc.lastScreen}")
@@ -266,8 +273,9 @@ object Telephony {
     @SuppressLint("MissingPermission")
     fun currentCall(ctx: Context): Map<String, Any?> {
         val st = try { ctx.getSystemService(android.telephony.TelephonyManager::class.java).callState } catch (e: Exception) { 0 }
-        // Android's live state wins: a call that ended while this app was frozen is over
-        if (st == android.telephony.TelephonyManager.CALL_STATE_IDLE) {
+        // Android's live state wins: a call that ended while this app was frozen is over (and an
+        // app call like Teams isn't a phone call)
+        if (st == android.telephony.TelephonyManager.CALL_STATE_IDLE || !CallLines.inPhoneCall()) {
             CallLines.reset()
             return mapOf("state" to "idle")
         }
