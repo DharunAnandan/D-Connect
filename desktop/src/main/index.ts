@@ -160,6 +160,7 @@ app.whenReady().then(async () => {
     } else if (kind.startsWith('file-')) handlers.get('fileAction')!(kind.slice(5), arg)
     else if (kind === 'open-url') shell.openExternal(arg)
     else if (kind === 'open-path') shell.openPath(arg)
+    else if (kind === 'phone-setting') hub.send('open.setting', { which: arg })
     else if (kind === 'copy') clipboard.writeText(arg)
   })
 

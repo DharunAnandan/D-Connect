@@ -123,6 +123,8 @@ class Bridge {
         if (call['state'] != null && call['state'] != 'idle') link.send('call.state', {...call, 'existing': true});
             r = await Native.map('btPair', {'address': d['address']});
           }
+        case 'control.status':
+          if (m.id != null) link.reply(m, 'control.status', {'on': await Native.call<bool>('controlAvailable') == true});
         case 'open.setting':
           Native.openSetting(d['which'] ?? 'app');
         case 'input.touch':

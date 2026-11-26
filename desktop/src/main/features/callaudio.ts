@@ -46,6 +46,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   let busy = Promise.resolve()
   let lastError = ''
   let controlOff = false
+  let phoneSaid: CallRoute | null = null // where the phone last said the call audio is
   // where the call plays and listens on this PC (null = the system default)
   let outDev: string | null = null
   let inDev: string | null = null
@@ -337,8 +338,16 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
       if (r === route) return
       if (r === 'pc') {
         const ok = await toPc()
-        route = ok ? 'pc' : null
-        if (!ok) ctx.toast({ kind: 'info', title: 'Call audio stays on the phone', body: lastError || 'Pair the phone over Bluetooth in Settings → Take calls on this PC.', ttl: 15000 })
+        // couldn't move it: show where the audio really is (what the phone last said), never nothing
+        route = ok ? 'pc' : phoneSaid || 'phone'
+        if (!ok)
+          ctx.toast({
+            kind: 'info',
+            title: 'Call audio stays on the phone',
+            body: controlOff ? "Screen control is off on the phone (Android turns it off after an app update), so D-Connect can't move the call. Turn it on once and it works again." : lastError || 'Pair the phone over Bluetooth in Settings → Take calls on this PC.',
+            ttl: 20000,
+            actions: controlOff ? [{ id: 'phone-setting:accessibility', label: 'Turn on (opens on phone)' }] : undefined
+          })
       } else if (r === 'phone' || r === 'speaker') {
         await toPhone(r === 'speaker')
         route = r
@@ -364,6 +373,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
       const n = await pwPhone()
       if (n.source || n.sink) r = 'pc'
     }
+    phoneSaid = r
     if (r !== route) {
       route = r
       ctx.emit('call.route', route)
@@ -375,6 +385,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     const prev = state
     state = (data as CallState).state
     if (state === 'idle') {
+      phoneSaid = null
       here = false
       setRoute(null)
     } else if (state === 'offhook' || state === 'dialing') {
@@ -531,7 +542,13 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   })
 
   // speakers/headsets and mics on this PC (never the phone itself)
+  // Real speakers and microphones on this PC, by name. Not D-Connect's own filter devices (the
+  // noise removal is applied by itself) and not the phone. "out"/"in" are the ones in use.
   ctx.handle('callDevices', async () => {
+    const friendly = (kind: 'sinks' | 'sources', name: string, label: string): string => {
+      if (/^alsa_/.test(name) && /Built-in Audio/i.test(label)) return kind === 'sinks' ? (/hdmi/i.test(name) ? `HDMI · ${label.replace(/^Built-in Audio\s*/, '')}` : 'Laptop speaker') : 'Laptop microphone'
+      return label
+    }
     const list = async (kind: 'sinks' | 'sources'): Promise<{ name: string; label: string }[]> => {
       const out = await sh('pactl', ['list', kind])
       return out
@@ -540,8 +557,16 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
         .map((b) => ({ name: /Name:\s*(\S+)/.exec(b)?.[1] || '', label: /Description:\s*(.+)/.exec(b)?.[1]?.trim() || '' }))
         .filter((d) => d.name && !d.name.endsWith('.monitor') && !d.name.includes('bluez_card') && !/2C_A7|18_AB/.test(d.name))
         .filter((d) => !(d.name.startsWith('bluez_') && /a2dp_source|headset_audio_gateway|handsfree_audio_gateway/.test(d.name)))
+        .filter((d) => !d.name.startsWith('dconnect') && !/^D-Connect/i.test(d.label))
+        .map((d) => ({ name: d.name, label: friendly(kind, d.name, d.label) }))
     }
-    return { outputs: await list('sinks'), inputs: await list('sources'), out: outDev, in: inDev }
+    const outputs = await list('sinks')
+    const inputs = await list('sources')
+    const defSink = (await sh('pactl', ['get-default-sink'])).trim()
+    const out = outDev && outputs.some((o) => o.name === outDev) ? outDev : outputs.find((o) => o.name === defSink)?.name || outputs[0]?.name || null
+    const mic = await realMic()
+    const inp = inDev && inputs.some((i) => i.name === inDev) ? inDev : inputs.find((i) => i.name === mic)?.name || inputs[0]?.name || null
+    return { outputs, inputs, out, in: inp }
   })
   ctx.handle('setCallDevices', (out: string | null, inp: string | null) => {
     outDev = out || null
@@ -549,6 +574,9 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     if (route === 'pc' || bridges.length) startCallBridges()
   })
   ctx.handle('callRoute', () => route)
+  // is the phone's screen control on? (needed to move a phone call to this PC)
+  ctx.handle('phoneControl', async () => ((await ctx.hub.request('control.status', {}, 5000).catch(() => null)) as any)?.on !== false)
+  ctx.handle('openPhoneSetting', (which: string) => ctx.hub.send('open.setting', { which }))
   ctx.handle('setCallRoute', (r: CallRoute) => setRoute(r))
 
   // Mute while the call is on the laptop: silence the laptop-mic stream that feeds the call.

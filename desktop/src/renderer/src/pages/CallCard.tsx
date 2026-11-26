@@ -59,6 +59,21 @@ export function CallCard() {
   const waitingCall = c.waitingCall || null
   const [adding, setAdding] = useState(false)
   const [menu, setMenu] = useState<'out' | 'in' | null>(null) // one speaker/mic menu open at a time
+  // the phone's screen control (needed to move a phone call here): check when a call is live
+  const [controlOff, setControlOff] = useState(false)
+  useEffect(() => {
+    if (c.state === 'idle' || c.app) return setControlOff(false)
+    let alive = true
+    const check = (): void => {
+      call<boolean>('phoneControl').then((on) => alive && setControlOff(on === false)).catch(() => {})
+    }
+    check()
+    const t = setInterval(check, 10000)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+  }, [c.state === 'idle', c.app])
   useEffect(() => {
     call('callRoute').then(setRoute)
     return dc.on('call.route', (r) => {
@@ -216,6 +231,12 @@ export function CallCard() {
             )}
             <AnimatePresence>{live && adding && <AddCall onDone={() => setAdding(false)} />}</AnimatePresence>
             {hint && <div className="relative mt-2 text-[11px] text-amber">{hint}</div>}
+            {live && controlOff && (
+              <div className="no-drag relative mx-auto mt-3 flex max-w-[310px] items-center gap-2 rounded-2xl bg-amber/10 px-3 py-2 text-left text-[11.5px] text-amber ring-1 ring-amber/25">
+                <span className="flex-1">Screen control is off on the phone, so the call can't move to this PC.</span>
+                <button onClick={() => call('openPhoneSetting', 'accessibility')} className="shrink-0 rounded-full bg-amber px-2.5 py-1 text-[11px] font-semibold text-ink-950">Turn on</button>
+              </div>
+            )}
             {live && route === 'pc' && devs && (
               <div className="no-drag relative mx-auto mt-4 flex w-full max-w-[310px] flex-col gap-2">
                 <DevicePicker kind="out" value={devs.out} options={devs.outputs} onPick={(v) => pick(v, devs.in)} open={menu === 'out'} onOpen={(o) => setMenu(o ? 'out' : (m) => (m === 'out' ? null : m))} />
@@ -324,7 +345,8 @@ function DevicePicker({ kind, value, options, onPick, open, onOpen }: { kind: 'o
       window.removeEventListener('blur', blur)
     }
   }, [open])
-  const all = [{ name: '', label: kind === 'out' ? 'Default speaker' : 'Default microphone' }, ...options]
+  // real devices only (the PC says which one is in use); noise removal is applied by itself
+  const all = options.length ? options : [{ name: '', label: kind === 'out' ? 'Speaker' : 'Microphone' }]
   const current = all.find((o) => o.name === (value || '')) || all[0]
   const iconFor = (label: string, name: string) => {
     if (/bluez|bluetooth|buds|airpods|headset|wh-|jbl|noise|realme|oneplus/i.test(name + label)) return Bluetooth
@@ -361,10 +383,10 @@ function DevicePicker({ kind, value, options, onPick, open, onOpen }: { kind: 'o
           >
             {all.map((o) => {
               const I = iconFor(o.label, o.name)
-              const sel = o.name === (value || '')
+              const sel = o.name === current.name
               return (
                 <button
-                  key={o.name || 'default'}
+                  key={o.name || 'none'}
                   onClick={() => {
                     onPick(o.name || null)
                     setOpen(false)
