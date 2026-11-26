@@ -378,23 +378,35 @@ function HangingPhone({ onPull }: { onPull: () => void }) {
   const cord = useTransform([x, y], ([dx, dy]: number[]) => {
     const ex = AX + dx
     const ey = REST + dy
-    // a coiled cord: little loops along the line from the bar to the handset
-    const n = 14
+    // A coiled phone cord: a spring (a helix seen from the side) wound around the line from the
+    // bar to the handset, in whatever direction it's pulled. Same number of coils always, so it
+    // stretches like a spring; the loops narrow a little as it stretches.
+    const len = Math.hypot(ex - AX, ey) || 1
+    const tx = (ex - AX) / len // along the cord
+    const ty = ey / len
+    const nx = -ty // across it
+    const ny = tx
+    const coils = 11
+    const r = Math.max(2.6, 5.2 - Math.max(0, len - REST) / 60) // narrower when stretched
+    const steps = coils * 12
     let d = `M ${AX} 0`
-    for (let i = 1; i <= n; i++) {
-      const t = i / n
-      const px = AX + (ex - AX) * t
-      const py = ey * t
-      const side = (i % 2 ? 1 : -1) * 4.2 * (1 - t * 0.35)
-      d += ` Q ${(px + side).toFixed(1)} ${(py - ey / n / 2).toFixed(1)} ${px.toFixed(1)} ${py.toFixed(1)}`
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps
+      const th = t * coils * Math.PI * 2
+      const ease = Math.min(1, t * 8, (1 - t) * 8) // straight where it leaves the bar and joins the handset
+      const across = Math.sin(th) * r * ease
+      const along = (Math.cos(th) - 1) * r * 0.55 * ease
+      const px = AX + (ex - AX) * t + nx * across + tx * along
+      const py = ey * t + ny * across + ty * along
+      d += ` L ${px.toFixed(1)} ${py.toFixed(1)}`
     }
     return d
   })
   return (
     <div className="no-drag relative h-[112px] w-full">
       <svg className="pointer-events-none absolute left-0 top-0 h-full w-full overflow-visible">
-        <motion.path d={cord} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={3.4} strokeLinejoin="round" strokeLinecap="round" transform="translate(1 1.5)" />
-        <motion.path d={cord} fill="none" style={{ stroke: 'rgb(var(--c-cyan-soft) / 0.85)' }} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />
+        <motion.path d={cord} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={2.8} strokeLinejoin="round" strokeLinecap="round" transform="translate(1 1.5)" />
+        <motion.path d={cord} fill="none" style={{ stroke: 'rgb(var(--c-cyan-soft) / 0.85)' }} strokeWidth={1.8} strokeLinejoin="round" strokeLinecap="round" />
       </svg>
       <motion.div
         drag
