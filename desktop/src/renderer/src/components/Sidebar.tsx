@@ -1,8 +1,9 @@
-import { AnimatePresence, motion } from 'framer-motion'
-import { useState } from 'react'
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform, type MotionValue } from 'framer-motion'
+import { useRef, useState } from 'react'
 import { call, useLive } from '@/lib/api'
 import { Bell, Bluetooth, Check, ChevronsUpDown, Eye, LayoutGrid, FolderUp, Home, Image, MessageSquare, MonitorSmartphone, Phone, Settings, Sparkles, Volume2, BatteryMedium } from 'lucide-react'
 import { useApp } from '@/lib/store'
+import { Mark } from './TitleBar'
 import { spring } from '@/theme/motion'
 import { BatteryPill } from './Battery'
 
@@ -23,55 +24,101 @@ export const NAV = [
 
 export function Sidebar({ route, go }: { route: string; go: (r: string) => void }) {
   const { conn, status, notifs, eye, devices, settings } = useApp()
-  if (settings.navStyle === 'dock') return <Dock route={route} go={go} />
+  if (settings.navStyle !== 'sidebar') return <Dock route={route} go={go} />
   return <FullSidebar route={route} go={go} />
 }
 
-// The slim dock: icon above a short label, the phone as a round badge at the top.
+// The dock: on the left (icon above a short label) or floating at the bottom. Icons grow under
+// the pointer and their neighbours a little less, like a dock should.
 const SHORT: Record<string, string> = { '/notifications': 'Alerts', '/eye': 'Eyes', '/mirror': 'Screen' }
+function DockItem({ to, label, Icon, active, badge, mouse, horizontal, onClick }: { to: string; label: string; Icon: any; active: boolean; badge: number; mouse: MotionValue<number>; horizontal: boolean; onClick: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null)
+  // 1 far away, up to 1.45 right under the pointer
+  const scale = useSpring(
+    useTransform(mouse, (m) => {
+      const r = ref.current?.getBoundingClientRect()
+      if (!r || !Number.isFinite(m)) return 1
+      const c = horizontal ? r.left + r.width / 2 : r.top + r.height / 2
+      return 1 + 0.45 * Math.max(0, 1 - Math.abs(m - c) / 110)
+    }),
+    { stiffness: 420, damping: 30, mass: 0.4 }
+  )
+  return (
+    <button ref={ref} onClick={onClick} title={label} className={`group relative flex shrink-0 flex-col items-center ${horizontal ? 'px-1' : 'w-full py-1'}`}>
+      <motion.span style={{ scale, transformOrigin: horizontal ? '50% 100%' : '0% 50%' }} className="relative grid h-10 w-12 place-items-center rounded-2xl">
+        {active && <motion.span layoutId="dock-active" transition={spring} className="absolute inset-0 rounded-2xl bg-[linear-gradient(120deg,rgb(var(--c-violet)/0.34),rgb(var(--c-cyan)/0.18))] ring-1 ring-white/[0.12]" />}
+        {!active && <span className="absolute inset-0 rounded-2xl opacity-0 transition group-hover:bg-white/[0.06] group-hover:opacity-100" />}
+        <Icon size={19} className={`relative ${active ? 'text-white' : 'text-white/60 group-hover:text-white'}`} />
+        {badge > 0 && <span className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-pink px-1 text-center text-[9.5px] font-bold leading-[16px] text-white">{badge > 99 ? '99+' : badge}</span>}
+      </motion.span>
+      {horizontal ? (
+        <span className="pointer-events-none absolute -top-9 whitespace-nowrap rounded-lg bg-ink-950/90 px-2 py-1 text-[11px] font-semibold text-white opacity-0 ring-1 ring-white/10 transition group-hover:opacity-100">{label}</span>
+      ) : (
+        <span className={`mt-0.5 text-[10.5px] font-medium ${active ? 'text-white' : 'text-white/50'}`}>{SHORT[to] || label}</span>
+      )}
+    </button>
+  )
+}
+
 function Dock({ route, go }: { route: string; go: (r: string) => void }) {
-  const { conn, status, notifs, devices } = useApp()
+  const { conn, status, notifs, devices, settings } = useApp()
   const [open, setOpen] = useState(false)
+  const horizontal = settings.dockPos === 'bottom'
+  const mouse = useMotionValue(Infinity)
   const many = devices.length > 1
-  const item = (to: string, label: string, Icon: any, badge = 0) => {
-    const active = to === '/' ? route === '/' : route.startsWith(to)
-    return (
-      <button key={to} onClick={() => go(to)} title={label} className="group relative flex w-full flex-col items-center gap-1 py-1.5">
-        <span className={`relative grid h-9 w-14 place-items-center rounded-2xl transition-colors ${active ? '' : 'group-hover:bg-white/[0.05]'}`}>
-          {active && <motion.span layoutId="dock-active" transition={spring} className="absolute inset-0 rounded-2xl bg-[linear-gradient(120deg,rgb(var(--c-violet)/0.32),rgb(var(--c-cyan)/0.16))] ring-1 ring-white/[0.1]" />}
-          <Icon size={19} className={`relative ${active ? 'text-white' : 'text-white/60 group-hover:text-white/90'}`} />
-          {badge > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[16px] rounded-full bg-pink px-1 text-center text-[9.5px] font-bold leading-[16px] text-white">{badge > 99 ? '99+' : badge}</span>}
-        </span>
-        <span className={`text-[10.5px] font-medium ${active ? 'text-white' : 'text-white/50'}`}>{SHORT[to] || label}</span>
+  const isActive = (to: string): boolean => (to === '/' ? route === '/' : route.startsWith(to))
+  const items = [...NAV.map((n) => ({ to: n.to, label: n.label, Icon: n.icon })), { to: '/settings', label: 'Settings', Icon: Settings }]
+  const phone = (
+    <div className="relative shrink-0">
+      <button onClick={() => many && setOpen(!open)} title={`${conn.device?.name || 'No phone'}${status ? ` · ${status.battery}%` : ''}`} className={`relative grid place-items-center rounded-2xl bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-ink-950 shadow-[0_8px_24px_-8px_rgb(var(--c-violet)/0.8)] ${horizontal ? 'h-11 w-11' : 'h-12 w-12'}`}>
+        <Mark size={horizontal ? 24 : 26} />
+        <span className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-ink-900 ${conn.connected ? 'bg-mint' : 'bg-white/30'}`} />
       </button>
+      {!horizontal && conn.connected && status && <div className="mt-1 text-center text-[10px] font-semibold tabular-nums text-white/55">{status.battery}%</div>}
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} className={`glass-strong absolute z-30 w-56 rounded-2xl p-1.5 ${horizontal ? 'bottom-full left-0 mb-2' : 'left-full top-0 ml-2'}`}>
+            {devices.map((d: any) => (
+              <button key={d.deviceId} onClick={async () => { await call('activateDevice', d.deviceId); setOpen(false) }} className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left ${d.active ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}>
+                <span className={`h-2 w-2 shrink-0 rounded-full ${d.active ? 'bg-mint' : d.online ? 'bg-amber' : 'bg-white/20'}`} />
+                <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{d.name}</span>
+                {d.active && <Check size={15} className="text-mint" />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+  if (horizontal) {
+    return (
+      <div className="pointer-events-none fixed inset-x-0 bottom-3 z-40 flex justify-center">
+        <motion.nav
+          initial={{ y: 40, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={spring}
+          onMouseMove={(e) => mouse.set(e.clientX)}
+          onMouseLeave={() => mouse.set(Infinity)}
+          className="pointer-events-auto flex items-end gap-1 rounded-[26px] bg-ink-950/80 px-2.5 pb-2 pt-2 ring-1 ring-white/10 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+        >
+          {phone}
+          <span className="mx-1.5 h-8 w-px self-center bg-white/10" />
+          {items.map((n) => (
+            <DockItem key={n.to} to={n.to} label={n.label} Icon={n.Icon} active={isActive(n.to)} badge={n.to === '/notifications' ? notifs.length : 0} mouse={mouse} horizontal onClick={() => go(n.to)} />
+          ))}
+        </motion.nav>
+      </div>
     )
   }
   return (
-    <aside className="flex w-[84px] shrink-0 flex-col items-center px-1.5 pb-3">
-      <div className="relative mb-3 mt-1">
-        <button onClick={() => many && setOpen(!open)} title={`${conn.device?.name || 'No phone'}${status ? ` · ${status.battery}%` : ''}`} className="relative grid h-12 w-12 place-items-center rounded-2xl bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-ink-950 shadow-[0_8px_24px_-8px_rgb(var(--c-violet)/0.8)]">
-          <MonitorSmartphone size={20} />
-          <span className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-ink-900 ${conn.connected ? 'bg-mint' : 'bg-white/30'}`} />
-        </button>
-        {conn.connected && status && <div className="mt-1 text-center text-[10px] font-semibold tabular-nums text-white/55">{status.battery}%</div>}
-        <AnimatePresence>
-          {open && (
-            <motion.div initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} className="glass-strong absolute left-full top-0 z-30 ml-2 w-56 rounded-2xl p-1.5">
-              {devices.map((d: any) => (
-                <button key={d.deviceId} onClick={async () => { await call('activateDevice', d.deviceId); setOpen(false) }} className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left ${d.active ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}>
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${d.active ? 'bg-mint' : d.online ? 'bg-amber' : 'bg-white/20'}`} />
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{d.name}</span>
-                  {d.active && <Check size={15} className="text-mint" />}
-                </button>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-      <nav className="flex w-full flex-1 flex-col items-center gap-0.5 overflow-y-auto">
-        {NAV.map((n) => item(n.to, n.label, n.icon, n.to === '/notifications' ? notifs.length : 0))}
+    <aside className="flex w-[84px] shrink-0 flex-col items-center px-1.5 pb-3" onMouseMove={(e) => mouse.set(e.clientY)} onMouseLeave={() => mouse.set(Infinity)}>
+      <div className="mb-3 mt-1">{phone}</div>
+      <nav className="flex w-full flex-1 flex-col items-center gap-0.5 overflow-visible">
+        {items.slice(0, -1).map((n) => (
+          <DockItem key={n.to} to={n.to} label={n.label} Icon={n.Icon} active={isActive(n.to)} badge={n.to === '/notifications' ? notifs.length : 0} mouse={mouse} horizontal={false} onClick={() => go(n.to)} />
+        ))}
       </nav>
-      {item('/settings', 'Settings', Settings)}
+      <DockItem to="/settings" label="Settings" Icon={Settings} active={isActive('/settings')} badge={0} mouse={mouse} horizontal={false} onClick={() => go('/settings')} />
     </aside>
   )
 }
@@ -88,7 +135,7 @@ function FullSidebar({ route, go }: { route: string; go: (r: string) => void }) 
       <motion.div layout onClick={() => many && setOpen(!open)} className={`glass rounded-2xl p-3.5 ${many ? 'cursor-pointer hover:ring-1 hover:ring-white/10' : ''}`}>
         <div className="flex items-center gap-3">
           <div className="relative grid h-10 w-10 place-items-center rounded-xl bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-ink-950">
-            <MonitorSmartphone size={19} />
+            <Mark size={24} />
             {conn.connected && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-ink-850 bg-mint" />}
           </div>
           <div className="min-w-0 flex-1">

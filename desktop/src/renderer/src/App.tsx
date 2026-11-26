@@ -78,6 +78,7 @@ export function App() {
 
   const firstRun = !conn.connected && devices.length === 0
   const Page = firstRun ? Pair : PAGES[route] || Home
+  const bottomDock = !firstRun && settings.navStyle !== 'sidebar' && settings.dockPos === 'bottom'
 
   return (
     <div className="flex h-full flex-col">
@@ -87,7 +88,7 @@ export function App() {
         {!firstRun && <Sidebar route={route} go={go} />}
         <main className="relative min-w-0 flex-1 overflow-hidden">
           <AnimatePresence mode="wait">
-            <motion.div key={firstRun ? 'pair' : route} variants={page} initial="initial" animate="animate" exit="exit" className="absolute inset-0 overflow-y-auto overflow-x-hidden px-6 pb-10 pt-2 xl:px-8">
+            <motion.div key={firstRun ? 'pair' : route} variants={page} initial="initial" animate="animate" exit="exit" className={`absolute inset-0 overflow-y-auto overflow-x-hidden px-6 pt-2 xl:px-8 ${bottomDock ? 'pb-28' : 'pb-10'}`}>
               <Page />
             </motion.div>
           </AnimatePresence>

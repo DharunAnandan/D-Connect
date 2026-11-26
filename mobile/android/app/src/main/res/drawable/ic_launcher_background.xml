@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- D-Connect aurora: violet → cyan → mint, the same gradient as the desktop icon -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient android:type="linear" android:angle="315" android:startColor="#FF7356F0" android:centerColor="#FF2FB0EE" android:endColor="#FF2BC4A2" />
+    <gradient android:type="linear" android:angle="315" android:startColor="#FF8A6DFC" android:centerColor="#FF45C9F7" android:endColor="#FF3FD8A8" />
 </shape>

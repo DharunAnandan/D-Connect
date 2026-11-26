@@ -278,7 +278,7 @@ function Device({ icon, glow, tall }: { icon: React.ReactNode; glow?: boolean; t
 let hueCache: { theme: string; hues: [number, number, number] } | null = null
 function themeHues(): [number, number, number] {
   const theme = document.documentElement.dataset.theme || 'aurora'
-  if (hueCache?.theme === theme) return hueCache.hues
+  if (theme !== 'auto' && hueCache?.theme === theme) return hueCache.hues // auto keeps changing
   const css = getComputedStyle(document.documentElement)
   const hueOf = (name: string, fallback: number): number => {
     const [r, g, b] = css.getPropertyValue(`--c-${name}`).trim().split(/\s+/).map((x) => Number(x) / 255)

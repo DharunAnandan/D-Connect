@@ -47,7 +47,7 @@ export function Settings() {
   }, [])
 
   return (
-    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1100px] space-y-5">
+    <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px] space-y-5">
       <PageHeader icon={Cog} title="Settings" subtitle={info ? `${info.name} · D-Connect ${info.version} · port ${info.port}` : ''} />
 
       <Section title="Phones" icon={Smartphone}>
@@ -200,10 +200,10 @@ export function Settings() {
       </Section>
 
       <Section title="Experience" icon={Sparkles}>
-        <Row icon={Sparkles} title="Menu" body="A full sidebar with the phone card, or a slim dock with icons.">
+        <Row icon={Sparkles} title="Menu" body="A dock with icons (on the left or at the bottom), or the full sidebar with the phone card.">
           <div className="flex rounded-full bg-white/[0.06] p-1 ring-1 ring-white/10">
-            {[{ v: 'sidebar', l: 'Sidebar' }, { v: 'dock', l: 'Dock' }].map((o) => (
-              <button key={o.v} onClick={() => setSetting('navStyle', o.v)} className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${(settings.navStyle || 'sidebar') === o.v ? 'bg-white text-ink-950' : 'text-white/60 hover:text-white'}`}>{o.l}</button>
+            {[{ v: 'dock-left', l: 'Dock · left' }, { v: 'dock-bottom', l: 'Dock · bottom' }, { v: 'sidebar', l: 'Sidebar' }].map((o) => (
+              <button key={o.v} onClick={() => { if (o.v === 'sidebar') setSetting('navStyle', 'sidebar'); else { setSetting('navStyle', 'dock'); setSetting('dockPos', o.v === 'dock-bottom' ? 'bottom' : 'left') } }} className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${(settings.navStyle === 'sidebar' ? 'sidebar' : settings.dockPos === 'bottom' ? 'dock-bottom' : 'dock-left') === o.v ? 'bg-white text-ink-950' : 'text-white/60 hover:text-white'}`}>{o.l}</button>
             ))}
           </div>
         </Row>
@@ -214,7 +214,7 @@ export function Settings() {
             ))}
           </div>
         </Row>
-        <Row icon={Sparkles} title="Theme" body="Colours for the whole app, pop-ups and call card.">
+        <Row icon={Sparkles} title="Theme" body="Colours for the whole app, pop-ups and call card. Auto blends through all of them, a new one every 5 seconds.">
           <div className="flex gap-2">
             {THEMES.map((t) => {
               const on = (settings.theme || 'aurora') === t.id
@@ -243,6 +243,7 @@ export function Settings() {
 
 // the colour themes (see index.css [data-theme]); swatch colours only
 const THEMES = [
+  { id: 'auto', label: 'Auto', colors: ['#7c5cff', '#3dd6c4', '#ff9a5c'], bg: '#0a0c16' },
   { id: 'aurora', label: 'Aurora', colors: ['#7c5cff', '#35e0ff', '#3ddc97'], bg: '#070a14' },
   { id: 'sunset', label: 'Sunset', colors: ['#ff6b6b', '#ffb347', '#ffd666'], bg: '#14090f' },
   { id: 'ocean', label: 'Ocean', colors: ['#3884ff', '#2dd4bf', '#5eead4'], bg: '#040c1a' },

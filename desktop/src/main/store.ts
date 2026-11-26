@@ -29,9 +29,10 @@ export const DEFAULTS = {
   // usb
   usbAuto: true,
   // extras
-  theme: 'aurora',
-  navStyle: 'sidebar', // sidebar | dock
-  bgStyle: 'aurora', // aurora | mesh | stars | solid // colour theme: aurora | sunset | ocean | forest | graphite
+  theme: 'auto', // colour theme: auto (blends through all) | aurora | sunset | ocean | forest | graphite
+  navStyle: 'dock', // dock | sidebar
+  dockPos: 'left', // left | bottom
+  bgStyle: 'aurora', // aurora | mesh | stars | solid
   notifOpenInWindow: true, // clicking a phone notification opens that app in a window on this PC
   callNoiseAi: true, // RNNoise on the laptop mic during calls (after the WebRTC filter)
   callNoiseVad: 60, // RNNoise voice threshold %: higher cuts more background, too high clips soft speech

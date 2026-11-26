@@ -8,11 +8,9 @@ import { AppWindow } from './pages/AppWindow'
 import { MiniMixer } from './pages/Sound'
 import { startLiveState } from './lib/store'
 import { call, dc } from './lib/api'
+import { applyTheme } from './lib/theme'
 
 // colour theme for every window (main, pop-ups, call card, mixer), following the setting
-const applyTheme = (t?: string): void => {
-  document.documentElement.dataset.theme = t || 'aurora'
-}
 applyTheme(localStorage.getItem('dc.theme') || undefined)
 call<Record<string, any>>('settings').then((s) => applyTheme(s?.theme)).catch(() => {})
 dc.on('settings', (s: Record<string, any>) => {

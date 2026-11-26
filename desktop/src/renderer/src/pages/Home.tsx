@@ -5,6 +5,7 @@ import { Avatar, Button, Card, Pill, Ring } from '@/components/ui'
 import { call } from '@/lib/api'
 import { ago, size } from '@/lib/format'
 import { Boost } from './Sound'
+import { Mark } from '@/components/TitleBar'
 import { ClipboardCard } from '@/components/ClipboardCard'
 import { useApp } from '@/lib/store'
 import { list } from '@/theme/motion'
@@ -33,11 +34,18 @@ export function Home() {
     <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
       {/* hero */}
       <Card strong className="relative mb-5 overflow-hidden p-6">
+        {/* a soft light sweeps across now and then (every 10 s) */}
+        <motion.div
+          className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-[linear-gradient(90deg,transparent,rgb(var(--c-cyan)/0.10),rgba(255,255,255,0.10),rgb(var(--c-violet)/0.10),transparent)]"
+          initial={{ left: '-40%' }}
+          animate={{ left: '120%' }}
+          transition={{ duration: 2.4, ease: 'easeInOut', repeat: Infinity, repeatDelay: 7.6, delay: 1.5 }}
+        />
         <div className="absolute -left-20 -top-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgb(var(--c-violet)/0.30)_0%,transparent_70%)]" />
         <div className="absolute -bottom-32 right-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgb(var(--c-cyan)/0.20)_0%,transparent_70%)]" />
         <div className="relative flex items-center gap-6">
           <motion.div layoutId="phone-hero" className="relative grid h-[112px] w-[72px] place-items-center rounded-[22px] bg-[linear-gradient(160deg,#2a3360,#121731)] ring-1 ring-white/15 shadow-[0_0_50px_rgb(var(--c-violet)/0.4)]">
-            <MonitorSmartphone size={30} className="text-cyan-soft" />
+            <Mark size={40} className="text-cyan-soft" />
             <span className="absolute bottom-2 h-1 w-6 rounded-full bg-white/20" />
           </motion.div>
           <div className="min-w-0 flex-1">
