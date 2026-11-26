@@ -33,24 +33,24 @@ export function Home() {
     <motion.div variants={list} initial="initial" animate="animate" className="mx-auto w-full max-w-[1680px]">
       {/* hero */}
       <Card strong className="relative mb-5 overflow-hidden p-6">
-        <div className="absolute -left-20 -top-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.30)_0%,transparent_70%)]" />
-        <div className="absolute -bottom-32 right-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(53,224,255,0.20)_0%,transparent_70%)]" />
+        <div className="absolute -left-20 -top-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgb(var(--c-violet)/0.30)_0%,transparent_70%)]" />
+        <div className="absolute -bottom-32 right-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgb(var(--c-cyan)/0.20)_0%,transparent_70%)]" />
         <div className="relative flex items-center gap-6">
-          <motion.div layoutId="phone-hero" className="relative grid h-[112px] w-[72px] place-items-center rounded-[22px] bg-[linear-gradient(160deg,#2a3360,#121731)] ring-1 ring-white/15 shadow-[0_0_50px_rgba(124,92,255,0.4)]">
+          <motion.div layoutId="phone-hero" className="relative grid h-[112px] w-[72px] place-items-center rounded-[22px] bg-[linear-gradient(160deg,#2a3360,#121731)] ring-1 ring-white/15 shadow-[0_0_50px_rgb(var(--c-violet)/0.4)]">
             <MonitorSmartphone size={30} className="text-cyan-soft" />
             <span className="absolute bottom-2 h-1 w-6 rounded-full bg-white/20" />
           </motion.div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <Pill color="mint"><span className="h-1.5 w-1.5 rounded-full bg-mint shadow-[0_0_6px_#3ddc97]" /> Connected</Pill>
+              <Pill color="mint"><span className="h-1.5 w-1.5 rounded-full bg-mint shadow-[0_0_6px_rgb(var(--c-mint))]" /> Connected</Pill>
               <Pill color={conn.via === 'usb' ? 'violet' : 'cyan'}>{conn.via === 'usb' ? 'USB' : 'Wi-Fi'}{conn.rtt ? ` · ${conn.rtt} ms` : ''}</Pill>
             </div>
             <h1 className="mt-2 truncate text-[30px] font-bold tracking-tight">{conn.device?.name}</h1>
             <p className="text-sm text-muted">{conn.device?.model}{conn.since ? ` · linked ${ago(conn.since)} ago` : ''}</p>
           </div>
           <div className="flex items-center gap-5">
-            <Stat label="Battery" value={`${status?.battery ?? '–'}%`} pct={(status?.battery ?? 0) / 100} colors={status?.charging ? ['#3ddc97', '#8be9ff'] : (status?.battery ?? 100) <= 20 ? ['#ff5ca8', '#f87171'] : ['#7c5cff', '#35e0ff']} sub={status?.charging ? 'Charging' : 'On battery'} />
-            <Stat label="Storage" value={status?.storageFree ? size(status.storageFree) : '–'} pct={storagePct} colors={['#ffb547', '#ff5ca8']} sub="free" />
+            <Stat label="Battery" value={`${status?.battery ?? '–'}%`} pct={(status?.battery ?? 0) / 100} colors={status?.charging ? ['rgb(var(--c-mint))', '#8be9ff'] : (status?.battery ?? 100) <= 20 ? ['rgb(var(--c-pink))', '#f87171'] : ['rgb(var(--c-violet))', 'rgb(var(--c-cyan))']} sub={status?.charging ? 'Charging' : 'On battery'} />
+            <Stat label="Storage" value={status?.storageFree ? size(status.storageFree) : '–'} pct={storagePct} colors={['#ffb547', 'rgb(var(--c-pink))']} sub="free" />
           </div>
         </div>
       </Card>
@@ -105,7 +105,7 @@ export function Home() {
           {/* eye care */}
           <Card hover className="cursor-pointer p-5" onClick={() => nav('/eye')}>
             <div className="flex items-center gap-4">
-              <Ring value={eyePct} size={76} stroke={7} colors={['#35e0ff', '#3ddc97']}>
+              <Ring value={eyePct} size={76} stroke={7} colors={['rgb(var(--c-cyan))', 'rgb(var(--c-mint))']}>
                 <Eye size={22} className="text-cyan-soft" />
               </Ring>
               <div className="flex-1">
@@ -118,9 +118,9 @@ export function Home() {
 
           {/* now playing on the phone */}
           <Card className="relative overflow-hidden p-5">
-            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[radial-gradient(circle,rgba(255,92,168,0.20)_0%,transparent_70%)]" />
+            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[radial-gradient(circle,rgb(var(--c-pink)/0.20)_0%,transparent_70%)]" />
             <div className="relative flex items-center gap-4">
-              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[linear-gradient(135deg,#ff5ca8,#7c5cff)] shadow-[0_8px_30px_-6px_rgba(255,92,168,0.6)]">
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[linear-gradient(135deg,rgb(var(--c-pink)),rgb(var(--c-violet)))] shadow-[0_8px_30px_-6px_rgb(var(--c-pink)/0.6)]">
                 {phoneMedia?.playing ? <Equalizer /> : <Music2 size={22} />}
               </div>
               <div className="min-w-0 flex-1">

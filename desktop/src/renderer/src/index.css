@@ -2,18 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+:root,
+[data-theme='aurora'] {
+  /* theme colours as "r g b" so Tailwind and styles can add opacity */
+  --c-ink-950: 5 7 15;
+  --c-ink-900: 7 10 20;
+  --c-ink-850: 11 16 32;
+  --c-ink-800: 16 23 43;
+  --c-ink-700: 24 33 58;
+  --c-violet: 124 92 255;
+  --c-violet-soft: 160 139 255;
+  --c-cyan: 53 224 255;
+  --c-cyan-soft: 139 233 255;
+  --c-mint: 61 220 151;
+  --c-pink: 255 92 168;
+}
+[data-theme='sunset'] {
+  --c-ink-950: 14 6 10;
+  --c-ink-900: 20 9 15;
+  --c-ink-850: 30 14 22;
+  --c-ink-800: 42 20 30;
+  --c-ink-700: 58 28 40;
+  --c-violet: 255 107 107;
+  --c-violet-soft: 255 160 150;
+  --c-cyan: 255 179 71;
+  --c-cyan-soft: 255 210 140;
+  --c-mint: 255 214 102;
+  --c-pink: 255 92 168;
+}
+[data-theme='ocean'] {
+  --c-ink-950: 2 8 18;
+  --c-ink-900: 4 12 26;
+  --c-ink-850: 8 20 40;
+  --c-ink-800: 12 28 54;
+  --c-ink-700: 18 40 74;
+  --c-violet: 56 132 255;
+  --c-violet-soft: 125 175 255;
+  --c-cyan: 45 212 191;
+  --c-cyan-soft: 125 235 220;
+  --c-mint: 94 234 212;
+  --c-pink: 129 140 248;
+}
+[data-theme='forest'] {
+  --c-ink-950: 4 10 7;
+  --c-ink-900: 6 14 10;
+  --c-ink-850: 10 22 16;
+  --c-ink-800: 15 32 23;
+  --c-ink-700: 22 46 33;
+  --c-violet: 52 211 153;
+  --c-violet-soft: 120 230 185;
+  --c-cyan: 163 230 53;
+  --c-cyan-soft: 200 240 120;
+  --c-mint: 110 231 183;
+  --c-pink: 250 204 21;
+}
+[data-theme='graphite'] {
+  --c-ink-950: 8 8 10;
+  --c-ink-900: 12 12 15;
+  --c-ink-850: 20 20 24;
+  --c-ink-800: 28 28 34;
+  --c-ink-700: 40 40 48;
+  --c-violet: 160 170 190;
+  --c-violet-soft: 200 206 220;
+  --c-cyan: 226 232 240;
+  --c-cyan-soft: 240 244 250;
+  --c-mint: 134 239 172;
+  --c-pink: 244 114 182;
+}
 :root {
-  --bg: #070a14;
-  --violet: #7c5cff;
-  --cyan: #35e0ff;
-  --pink: #ff5ca8;
-  --mint: #3ddc97;
+  --bg: rgb(var(--c-ink-900));
+  --violet: rgb(var(--c-violet));
+  --cyan: rgb(var(--c-cyan));
+  --pink: rgb(var(--c-pink));
+  --mint: rgb(var(--c-mint));
   --amber: #ffb547;
   --text: #eef2ff;
   --muted: rgba(214, 224, 255, 0.58);
   --line: rgba(160, 180, 255, 0.1);
-  --aurora: linear-gradient(120deg, #7c5cff 0%, #35e0ff 55%, #3ddc97 100%);
-  --aurora-pink: linear-gradient(120deg, #ff5ca8 0%, #7c5cff 50%, #35e0ff 100%);
+  --aurora: linear-gradient(120deg, rgb(var(--c-violet)) 0%, rgb(var(--c-cyan)) 55%, rgb(var(--c-mint)) 100%);
+  --aurora-pink: linear-gradient(120deg, rgb(var(--c-pink)) 0%, rgb(var(--c-violet)) 50%, rgb(var(--c-cyan)) 100%);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   color-scheme: dark;
 }
@@ -80,10 +147,10 @@ textarea,
   .field {
     @apply w-full rounded-xl bg-white/[0.04] border border-white/[0.08] px-3.5 py-2.5 text-sm outline-none transition;
     @apply placeholder:text-white/30 focus:border-cyan/50 focus:bg-white/[0.06];
-    box-shadow: 0 0 0 0 rgba(53, 224, 255, 0);
+    box-shadow: 0 0 0 0 rgb(var(--c-cyan) / 0);
   }
   .field:focus {
-    box-shadow: 0 0 0 4px rgba(53, 224, 255, 0.08);
+    box-shadow: 0 0 0 4px rgb(var(--c-cyan) / 0.08);
   }
   .kbd {
     @apply rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-white/60;

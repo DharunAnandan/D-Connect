@@ -228,11 +228,16 @@ app.whenReady().then(async () => {
     })
   }
   // the call card can shrink to a small bar in the corner and grow back
+  // Shrink / grow where the card is now (it may have been dragged): the right edge and the top
+  // stay put, and it stays on the screen it's on.
   ctx.handle('callCompact', (on: boolean) => {
     if (!callWin || callWin.isDestroyed()) return
-    const wa = screen.getPrimaryDisplay().workArea
+    const b = callWin.getBounds()
     const [W, H] = on ? [340, 84] : [380, 780]
-    callWin.setBounds({ x: wa.x + wa.width - W - 24, y: wa.y + 24, width: W, height: H })
+    const wa = screen.getDisplayMatching(b).workArea
+    const x = Math.min(Math.max(b.x + b.width - W, wa.x), wa.x + wa.width - W)
+    const y = Math.min(Math.max(b.y, wa.y), wa.y + wa.height - H)
+    callWin.setBounds({ x, y, width: W, height: H })
   })
 
   // ---------------------------------------------------------------- features

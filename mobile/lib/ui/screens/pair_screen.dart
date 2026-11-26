@@ -102,11 +102,12 @@ class _Logo extends StatelessWidget {
   const _Logo({required this.size});
   @override
   Widget build(BuildContext context) {
+    // the app icon: a computer with a D on its screen and a phone in front
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(gradient: C.aurora, borderRadius: BorderRadius.circular(size * .3), boxShadow: [BoxShadow(color: C.cyan.withValues(alpha: .4), blurRadius: 20)]),
-      child: Center(child: Text('D', style: TextStyle(fontSize: size * .55, fontWeight: FontWeight.w900, color: C.ink850))),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(size * .3), boxShadow: [BoxShadow(color: C.cyan.withValues(alpha: .4), blurRadius: 20)]),
+      child: Image.asset('assets/logo.png', width: size, height: size, filterQuality: FilterQuality.medium),
     );
   }
 }

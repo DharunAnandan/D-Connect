@@ -87,7 +87,7 @@ export function Messages() {
                   onClick={() => open(t)}
                   className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${active?.threadId === t.threadId ? '' : 'hover:bg-white/[0.04]'}`}
                 >
-                  {active?.threadId === t.threadId && <motion.span layoutId="thread-active" transition={spring} className="absolute inset-0 rounded-xl bg-[linear-gradient(120deg,rgba(124,92,255,0.22),rgba(53,224,255,0.08))] ring-1 ring-white/10" />}
+                  {active?.threadId === t.threadId && <motion.span layoutId="thread-active" transition={spring} className="absolute inset-0 rounded-xl bg-[linear-gradient(120deg,rgb(var(--c-violet)/0.22),rgb(var(--c-cyan)/0.08))] ring-1 ring-white/10" />}
                   <div className="relative"><Avatar name={t.name || t.address} size={42} /></div>
                   <div className="relative min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
@@ -96,7 +96,7 @@ export function Messages() {
                     </div>
                     <div className={`truncate text-[13px] ${t.unread ? 'text-white/85' : 'text-muted'}`}>{t.snippet}</div>
                   </div>
-                  {t.unread > 0 && <span className="relative h-2.5 w-2.5 rounded-full bg-cyan shadow-[0_0_8px_#35e0ff]" />}
+                  {t.unread > 0 && <span className="relative h-2.5 w-2.5 rounded-full bg-cyan shadow-[0_0_8px_rgb(var(--c-cyan))]" />}
                 </motion.button>
               ))}
         </div>
@@ -127,7 +127,7 @@ export function Messages() {
                     <motion.div key={m.id} layout initial={{ opacity: 0, y: 14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring}>
                       {showTime && <div className="my-3 text-center text-[11px] text-white/35">{new Date(m.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · {clock(m.date)}</div>}
                       <div className={`flex ${m.out ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`selectable max-w-[70%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-[20px] px-4 py-2.5 text-[14px] leading-snug ${m.out ? 'rounded-br-md bg-[linear-gradient(135deg,#7c5cff,#4b9dff)] text-white shadow-[0_6px_20px_-8px_rgba(124,92,255,0.8)]' : 'rounded-bl-md bg-white/[0.07] text-white/90'}`}>
+                        <div className={`selectable max-w-[70%] whitespace-pre-wrap [overflow-wrap:anywhere] rounded-[20px] px-4 py-2.5 text-[14px] leading-snug ${m.out ? 'rounded-br-md bg-[linear-gradient(135deg,rgb(var(--c-violet)),#4b9dff)] text-white shadow-[0_6px_20px_-8px_rgb(var(--c-violet)/0.8)]' : 'rounded-bl-md bg-white/[0.07] text-white/90'}`}>
                           {m.body}
                         </div>
                       </div>
@@ -151,7 +151,7 @@ export function Messages() {
                 placeholder="Text message"
                 className="field max-h-32 min-h-[44px] resize-none py-3"
               />
-              <motion.button whileTap={{ scale: 0.85 }} whileHover={{ scale: 1.06 }} disabled={!text.trim()} onClick={send} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[linear-gradient(135deg,#7c5cff,#35e0ff)] text-ink-950 shadow-[0_6px_20px_-6px_rgba(53,224,255,0.7)] disabled:opacity-30">
+              <motion.button whileTap={{ scale: 0.85 }} whileHover={{ scale: 1.06 }} disabled={!text.trim()} onClick={send} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-ink-950 shadow-[0_6px_20px_-6px_rgb(var(--c-cyan)/0.7)] disabled:opacity-30">
                 <Send size={18} />
               </motion.button>
             </div>

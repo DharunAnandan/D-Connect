@@ -21,7 +21,7 @@ class ClipTile : TileService() {
         t.state = if (linked) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         t.label = "D-Connect"
         t.icon = android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_tile_clip) // not the cached old one
-        if (Build.VERSION.SDK_INT >= 29) t.subtitle = if (linked) "Clipboard → PC" else "Not linked"
+        if (Build.VERSION.SDK_INT >= 29) t.subtitle = null // just "D-Connect" (on = linked)
         t.updateTile()
     }
 

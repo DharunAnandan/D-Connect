@@ -65,7 +65,8 @@ export function ConnectScene({ state, phoneName = 'Phone', pcName = 'This PC', h
     const lerp = (a: number, b: number, t: number): number => a + (b - a) * t
     const mix = (h: number): string => {
       // violet (262) -> cyan (190) -> mint (152)
-      const hue = h < 0.5 ? lerp(262, 190, h * 2) : lerp(190, 152, (h - 0.5) * 2)
+      const [h1, h2, h3] = themeHues()
+      const hue = h < 0.5 ? lerp(h1, h2, h * 2) : lerp(h2, h3, (h - 0.5) * 2)
       return `${hue}`
     }
 
@@ -246,7 +247,7 @@ export function ConnectScene({ state, phoneName = 'Phone', pcName = 'This PC', h
         {state === 'connected' && (
           <motion.div
             key="check"
-            className="absolute left-1/2 top-[calc(50%-14px)] grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_0_40px_rgba(61,220,151,0.8)]"
+            className="absolute left-1/2 top-[calc(50%-14px)] grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_0_40px_rgb(var(--c-mint)/0.8)]"
             initial={{ scale: 0, rotate: -90 }}
             animate={{ scale: 1, rotate: 0 }}
             exit={{ scale: 0 }}
@@ -263,11 +264,30 @@ export function ConnectScene({ state, phoneName = 'Phone', pcName = 'This PC', h
 function Device({ icon, glow, tall }: { icon: React.ReactNode; glow?: boolean; tall?: boolean }) {
   return (
     <motion.div
-      animate={glow ? { boxShadow: ['0 0 0px rgba(61,220,151,0)', '0 0 50px rgba(61,220,151,0.55)', '0 0 28px rgba(61,220,151,0.35)'] } : { boxShadow: '0 0 30px rgba(124,92,255,0.35)' }}
+      animate={glow ? { boxShadow: ['0 0 0px rgb(var(--c-mint)/0)', '0 0 50px rgb(var(--c-mint)/0.55)', '0 0 28px rgb(var(--c-mint)/0.35)'] } : { boxShadow: '0 0 30px rgb(var(--c-violet)/0.35)' }}
       transition={{ duration: 1.2 }}
       className={`grid place-items-center rounded-3xl bg-[linear-gradient(150deg,rgba(40,48,90,0.95),rgba(16,20,40,0.95))] text-white ring-1 ring-white/15 ${tall ? 'h-24 w-16' : 'h-20 w-24'}`}
     >
       {icon}
     </motion.div>
   )
+}
+
+// The theme's violet, cyan and mint as hues (the canvas can't read CSS variables). Read again
+// when the theme changes.
+let hueCache: { theme: string; hues: [number, number, number] } | null = null
+function themeHues(): [number, number, number] {
+  const theme = document.documentElement.dataset.theme || 'aurora'
+  if (hueCache?.theme === theme) return hueCache.hues
+  const css = getComputedStyle(document.documentElement)
+  const hueOf = (name: string, fallback: number): number => {
+    const [r, g, b] = css.getPropertyValue(`--c-${name}`).trim().split(/\s+/).map((x) => Number(x) / 255)
+    if (![r, g, b].every((x) => Number.isFinite(x))) return fallback
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
+    if (!d) return fallback
+    const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+    return (h * 60 + 360) % 360
+  }
+  hueCache = { theme, hues: [hueOf('violet', 262), hueOf('cyan', 190), hueOf('mint', 152)] }
+  return hueCache.hues
 }

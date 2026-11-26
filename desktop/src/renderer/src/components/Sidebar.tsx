@@ -32,7 +32,7 @@ export function Sidebar({ route, go }: { route: string; go: (r: string) => void 
       <div className="relative mb-4">
       <motion.div layout onClick={() => many && setOpen(!open)} className={`glass rounded-2xl p-3.5 ${many ? 'cursor-pointer hover:ring-1 hover:ring-white/10' : ''}`}>
         <div className="flex items-center gap-3">
-          <div className="relative grid h-10 w-10 place-items-center rounded-xl bg-[linear-gradient(135deg,#7c5cff,#35e0ff)] text-ink-950">
+          <div className="relative grid h-10 w-10 place-items-center rounded-xl bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-ink-950">
             <MonitorSmartphone size={19} />
             {conn.connected && <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-ink-850 bg-mint" />}
           </div>
@@ -73,7 +73,7 @@ export function Sidebar({ route, go }: { route: string; go: (r: string) => void 
                 }}
                 className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors ${d.active ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}
               >
-                <span className={`h-2 w-2 shrink-0 rounded-full ${d.active ? 'bg-mint shadow-[0_0_6px_#3ddc97]' : d.online ? 'bg-amber' : 'bg-white/20'}`} />
+                <span className={`h-2 w-2 shrink-0 rounded-full ${d.active ? 'bg-mint shadow-[0_0_6px_rgb(var(--c-mint))]' : d.online ? 'bg-amber' : 'bg-white/20'}`} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium">{d.name}</span>
                   <span className="block text-[10.5px] text-muted">{d.active ? 'In use' : d.online ? 'Online · standby' : 'Offline'}</span>
@@ -93,8 +93,8 @@ export function Sidebar({ route, go }: { route: string; go: (r: string) => void 
           return (
             <button key={n.to} onClick={() => go(n.to)} className={`group relative flex h-10 items-center gap-3 rounded-xl px-3 text-[13.5px] font-medium transition-colors ${active ? 'text-white' : 'text-white/55 hover:text-white/90'}`}>
               {active && (
-                <motion.span layoutId="nav-active" transition={spring} className="absolute inset-0 rounded-xl bg-[linear-gradient(120deg,rgba(124,92,255,0.22),rgba(53,224,255,0.1))] ring-1 ring-white/[0.08]">
-                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[linear-gradient(#8b6cff,#35e0ff)] shadow-[0_0_10px_#35e0ff]" />
+                <motion.span layoutId="nav-active" transition={spring} className="absolute inset-0 rounded-xl bg-[linear-gradient(120deg,rgb(var(--c-violet)/0.22),rgb(var(--c-cyan)/0.1))] ring-1 ring-white/[0.08]">
+                  <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-[linear-gradient(rgb(var(--c-violet)),rgb(var(--c-cyan)))] shadow-[0_0_10px_rgb(var(--c-cyan))]" />
                 </motion.span>
               )}
               <n.icon size={18} className={`relative transition-transform group-hover:scale-110 ${active ? 'text-cyan-soft' : ''}`} />

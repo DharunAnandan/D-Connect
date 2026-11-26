@@ -17,7 +17,7 @@ export const Card = forwardRef<HTMLDivElement, HTMLMotionProps<'div'> & { hover?
       ref={ref}
       variants={item}
       whileHover={hover ? { y: -3, transition: spring } : undefined}
-      className={cx(strong ? 'glass-strong' : 'glass', 'rounded-2xl', hover && 'transition-shadow hover:shadow-[0_18px_50px_-14px_rgba(124,92,255,0.35)]', className)}
+      className={cx(strong ? 'glass-strong' : 'glass', 'rounded-2xl', hover && 'transition-shadow hover:shadow-[0_18px_50px_-14px_rgb(var(--c-violet)/0.35)]', className)}
       {...rest}
     >
       {children}
@@ -28,11 +28,11 @@ export const Card = forwardRef<HTMLDivElement, HTMLMotionProps<'div'> & { hover?
 type BtnProps = HTMLMotionProps<'button'> & { variant?: 'primary' | 'ghost' | 'soft' | 'danger' | 'success'; icon?: LucideIcon; size?: 'sm' | 'md' | 'lg' }
 export function Button({ variant = 'soft', icon: Icon, size = 'md', className, children, ...rest }: BtnProps) {
   const v = {
-    primary: 'text-ink-950 font-semibold bg-[linear-gradient(120deg,#8b6cff,#35e0ff)] shadow-[0_8px_28px_-8px_rgba(53,224,255,0.6)] hover:shadow-[0_10px_34px_-6px_rgba(124,92,255,0.7)]',
+    primary: 'text-ink-950 font-semibold bg-[linear-gradient(120deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] shadow-[0_8px_28px_-8px_rgb(var(--c-cyan)/0.6)] hover:shadow-[0_10px_34px_-6px_rgb(var(--c-violet)/0.7)]',
     soft: 'bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white/90',
     ghost: 'hover:bg-white/[0.06] text-white/70 hover:text-white',
     danger: 'bg-rose/90 hover:bg-rose text-white font-semibold shadow-[0_8px_28px_-8px_rgba(248,113,113,0.7)]',
-    success: 'bg-mint/90 hover:bg-mint text-ink-950 font-semibold shadow-[0_8px_28px_-8px_rgba(61,220,151,0.7)]'
+    success: 'bg-mint/90 hover:bg-mint text-ink-950 font-semibold shadow-[0_8px_28px_-8px_rgb(var(--c-mint)/0.7)]'
   }[variant]
   const s = { sm: 'h-8 px-3 text-xs gap-1.5 rounded-lg', md: 'h-10 px-4 text-sm gap-2 rounded-xl', lg: 'h-12 px-6 text-[15px] gap-2.5 rounded-2xl' }[size]
   return (
@@ -73,7 +73,7 @@ export function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: 
       aria-checked={on}
       disabled={disabled}
       onClick={() => onChange(!on)}
-      className={cx('no-drag relative h-[26px] w-[46px] shrink-0 rounded-full transition-colors duration-300 disabled:opacity-40', on ? 'bg-[linear-gradient(120deg,#7c5cff,#35e0ff)]' : 'bg-white/10')}
+      className={cx('no-drag relative h-[26px] w-[46px] shrink-0 rounded-full transition-colors duration-300 disabled:opacity-40', on ? 'bg-[linear-gradient(120deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))]' : 'bg-white/10')}
     >
       <motion.span
         layout
@@ -90,8 +90,8 @@ export function Slider({ value, min, max, step = 1, onChange, suffix }: { value:
     <div className="flex items-center gap-3">
       <div className="relative h-6 flex-1">
         <div className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/10" />
-        <div className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[linear-gradient(90deg,#7c5cff,#35e0ff)]" style={{ width: `${pct}%` }} />
-        <div className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_0_4px_rgba(53,224,255,0.2)]" style={{ left: `${pct}%` }} />
+        <div className="absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-[linear-gradient(90deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))]" style={{ width: `${pct}%` }} />
+        <div className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_0_4px_rgb(var(--c-cyan)/0.2)]" style={{ left: `${pct}%` }} />
         <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(+e.target.value)} className="absolute inset-0 w-full cursor-pointer opacity-0" />
       </div>
       <span className="w-14 text-right text-sm tabular-nums text-white/80">
@@ -102,7 +102,7 @@ export function Slider({ value, min, max, step = 1, onChange, suffix }: { value:
   )
 }
 
-export function Ring({ value, size = 64, stroke = 6, children, colors = ['#7c5cff', '#35e0ff'], track = 'rgba(255,255,255,0.08)' }: { value: number; size?: number; stroke?: number; children?: ReactNode; colors?: string[]; track?: string }) {
+export function Ring({ value, size = 64, stroke = 6, children, colors = ['rgb(var(--c-violet))', 'rgb(var(--c-cyan))'], track = 'rgba(255,255,255,0.08)' }: { value: number; size?: number; stroke?: number; children?: ReactNode; colors?: string[]; track?: string }) {
   const r = (size - stroke) / 2
   const len = 2 * Math.PI * r
   const id = `rg${colors.join('').replace(/#/g, '')}`
@@ -112,7 +112,7 @@ export function Ring({ value, size = 64, stroke = 6, children, colors = ['#7c5cf
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
             {colors.map((c, i) => (
-              <stop key={c} offset={`${(i / (colors.length - 1)) * 100}%`} stopColor={c} />
+              <stop key={c} offset={`${(i / (colors.length - 1)) * 100}%`} style={{ stopColor: c }} />
             ))}
           </linearGradient>
         </defs>
@@ -151,7 +151,7 @@ export function PageHeader({ title, subtitle, children, icon: Icon }: { title: s
     <div className="sticky top-0 z-20 -mx-6 mb-6 flex items-end justify-between gap-4 border-b border-white/[0.04] bg-ink-900/95 px-6 pb-4 pt-2 xl:-mx-8 xl:px-8 shadow-[0_12px_24px_-12px_rgba(0,0,0,0.6)]">
       <div className="flex items-center gap-3.5">
         {Icon && (
-          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[linear-gradient(135deg,rgba(124,92,255,0.25),rgba(53,224,255,0.18))] text-cyan-soft ring-1 ring-white/10">
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[linear-gradient(135deg,rgb(var(--c-violet)/0.25),rgb(var(--c-cyan)/0.18))] text-cyan-soft ring-1 ring-white/10">
             <Icon size={21} />
           </div>
         )}
@@ -171,7 +171,7 @@ export function Empty({ icon: Icon, title, body, children }: { icon: LucideIcon;
       <motion.div
         animate={{ y: [0, -6, 0] }}
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        className="mb-5 grid h-20 w-20 place-items-center rounded-3xl bg-[linear-gradient(135deg,rgba(124,92,255,0.22),rgba(53,224,255,0.12))] text-cyan-soft ring-1 ring-white/10"
+        className="mb-5 grid h-20 w-20 place-items-center rounded-3xl bg-[linear-gradient(135deg,rgb(var(--c-violet)/0.22),rgb(var(--c-cyan)/0.12))] text-cyan-soft ring-1 ring-white/10"
       >
         <Icon size={34} strokeWidth={1.6} />
       </motion.div>

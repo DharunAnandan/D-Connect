@@ -17,7 +17,7 @@ export function TitleBar() {
           animate={{ opacity: 1, x: 0 }}
           className={`ml-2 flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${conn.connected ? 'bg-mint/10 text-mint' : 'bg-white/5 text-white/45'}`}
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${conn.connected ? 'bg-mint shadow-[0_0_8px_#3ddc97]' : 'bg-white/30'}`} />
+          <span className={`h-1.5 w-1.5 rounded-full ${conn.connected ? 'bg-mint shadow-[0_0_8px_rgb(var(--c-mint))]' : 'bg-white/30'}`} />
           {conn.connected ? `${conn.via === 'usb' ? 'USB' : 'Wi-Fi'}${conn.rtt ? ` · ${conn.rtt} ms` : ''}` : 'Offline'}
         </motion.span>
         {conn.connected && bt.connected && (
@@ -52,14 +52,18 @@ export function Logo({ size = 28 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 64 64">
       <defs>
         <linearGradient id="lg-a" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#8b6cff" />
-          <stop offset="0.55" stopColor="#35e0ff" />
-          <stop offset="1" stopColor="#3ddc97" />
+          <stop offset="0" style={{ stopColor: "rgb(var(--c-violet))" }} />
+          <stop offset="0.55" style={{ stopColor: "rgb(var(--c-cyan))" }} />
+          <stop offset="1" style={{ stopColor: "rgb(var(--c-mint))" }} />
         </linearGradient>
       </defs>
       <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#lg-a)" />
-      <path d="M22 18h9c9 0 15 6 15 14s-6 14-15 14h-9z" fill="none" stroke="#0b1020" strokeWidth="5.5" strokeLinejoin="round" />
-      <circle cx="31" cy="32" r="4.5" fill="#0b1020" />
+      {/* a computer with a D on its screen, and a phone in front */}
+      <path d="M35 39H14a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4h26a4 4 0 0 1 4 4v3" fill="none" stroke="#0b1020" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M27 39v5M20 45.5h13" fill="none" stroke="#0b1020" strokeWidth="4" strokeLinecap="round" />
+      <path d="M19 20.5h4c4.2 0 7 2.6 7 6s-2.8 6-7 6h-4z" fill="none" stroke="#0b1020" strokeWidth="3.2" strokeLinejoin="round" />
+      <path fillRule="evenodd" fill="#0b1020" d="M41.5 25h8a3.5 3.5 0 0 1 3.5 3.5v19a3.5 3.5 0 0 1-3.5 3.5h-8a3.5 3.5 0 0 1-3.5-3.5v-19a3.5 3.5 0 0 1 3.5-3.5zM41.9 29.2h7.2a1.6 1.6 0 0 1 1.6 1.6v14.4a1.6 1.6 0 0 1-1.6 1.6h-7.2a1.6 1.6 0 0 1-1.6-1.6v-14.4a1.6 1.6 0 0 1 1.6-1.6zM43.75 26.6h3.5a.55 .55 0 0 1 0 1.1h-3.5a.55 .55 0 0 1 0-1.1z" />
+      <rect x="40.3" y="29.2" width="10.4" height="17.6" rx="1.6" fill="#fff" fillOpacity="0.9" />
     </svg>
   )
 }

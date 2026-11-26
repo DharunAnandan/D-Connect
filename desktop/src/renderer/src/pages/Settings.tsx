@@ -200,6 +200,19 @@ export function Settings() {
       </Section>
 
       <Section title="Experience" icon={Sparkles}>
+        <Row icon={Sparkles} title="Theme" body="Colours for the whole app, pop-ups and call card.">
+          <div className="flex gap-2">
+            {THEMES.map((t) => {
+              const on = (settings.theme || 'aurora') === t.id
+              return (
+                <button key={t.id} title={t.label} onClick={() => setSetting('theme', t.id)} className={`flex flex-col items-center gap-1 rounded-2xl p-1.5 transition ${on ? 'bg-white/[0.08] ring-2 ring-white/70' : 'hover:bg-white/[0.05]'}`}>
+                  <span className="h-8 w-12 rounded-xl ring-1 ring-white/10" style={{ background: `linear-gradient(135deg, ${t.colors[0]}, ${t.colors[1]} 55%, ${t.colors[2]}), ${t.bg}` }} />
+                  <span className={`text-[10.5px] font-semibold ${on ? 'text-white' : 'text-white/55'}`}>{t.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </Row>
         <Row icon={Volume2} title="Sounds" body="Soft chimes for connecting, notifications and messages.">
           <Toggle on={settings.sounds !== false} onChange={(v) => setSetting('sounds', v)} />
         </Row>
@@ -213,6 +226,15 @@ export function Settings() {
     </motion.div>
   )
 }
+
+// the colour themes (see index.css [data-theme]); swatch colours only
+const THEMES = [
+  { id: 'aurora', label: 'Aurora', colors: ['#7c5cff', '#35e0ff', '#3ddc97'], bg: '#070a14' },
+  { id: 'sunset', label: 'Sunset', colors: ['#ff6b6b', '#ffb347', '#ffd666'], bg: '#14090f' },
+  { id: 'ocean', label: 'Ocean', colors: ['#3884ff', '#2dd4bf', '#5eead4'], bg: '#040c1a' },
+  { id: 'forest', label: 'Forest', colors: ['#34d399', '#a3e635', '#6ee7b7'], bg: '#060e0a' },
+  { id: 'graphite', label: 'Graphite', colors: ['#a0aabe', '#e2e8f0', '#86efac'], bg: '#0c0c0f' }
+]
 
 function Step({ n, done, title, body, children }: { n: number; done: boolean; title: string; body: string; children?: React.ReactNode }) {
   return (

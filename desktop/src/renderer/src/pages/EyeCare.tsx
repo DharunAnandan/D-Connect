@@ -40,10 +40,10 @@ export function EyeCare() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <Card strong className="relative flex items-center gap-8 overflow-hidden p-8">
-          <div className="absolute -left-16 -top-16 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(53,224,255,0.20)_0%,transparent_70%)]" />
+          <div className="absolute -left-16 -top-16 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgb(var(--c-cyan)/0.20)_0%,transparent_70%)]" />
           <div className="relative">
             <motion.div className="absolute inset-4 rounded-full bg-cyan/10" animate={{ scale: [1, 1.08, 1], opacity: [0.6, 0.25, 0.6] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }} />
-            <Ring value={pct} size={210} stroke={10} colors={['#8be9ff', '#35e0ff', '#3ddc97']}>
+            <Ring value={pct} size={210} stroke={10} colors={['#8be9ff', 'rgb(var(--c-cyan))', 'rgb(var(--c-mint))']}>
               <div className="text-center">
                 <div className="text-[46px] font-extralight tabular-nums tracking-tight">{eye?.on ? `${mm}:${String(ss).padStart(2, '0')}` : 'Off'}</div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/45">{eye?.showing ? 'on a break' : eye?.screenOn === false ? 'paused · screen off' : 'until break'}</div>
@@ -69,7 +69,7 @@ export function EyeCare() {
               return (
                 <div key={d.date} className="flex flex-1 flex-col items-center gap-2" title={`${d.done} taken · ${d.snooze} snoozed · ${d.skip} skipped`}>
                   <div className="flex h-36 w-full flex-col-reverse overflow-hidden rounded-xl bg-white/[0.04]">
-                    <motion.div initial={{ height: 0 }} animate={{ height: `${(d.done / maxDay) * 100}%` }} transition={{ ...spring, delay: i * 0.05 }} className="w-full bg-[linear-gradient(0deg,#35e0ff,#3ddc97)]" />
+                    <motion.div initial={{ height: 0 }} animate={{ height: `${(d.done / maxDay) * 100}%` }} transition={{ ...spring, delay: i * 0.05 }} className="w-full bg-[linear-gradient(0deg,rgb(var(--c-cyan)),rgb(var(--c-mint)))]" />
                     <motion.div initial={{ height: 0 }} animate={{ height: `${(d.snooze / maxDay) * 100}%` }} transition={{ ...spring, delay: i * 0.05 + 0.1 }} className="w-full bg-amber/70" />
                     <motion.div initial={{ height: 0 }} animate={{ height: `${(d.skip / maxDay) * 100}%` }} transition={{ ...spring, delay: i * 0.05 + 0.2 }} className="w-full bg-rose/60" />
                   </div>

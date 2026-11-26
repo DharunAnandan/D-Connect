@@ -170,7 +170,7 @@ export function ToastHost() {
                   >
                     <div className="mt-2 flex gap-2">
                       <input name="r" autoFocus placeholder="Reply…" className="field py-2" onKeyDown={(e) => e.key === 'Escape' && setReplying(null)} />
-                      <button className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[linear-gradient(135deg,#7c5cff,#35e0ff)] text-ink-950"><Send size={15} /></button>
+                      <button className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-ink-950"><Send size={15} /></button>
                     </div>
                   </motion.form>
                 )}
@@ -222,7 +222,7 @@ const BASE = '#0d1124'
 function tint(rgb?: string): React.CSSProperties {
   if (!rgb)
     return {
-      background: `linear-gradient(135deg, rgba(124,92,255,0.16) 0%, rgba(53,224,255,0.06) 55%, rgba(0,0,0,0) 100%), ${BASE}`,
+      background: `linear-gradient(135deg, rgb(var(--c-violet)/0.16) 0%, rgb(var(--c-cyan)/0.06) 55%, rgba(0,0,0,0) 100%), ${BASE}`,
       boxShadow: '0 18px 50px -14px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 0 1px rgba(255,255,255,0.08)'
     }
   return {

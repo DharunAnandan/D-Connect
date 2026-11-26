@@ -68,10 +68,10 @@ export function Battery() {
 
 function Gauge({ icon: Icon, title, level, charging, empty, low }: { icon: typeof Laptop; title: string; level?: number; charging: boolean; empty: string; low: number }) {
   const has = typeof level === 'number'
-  const color = !has ? ['#555', '#555'] : charging ? ['#3ddc97', '#35e0ff'] : level! <= low ? ['#ff5ca8', '#f87171'] : level! <= 40 ? ['#ffb547', '#ff5ca8'] : ['#7c5cff', '#35e0ff']
+  const color = !has ? ['#555', '#555'] : charging ? ['rgb(var(--c-mint))', 'rgb(var(--c-cyan))'] : level! <= low ? ['rgb(var(--c-pink))', '#f87171'] : level! <= 40 ? ['#ffb547', 'rgb(var(--c-pink))'] : ['rgb(var(--c-violet))', 'rgb(var(--c-cyan))']
   return (
     <Card strong className="relative flex items-center gap-6 overflow-hidden p-6">
-      <div className="absolute -left-14 -top-14 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.18)_0%,transparent_70%)]" />
+      <div className="absolute -left-14 -top-14 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgb(var(--c-violet)/0.18)_0%,transparent_70%)]" />
       <Ring value={has ? level! / 100 : 0} size={132} stroke={10} colors={color}>
         <div className="text-center">
           <div className="text-3xl font-light tabular-nums">{has ? `${level}%` : '–'}</div>

@@ -59,14 +59,14 @@ export function Pair() {
       </motion.div>
 
       <Card strong className="relative overflow-hidden p-7">
-        <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.30)_0%,transparent_70%)]" />
+        <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgb(var(--c-violet)/0.30)_0%,transparent_70%)]" />
         <div className="relative">
           <div className="flex items-center gap-2 text-sm font-semibold text-white/80">
             <QrCode size={17} className="text-cyan" /> Scan with the D-Connect app
           </div>
           <div className="relative mx-auto mt-5 w-fit">
             <motion.div
-              className="absolute -inset-3 rounded-[30px] bg-[conic-gradient(from_0deg,#7c5cff,#35e0ff,#3ddc97,#ff5ca8,#7c5cff)] opacity-70 blur-md"
+              className="absolute -inset-3 rounded-[30px] bg-[conic-gradient(from_0deg,rgb(var(--c-violet)),rgb(var(--c-cyan)),rgb(var(--c-mint)),rgb(var(--c-pink)),rgb(var(--c-violet)))] opacity-70 blur-md"
               animate={{ rotate: 360 }}
               transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
             />
@@ -81,7 +81,7 @@ export function Pair() {
           <ol className="mt-7 space-y-3 text-sm">
             {['Install D-Connect on your Android phone', 'Open it and tap “Pair with PC”', 'Point the camera at this code'].map((s, i) => (
               <li key={s} className="flex items-center gap-3">
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-[linear-gradient(135deg,#7c5cff,#35e0ff)] text-[11px] font-bold text-ink-950">{i + 1}</span>
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-[11px] font-bold text-ink-950">{i + 1}</span>
                 <span className="text-white/80">{s}</span>
               </li>
             ))}

@@ -96,7 +96,7 @@ export function Calls() {
           </div>
           <div className="mt-5 flex items-center justify-center gap-6">
             <div className="w-12" />
-            <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.06 }} disabled={!num} onClick={() => dial(num)} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.8)] disabled:opacity-40">
+            <motion.button whileTap={{ scale: 0.88 }} whileHover={{ scale: 1.06 }} disabled={!num} onClick={() => dial(num)} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgb(var(--c-mint)/0.8)] disabled:opacity-40">
               <Phone size={26} fill="currentColor" />
             </motion.button>
             <motion.button whileTap={{ scale: 0.85 }} onClick={() => setNum((n) => n.slice(0, -1))} className="grid h-12 w-12 place-items-center rounded-full text-white/60 hover:bg-white/5 hover:text-white">

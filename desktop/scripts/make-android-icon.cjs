@@ -1,13 +1,17 @@
-// Renders the Android adaptive-icon foreground (the "D" on transparent, inside the 66dp safe
+// Renders the Android adaptive-icon foreground (the computer-and-phone mark with its D, on transparent, inside the 66dp safe
 // zone of the 108dp canvas). The gradient background is a drawable, so no white plate.
 // Run: npm run icons:android
 const { app, BrowserWindow } = require('electron')
 const fs = require('fs')
 const path = require('path')
 
-const glyph = (color) => `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="-8.5 -11 83.5 83.5">
-<path d="M22 18h9c9 0 15 6 15 14s-6 14-15 14h-9z" fill="none" stroke="${color}" stroke-width="5.5" stroke-linejoin="round"/>
-<circle cx="31" cy="32" r="4.5" fill="${color}"/></svg>`
+const glyph = (color) => `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="-3.5 -2.5 70 70">
+<path d="M35 39H14a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4h26a4 4 0 0 1 4 4v3" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M27 39v5M20 45.5h13" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+<path d="M19 20.5h4c4.2 0 7 2.6 7 6s-2.8 6-7 6h-4z" fill="none" stroke="${color}" stroke-width="3.2" stroke-linejoin="round"/>
+<path fill-rule="evenodd" d="M41.5 25h8a3.5 3.5 0 0 1 3.5 3.5v19a3.5 3.5 0 0 1-3.5 3.5h-8a3.5 3.5 0 0 1-3.5-3.5v-19a3.5 3.5 0 0 1 3.5-3.5zM41.9 29.2h7.2a1.6 1.6 0 0 1 1.6 1.6v14.4a1.6 1.6 0 0 1-1.6 1.6h-7.2a1.6 1.6 0 0 1-1.6-1.6v-14.4a1.6 1.6 0 0 1 1.6-1.6zM43.75 26.6h3.5a.55 .55 0 0 1 0 1.1h-3.5a.55 .55 0 0 1 0-1.1z" fill="${color}"/>
+<rect x="40.3" y="29.2" width="10.4" height="17.6" rx="1.6" fill="${color === '#ffffff' ? 'transparent' : 'rgba(255,255,255,0.9)'}"/>
+<rect x="43.2" y="26.6" width="4.6" height="1.1" rx=".55" fill="${color === '#ffffff' ? 'transparent' : 'rgba(255,255,255,0.9)'}"/></svg>`
 const RES = path.join(__dirname, '..', '..', 'mobile', 'android', 'app', 'src', 'main', 'res')
 const SIZES = { mdpi: 108, hdpi: 162, xhdpi: 216, xxhdpi: 324, xxxhdpi: 432 }
 

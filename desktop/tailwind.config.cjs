@@ -1,15 +1,18 @@
+const v = (name) => `rgb(var(--c-${name}) / <alpha-value>)`
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./src/renderer/index.html', './src/renderer/src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        ink: { 950: '#05070F', 900: '#070A14', 850: '#0B1020', 800: '#10172B', 700: '#18213A' },
-        violet: { DEFAULT: '#7C5CFF', soft: '#A08BFF' },
-        cyan: { DEFAULT: '#35E0FF', soft: '#8BE9FF' },
-        pink: { DEFAULT: '#FF5CA8' },
+        // theme colours: CSS variables (see index.css, [data-theme])
+        ink: { 950: v('ink-950'), 900: v('ink-900'), 850: v('ink-850'), 800: v('ink-800'), 700: v('ink-700') },
+        violet: { DEFAULT: v('violet'), soft: v('violet-soft') },
+        cyan: { DEFAULT: v('cyan'), soft: v('cyan-soft') },
+        pink: { DEFAULT: v('pink') },
         amber: { DEFAULT: '#FFB547' },
-        mint: { DEFAULT: '#3DDC97' },
+        mint: { DEFAULT: v('mint') },
         rose: { DEFAULT: '#F87171' }
       },
       fontFamily: {

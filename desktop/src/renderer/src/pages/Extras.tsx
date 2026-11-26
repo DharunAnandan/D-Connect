@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Camera, Coffee, Link2, Lock, Moon, MoonStar, Music2, Pause, Play, Plus, Radar, Send, ShieldCheck, SkipBack, SkipForward, Sparkles, Terminal, Trash2, Type, Video, VolumeX } from 'lucide-react'
+import { Camera, Clapperboard, Coffee, Crop, Link2, Lock, Moon, MoonStar, Music2, Pause, Play, Plus, Radar, Send, ShieldCheck, SkipBack, SkipForward, Sparkles, Terminal, Trash2, Type, Video, VolumeX } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { QuickCommand } from '@shared/protocol'
 import { Button, Card, Empty, PageHeader, Row, Toggle } from '@/components/ui'
@@ -7,7 +7,7 @@ import { call } from '@/lib/api'
 import { useApp } from '@/lib/store'
 import { list } from '@/theme/motion'
 
-const ICONS: Record<string, any> = { lock: Lock, moon: Moon, 'volume-x': VolumeX, camera: Camera, coffee: Coffee, video: Video, terminal: Terminal }
+const ICONS: Record<string, any> = { lock: Lock, moon: Moon, 'volume-x': VolumeX, camera: Camera, coffee: Coffee, video: Video, crop: Crop, 'video-area': Clapperboard, terminal: Terminal }
 
 export function Extras() {
   const { conn, settings, setSetting, pcMedia, status } = useApp()
@@ -46,7 +46,7 @@ export function Extras() {
           <div className="flex items-center gap-5">
             <div className="relative grid h-24 w-24 place-items-center">
               {ringing && [0, 1, 2].map((i) => <motion.span key={i} className="absolute inset-0 rounded-full border-2 border-pink" initial={{ scale: 0.6, opacity: 0.8 }} animate={{ scale: 1.7, opacity: 0 }} transition={{ duration: 1.6, repeat: Infinity, delay: i * 0.5 }} />)}
-              <motion.button whileTap={{ scale: 0.9 }} animate={ringing ? { rotate: [0, -12, 12, -12, 12, 0] } : {}} transition={ringing ? { duration: 0.6, repeat: Infinity, repeatDelay: 0.4 } : {}} onClick={ring} className="relative grid h-20 w-20 place-items-center rounded-full bg-[linear-gradient(135deg,#ff5ca8,#7c5cff)] shadow-[0_12px_40px_-8px_rgba(255,92,168,0.8)]">
+              <motion.button whileTap={{ scale: 0.9 }} animate={ringing ? { rotate: [0, -12, 12, -12, 12, 0] } : {}} transition={ringing ? { duration: 0.6, repeat: Infinity, repeatDelay: 0.4 } : {}} onClick={ring} className="relative grid h-20 w-20 place-items-center rounded-full bg-[linear-gradient(135deg,rgb(var(--c-pink)),rgb(var(--c-violet)))] shadow-[0_12px_40px_-8px_rgb(var(--c-pink)/0.8)]">
                 <Radar size={32} />
               </motion.button>
             </div>

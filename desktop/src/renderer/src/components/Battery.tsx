@@ -1,7 +1,7 @@
 import { BatteryCharging } from 'lucide-react'
 
 export function BatteryPill({ level, charging }: { level: number; charging: boolean }) {
-  const color = charging ? '#3ddc97' : level <= 15 ? '#f87171' : level <= 30 ? '#ffb547' : '#8be9ff'
+  const color = charging ? 'rgb(var(--c-mint))' : level <= 15 ? '#f87171' : level <= 30 ? '#ffb547' : '#8be9ff'
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-2 py-1 text-[10.5px] font-semibold tabular-nums" style={{ color }}>
       {charging ? (

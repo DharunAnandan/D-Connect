@@ -206,7 +206,7 @@ export function Mirror() {
         <div className="relative flex h-full min-h-0 items-center justify-center">
           <motion.div
             animate={{ opacity: on ? 1 : 0.6, scale: on ? 1 : 0.97 }}
-            className="relative h-full max-h-[calc(100vh-200px)] rounded-[38px] bg-[linear-gradient(160deg,#2a3360,#0f1328)] p-[10px] shadow-[0_30px_80px_-20px_rgba(124,92,255,0.5)] ring-1 ring-white/15"
+            className="relative h-full max-h-[calc(100vh-200px)] rounded-[38px] bg-[linear-gradient(160deg,#2a3360,#0f1328)] p-[10px] shadow-[0_30px_80px_-20px_rgb(var(--c-violet)/0.5)] ring-1 ring-white/15"
             style={{ aspectRatio: m.width && m.height ? `${m.width} / ${m.height}` : '9 / 19.5' }}
           >
             <canvas

@@ -69,7 +69,7 @@ export function Apps() {
               whileTap={{ scale: 0.96 }}
               onClick={() => open(a)}
               disabled={!!opening}
-              className="glass relative flex flex-col items-center gap-2.5 rounded-2xl px-2 py-4 text-center transition-shadow hover:shadow-[0_14px_40px_-14px_rgba(124,92,255,0.45)] disabled:opacity-60"
+              className="glass relative flex flex-col items-center gap-2.5 rounded-2xl px-2 py-4 text-center transition-shadow hover:shadow-[0_14px_40px_-14px_rgb(var(--c-violet)/0.45)] disabled:opacity-60"
             >
               {a.icon ? <img src={`data:image/png;base64,${a.icon}`} className="h-12 w-12" /> : <div className="h-12 w-12 rounded-2xl bg-white/10" />}
               <span className="line-clamp-2 text-[12px] font-medium leading-tight text-white/85">{a.label}</span>

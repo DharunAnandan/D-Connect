@@ -56,12 +56,12 @@ export function Files() {
         className={`relative mb-6 flex h-52 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed transition-colors ${over ? 'border-cyan bg-cyan/[0.07]' : 'border-white/10 bg-white/[0.02] hover:border-white/20'} ${connected ? '' : 'pointer-events-none opacity-50'}`}
       >
         <input type="file" multiple className="hidden" onChange={(e) => sendList(e.target.files)} />
-        <motion.div animate={over ? { y: -8, scale: 1.12 } : { y: [0, -5, 0] }} transition={over ? spring : { duration: 3, repeat: Infinity }} className="mb-3 grid h-16 w-16 place-items-center rounded-2xl bg-[linear-gradient(135deg,#7c5cff,#35e0ff)] text-ink-950 shadow-[0_12px_40px_-8px_rgba(53,224,255,0.7)]">
+        <motion.div animate={over ? { y: -8, scale: 1.12 } : { y: [0, -5, 0] }} transition={over ? spring : { duration: 3, repeat: Infinity }} className="mb-3 grid h-16 w-16 place-items-center rounded-2xl bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-ink-950 shadow-[0_12px_40px_-8px_rgb(var(--c-cyan)/0.7)]">
           <Upload size={28} />
         </motion.div>
         <div className="font-semibold">{over ? 'Let go to send' : 'Drop files to send'}</div>
         <div className="mt-1 text-sm text-muted">or click to choose · any size</div>
-        {over && <motion.div layoutId="drop-glow" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(53,224,255,0.18),transparent_60%)]" />}
+        {over && <motion.div layoutId="drop-glow" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgb(var(--c-cyan)/0.18),transparent_60%)]" />}
       </motion.label>
 
       {transfers.length === 0 ? (
@@ -76,7 +76,7 @@ export function Files() {
               return (
                 <motion.div key={t.fid} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={spring}>
                   <Card className="flex items-center gap-4 p-4">
-                    <Ring value={done ? 1 : pct} size={50} stroke={5} colors={bad ? ['#f87171', '#ff5ca8'] : done ? ['#3ddc97', '#8be9ff'] : ['#7c5cff', '#35e0ff']}>
+                    <Ring value={done ? 1 : pct} size={50} stroke={5} colors={bad ? ['#f87171', 'rgb(var(--c-pink))'] : done ? ['rgb(var(--c-mint))', '#8be9ff'] : ['rgb(var(--c-violet))', 'rgb(var(--c-cyan))']}>
                       <AnimatePresence mode="wait">
                         {done ? (
                           <motion.span key="d" initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-mint"><Check size={20} strokeWidth={3} /></motion.span>

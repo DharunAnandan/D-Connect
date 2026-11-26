@@ -15,12 +15,21 @@ export function CallCard() {
   const [switching, setSwitching] = useState<'pc' | 'phone' | 'speaker' | null>(null)
   const [hint, setHint] = useState('')
   const [compact, setCompact] = useState(false)
-  const setSize = (on: boolean): void => {
-    setCompact(on)
-    call('callCompact', on)
+  // No half-drawn card while the window changes size: shrinking draws the small bar first and
+  // then shrinks the window; growing grows the window first and then draws the full card.
+  const setSize = async (on: boolean): Promise<void> => {
+    if (on) {
+      setCompact(true)
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      await call('callCompact', true)
+    } else {
+      await call('callCompact', false)
+      await new Promise((r) => requestAnimationFrame(r))
+      setCompact(false)
+    }
   }
   useEffect(() => {
-    if (c.state === 'idle' || c.state === 'ringing') setCompact(false) // ringing always shows in full
+    if ((c.state === 'idle' || c.state === 'ringing') && compact) void setSize(false) // ringing always shows in full
   }, [c.state])
   const [devs, setDevs] = useState<{ outputs: { name: string; label: string }[]; inputs: { name: string; label: string }[]; out: string | null; in: string | null } | null>(null)
   useEffect(() => {
@@ -172,7 +181,7 @@ export function CallCard() {
                 <Minimize2 size={14} />
               </button>
             )}
-            <div className="absolute -left-10 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(61,220,151,0.25)_0%,transparent_70%)]" />
+            <div className="absolute -left-10 -top-16 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgb(var(--c-mint)/0.25)_0%,transparent_70%)]" />
             <AnimatePresence>
               {waitingCall && (
                 <motion.div key="waiting" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="no-drag relative mt-3 mb-4">
@@ -203,7 +212,7 @@ export function CallCard() {
                 </motion.div>
               )}
             </AnimatePresence>
-            <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,0.30)_0%,transparent_70%)]" />
+            <div className="absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-[radial-gradient(circle,rgb(var(--c-violet)/0.30)_0%,transparent_70%)]" />
             <div className="relative mx-auto grid h-32 w-32 place-items-center">
               {(c.state === 'ringing' || c.state === 'dialing') && [0, 1, 2].map((i) => <motion.span key={i} className="absolute inset-2 rounded-full border-2 border-mint/70" initial={{ scale: 0.8, opacity: 0.9 }} animate={{ scale: 1.6, opacity: 0 }} transition={{ duration: 1.8, repeat: Infinity, delay: i * 0.6 }} />)}
               <motion.div animate={c.state === 'ringing' ? { scale: [1, 1.05, 1] } : {}} transition={{ duration: 1.2, repeat: Infinity }}>
@@ -343,7 +352,7 @@ export function CallCard() {
                 </div>
               )}
               {c.state === 'ringing' && (
-                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }} animate={{ rotate: [0, -14, 14, -14, 14, 0] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }} title={c.waiting ? 'Answer and hold the current call' : 'Answer'} onClick={() => call('callAnswer')} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.9)]">
+                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }} animate={{ rotate: [0, -14, 14, -14, 14, 0] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }} title={c.waiting ? 'Answer and hold the current call' : 'Answer'} onClick={() => call('callAnswer')} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgb(var(--c-mint)/0.9)]">
                   <Phone size={26} fill="currentColor" />
                 </motion.button>
               )}
@@ -450,7 +459,7 @@ function DevicePicker({ kind, value, options, onPick, open, onOpen }: { kind: 'o
         onClick={() => setOpen(!open)}
         className={`flex w-full items-center gap-2.5 rounded-2xl px-3 py-2 text-left ring-1 transition-colors ${open ? 'bg-white/[0.12] ring-cyan/40' : 'bg-white/[0.06] ring-white/10 hover:bg-white/[0.09]'}`}
       >
-        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-xl ${kind === 'out' ? 'bg-[linear-gradient(135deg,#7c5cff,#35e0ff)]' : 'bg-[linear-gradient(135deg,#3ddc97,#35e0ff)]'} text-ink-950`}>
+        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-xl ${kind === 'out' ? 'bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))]' : 'bg-[linear-gradient(135deg,rgb(var(--c-mint)),rgb(var(--c-cyan)))]'} text-ink-950`}>
           <CurIcon size={14} />
         </span>
         <span className="min-w-0 flex-1">

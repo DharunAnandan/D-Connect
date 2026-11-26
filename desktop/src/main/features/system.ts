@@ -16,7 +16,7 @@ export const BUILTIN: QuickCommand[] = [
   { id: 'screenshot', name: 'Screenshot', icon: 'camera', builtin: true },
   { id: 'shotarea', name: 'Screenshot area', icon: 'crop', builtin: true },
   { id: 'record', name: 'Screen record', icon: 'video', builtin: true, toggle: true },
-  { id: 'recarea', name: 'Record area', icon: 'crop', builtin: true },
+  { id: 'recarea', name: 'Record area', icon: 'video-area', builtin: true },
   { id: 'awake', name: 'Keep awake', icon: 'coffee', builtin: true, toggle: true }
 ]
 

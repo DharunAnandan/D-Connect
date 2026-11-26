@@ -9,7 +9,7 @@ import { spring } from '@/theme/motion'
 
 // fixed filters by kind of app (the package names cover the usual variants)
 const GROUPS: { id: string; label: string; color: string; match: RegExp }[] = [
-  { id: 'sms', label: 'SMS', color: '#35e0ff', match: /(\.mms|messaging|\.sms|com\.android\.messaging|com\.oneplus\.mms|com\.coloros\.mms|truecaller)/i },
+  { id: 'sms', label: 'SMS', color: 'rgb(var(--c-cyan))', match: /(\.mms|messaging|\.sms|com\.android\.messaging|com\.oneplus\.mms|com\.coloros\.mms|truecaller)/i },
   { id: 'whatsapp', label: 'WhatsApp', color: '#25d366', match: /^com\.whatsapp(\.w4b)?$/ },
   { id: 'instagram', label: 'Instagram', color: '#e1306c', match: /^com\.instagram\./ },
   { id: 'facebook', label: 'Facebook', color: '#1877f2', match: /^com\.facebook\.(katana|orca|lite|mlite)/ },

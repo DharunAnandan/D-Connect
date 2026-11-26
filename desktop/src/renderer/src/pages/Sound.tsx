@@ -37,7 +37,7 @@ export function MiniMixer() {
     <div className="h-screen w-screen p-2">
       <motion.div initial={{ opacity: 0, y: -8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring} className="glass-strong flex h-full flex-col overflow-hidden rounded-[22px] bg-ink-900/95 p-4 ring-1 ring-white/10">
         <div className="drag mb-3 flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-xl bg-[linear-gradient(135deg,#ff5ca8,#7c5cff)]"><Volume2 size={16} /></div>
+          <div className="grid h-8 w-8 place-items-center rounded-xl bg-[linear-gradient(135deg,rgb(var(--c-pink)),rgb(var(--c-violet)))]"><Volume2 size={16} /></div>
           <div className="flex-1 text-sm font-semibold">Sound</div>
           <button onClick={() => call('mixerWindow', false)} className="no-drag grid h-7 w-7 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"><X size={15} /></button>
         </div>
@@ -74,9 +74,9 @@ export function Sound() {
       ) : (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <Card strong className="relative overflow-hidden p-6">
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(255,92,168,0.22)_0%,transparent_70%)]" />
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgb(var(--c-pink)/0.22)_0%,transparent_70%)]" />
             <div className="relative mb-5 flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[linear-gradient(135deg,#ff5ca8,#7c5cff)] shadow-[0_8px_30px_-6px_rgba(255,92,168,0.6)]"><Speaker size={22} /></div>
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[linear-gradient(135deg,rgb(var(--c-pink)),rgb(var(--c-violet)))] shadow-[0_8px_30px_-6px_rgb(var(--c-pink)/0.6)]"><Speaker size={22} /></div>
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">This PC</div>
                 <div className="truncate font-semibold">{mx?.output?.label || 'Speaker'}</div>
@@ -148,7 +148,7 @@ export function Boost({ value, muted, onChange, onMute }: { value: number; muted
       )}
       <div className="relative h-8 flex-1">
         <div className="absolute inset-x-0 top-1/2 h-2 -translate-y-1/2 overflow-hidden rounded-full bg-white/10">
-          <div className={`h-full rounded-full ${muted ? 'bg-white/25' : value > 100 ? 'bg-[linear-gradient(90deg,#7c5cff_0%,#35e0ff_50%,#ffb547_75%,#ff5ca8_100%)]' : 'bg-[linear-gradient(90deg,#7c5cff,#35e0ff)]'}`} style={{ width: `${pct}%`, backgroundSize: value > 100 ? `${(100 / pct) * 100}% 100%` : undefined }} />
+          <div className={`h-full rounded-full ${muted ? 'bg-white/25' : value > 100 ? 'bg-[linear-gradient(90deg,#7c5cff_0%,#35e0ff_50%,#ffb547_75%,#ff5ca8_100%)]' : 'bg-[linear-gradient(90deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))]'}`} style={{ width: `${pct}%`, backgroundSize: value > 100 ? `${(100 / pct) * 100}% 100%` : undefined }} />
         </div>
         <div className="pointer-events-none absolute top-1/2 h-4 w-px -translate-y-1/2 bg-white/40" style={{ left: `${10000 / MAX}%` }} />
         <div className="pointer-events-none absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,0.4)]" style={{ left: `${pct}%` }} />

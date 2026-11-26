@@ -1,6 +1,6 @@
 // Slow aurora blobs behind the app: GPU-only transforms, blurred, very cheap.
 export function Background({ tint = 'default' }: { tint?: 'default' | 'eye' }) {
-  const colors = tint === 'eye' ? ['#35e0ff', '#3ddc97', '#7c5cff'] : ['#7c5cff', '#35e0ff', '#ff5ca8']
+  const colors = tint === 'eye' ? ['rgb(var(--c-cyan))', 'rgb(var(--c-mint))', 'rgb(var(--c-violet))'] : ['rgb(var(--c-violet))', 'rgb(var(--c-cyan))', 'rgb(var(--c-pink))']
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden bg-ink-900">
       <div className="aurora-blob" style={{ width: '46vw', height: '46vw', left: '-10vw', top: '-14vw', background: `radial-gradient(circle, ${colors[0]} 0%, ${colors[0]}00 68%)`, animation: 'drift1 26s ease-in-out infinite' }} />
