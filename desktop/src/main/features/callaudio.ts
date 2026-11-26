@@ -88,20 +88,23 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   }
 
   let rnnModules: string[] = [] // the RNNoise stage's modules (see startRnnoise)
+  // Remove every call-mic filter module by name, including ones left by an earlier run of the
+  // app (closed or restarted mid-call): nothing may keep the mic open after a call.
+  const sweepCallModules = async (): Promise<void> => {
+    const mods = (await sh('pactl', ['list', 'short', 'modules'])).split('\n')
+    const ids = mods.filter((l) => /dconnect_call_(mic|speaker|ai)/.test(l)).map((l) => l.split('\t')[0]).filter((x) => /^\d+$/.test(x))
+    for (const id of ids.sort((a, b) => +b - +a)) await sh('pactl', ['unload-module', id])
+  }
   const stopBridges = (): void => {
     for (const b of bridges) b.kill()
     // unload this bridge's voice processing (not a newer one started right after)
     const mod = ecModule
-    if (!bridging && rnnModules.length) {
-      const rnn = rnnModules.reverse()
-      rnnModules = []
-      setTimeout(async () => {
-        for (const m of rnn) await sh('pactl', ['unload-module', m])
-      }, 300)
-    }
-    if (mod && !bridging) {
+    if (!bridging && (mod || rnnModules.length)) {
       ecModule = null
-      setTimeout(() => sh('pactl', ['unload-module', mod]), 300)
+      rnnModules = []
+      setTimeout(() => {
+        if (!bridging && !bridges.length) void sweepCallModules()
+      }, 300)
     }
     bridges = []
   }
@@ -209,6 +212,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
   let ecModule: string | null = null
   const startVoiceProcessing = async (): Promise<{ sink: string; source: string } | null> => {
     await stopVoiceProcessing()
+    await sweepCallModules()
     const sinkMaster = outDev || (await sh('pactl', ['get-default-sink'])).trim()
     const sourceMaster = await realMic()
     if (!sinkMaster || !sourceMaster) return null
@@ -234,10 +238,9 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     return { sink: 'dconnect_call_speaker_ec', source: rnn || 'dconnect_call_mic_clean' }
   }
   const stopVoiceProcessing = async (): Promise<void> => {
-    for (const m of rnnModules.reverse()) await sh('pactl', ['unload-module', m])
     rnnModules = []
-    if (ecModule) await sh('pactl', ['unload-module', ecModule])
     ecModule = null
+    await sweepCallModules()
   }
 
   // RNNoise, bundled with the app (LADSPA plugin, GPL-3.0: resources/rnnoise). Copied to a fixed
@@ -574,6 +577,10 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     inDev = inp || null
     if (route === 'pc' || bridges.length) startCallBridges()
   })
+  // leftovers from an earlier run (the app was restarted mid-call)
+  setTimeout(() => {
+    if (!bridges.length && !bridging) void sweepCallModules()
+  }, 3000)
   ctx.handle('callRoute', () => route)
   // is the phone's screen control on? (needed to move a phone call to this PC)
   ctx.handle('phoneControl', async () => ((await ctx.hub.request('control.status', {}, 5000).catch(() => null)) as any)?.on !== false)

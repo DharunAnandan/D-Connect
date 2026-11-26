@@ -1,6 +1,6 @@
 // Incoming / ongoing call: a floating card with a pulsing avatar, answer and decline.
 import { AnimatePresence, motion } from 'framer-motion'
-import { Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Maximize2, Mic, MicOff, Minimize2, Pause, Phone, PhoneOff, Play, Repeat, Search, Smartphone, UserPlus, Volume2 } from 'lucide-react'
+import { BellOff, Bluetooth, Check, ChevronDown, Combine, Headphones, Laptop, Maximize2, Mic, MicOff, Minimize2, MessageSquare, Pause, Phone, PhoneOff, Play, Repeat, Search, Smartphone, UserPlus, Volume2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { CallState } from '@shared/protocol'
 import { Avatar } from '@/components/ui'
@@ -58,6 +58,10 @@ export function CallCard() {
   const twoCalls = inCall.length > 1 && !conference
   const waitingCall = c.waitingCall || null
   const [adding, setAdding] = useState(false)
+  const [replyTo, setReplyTo] = useState<string | null>(null) // decline with a message to this number
+  useEffect(() => {
+    if (c.state !== 'ringing' && !c.waitingCall) setReplyTo(null)
+  }, [c.state, !!c.waitingCall])
   const [menu, setMenu] = useState<'out' | 'in' | null>(null) // one speaker/mic menu open at a time
   // the phone's screen control (needed to move a phone call here): check when a call is live
   const [controlOff, setControlOff] = useState(false)
@@ -99,12 +103,20 @@ export function CallCard() {
     call('lastCall').then(setC)
     return dc.on('call', setC)
   }, [])
+  // Ringing on the PC: a full ring for a call when you're free; while you're on a call, only two
+  // quiet beeps now and then. "Silence" stops the PC's sound (the call keeps ringing for them;
+  // it isn't declined).
+  const ringKey = c.waitingCall ? 'w:' + (c.waitingCall.number || c.waitingCall.name || '') : c.state === 'ringing' ? 'r:' + (c.number || c.name || '') : ''
+  const [silenced, setSilenced] = useState('')
+  const isSilenced = !!ringKey && silenced === ringKey
   useEffect(() => {
-    if (c.state !== 'ringing' && !c.waitingCall) return
-    sfx.ring()
-    const t = setInterval(() => sfx.ring(), 2600)
+    if (!ringKey || isSilenced) return
+    const waiting = ringKey.startsWith('w:')
+    const play = (): void => (waiting ? sfx.waitBeep() : sfx.ring())
+    play()
+    const t = setInterval(play, waiting ? 5000 : 2600)
     return () => clearInterval(t)
-  }, [c.state, !!c.waitingCall])
+  }, [ringKey, isSilenced])
   useEffect(() => {
     const t = setInterval(() => tick((x) => x + 1), 1000)
     return () => clearInterval(t)
@@ -164,17 +176,29 @@ export function CallCard() {
             <AnimatePresence>
               {waitingCall && (
                 <motion.div key="waiting" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="no-drag relative mt-3 mb-4">
-                  <div className="flex items-center gap-3 rounded-2xl bg-mint/10 p-3 text-left ring-1 ring-mint/30">
-                    <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
-                      <Avatar name={waitingCall.name || waitingCall.number || '?'} size={40} />
-                    </motion.div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-mint">Call waiting</div>
-                      <div className="truncate text-sm font-semibold">{waitingCall.name || waitingCall.number || 'Unknown'}</div>
-                      <div className="truncate text-[11px] text-white/50">Answer puts {c.name || c.number || 'this call'} on hold</div>
+                  <div className="rounded-2xl bg-mint/10 p-3 text-left ring-1 ring-mint/30">
+                    <div className="flex items-center gap-3">
+                      <motion.div animate={isSilenced ? {} : { scale: [1, 1.08, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>
+                        <Avatar name={waitingCall.name || waitingCall.number || '?'} size={40} />
+                      </motion.div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-mint">Call waiting</div>
+                        <div className="truncate text-sm font-semibold">{waitingCall.name || waitingCall.number || 'Unknown'}</div>
+                        <div className="truncate text-[11px] text-white/50">{isSilenced ? 'Silenced here · still ringing for them' : `Answer puts ${c.name || c.number || 'this call'} on hold`}</div>
+                      </div>
                     </div>
-                    <button title="Decline" onClick={() => call('callReject')} className="grid h-10 w-10 place-items-center rounded-full bg-rose"><PhoneOff size={17} /></button>
-                    <button title="Answer and hold the current call" onClick={() => call('callAnswer')} className="grid h-10 w-10 place-items-center rounded-full bg-mint text-ink-950"><Phone size={17} fill="currentColor" /></button>
+                    <div className="mt-2.5 grid grid-cols-4 gap-1.5">
+                      {[
+                        { show: true, label: isSilenced ? 'Silenced' : 'Silence', I: BellOff, cls: isSilenced ? 'bg-white/5 text-white/35' : 'bg-white/10 hover:bg-white/15', on: () => setSilenced(ringKey), title: "Stop the beep here; it keeps ringing for them (not declined)" },
+                        { show: !!waitingCall.number, label: 'Message', I: MessageSquare, cls: 'bg-white/10 hover:bg-white/15', on: () => setReplyTo(waitingCall.number || null), title: 'Decline and send a text' },
+                        { show: true, label: 'Decline', I: PhoneOff, cls: 'bg-rose', on: () => call('callReject'), title: 'Decline' },
+                        { show: true, label: 'Answer', I: Phone, cls: 'bg-mint text-ink-950', on: () => call('callAnswer'), title: 'Answer and hold the current call' }
+                      ].map((b) => (
+                        <button key={b.label} disabled={!b.show} title={b.title} onClick={b.on} className={`flex flex-col items-center gap-1 rounded-xl py-1.5 text-[10.5px] font-semibold disabled:opacity-25 ${b.cls}`}>
+                          <b.I size={15} /> {b.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -207,6 +231,16 @@ export function CallCard() {
                       {l.name && l.number && <div className="truncate text-[10.5px] text-white/45">{l.number}</div>}
                     </div>
                     {l.since && <span className="text-[10.5px] tabular-nums text-white/40">{duration((Date.now() - l.since) / 1000)}</span>}
+                    <button
+                      title={`End the call with ${l.name || l.number} (the others stay)`}
+                      onClick={() => {
+                        setHint('')
+                        call('callControl', 'drop', l.number || l.name).then((r: any) => !r?.ok && setHint('Turn on Screen control on the phone (Settings → Screen control) to remove someone from here.'))
+                      }}
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-rose/15 text-rose hover:bg-rose hover:text-white"
+                    >
+                      <PhoneOff size={13} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -276,6 +310,7 @@ export function CallCard() {
                 ))}
               </div>
             )}
+            <AnimatePresence>{replyTo && <DeclineMessage onSend={(text) => { call('callReject'); call('smsSend', replyTo, text); setReplyTo(null) }} onClose={() => setReplyTo(null)} />}</AnimatePresence>
             <div className="no-drag relative mt-7 flex items-center justify-center gap-8">
               {live && (
                 <div className="flex flex-col items-center gap-1.5">
@@ -289,6 +324,22 @@ export function CallCard() {
                 <PhoneOff size={26} />
               </motion.button>
               {c.state === 'ringing' && (
+                <div className="flex flex-col items-center gap-1.5">
+                  <motion.button whileTap={{ scale: 0.88 }} title="Silence the ring on this PC (the call isn't declined)" onClick={() => setSilenced(ringKey)} className={`grid h-12 w-12 place-items-center rounded-full ${isSilenced ? 'bg-white/5 text-white/35' : 'bg-white/10 hover:bg-white/15'}`}>
+                    <BellOff size={19} />
+                  </motion.button>
+                  <span className="text-[11px] font-semibold text-white/55">{isSilenced ? 'Silenced' : 'Silence'}</span>
+                </div>
+              )}
+              {c.state === 'ringing' && !c.app && c.number && (
+                <div className="flex flex-col items-center gap-1.5">
+                  <motion.button whileTap={{ scale: 0.88 }} title="Decline with a message" onClick={() => setReplyTo(c.number || null)} className="grid h-12 w-12 place-items-center rounded-full bg-white/10 hover:bg-white/15">
+                    <MessageSquare size={19} />
+                  </motion.button>
+                  <span className="text-[11px] font-semibold text-white/55">Message</span>
+                </div>
+              )}
+              {c.state === 'ringing' && (
                 <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.88 }} animate={{ rotate: [0, -14, 14, -14, 14, 0] }} transition={{ duration: 0.7, repeat: Infinity, repeatDelay: 0.8 }} title={c.waiting ? 'Answer and hold the current call' : 'Answer'} onClick={() => call('callAnswer')} className="grid h-16 w-16 place-items-center rounded-full bg-mint text-ink-950 shadow-[0_10px_30px_-6px_rgba(61,220,151,0.9)]">
                   <Phone size={26} fill="currentColor" />
                 </motion.button>
@@ -298,6 +349,27 @@ export function CallCard() {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+// Decline and text the caller: ready replies, or your own.
+const QUICK_REPLIES = ["Can't talk now. I'll call you back.", "I'm on another call. I'll call you soon.", 'In a meeting. Please text me.', 'Driving right now. Will call later.']
+function DeclineMessage({ onSend, onClose }: { onSend: (text: string) => void; onClose: () => void }) {
+  const [own, setOwn] = useState('')
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="no-drag relative mx-auto mt-4 w-full max-w-[310px] rounded-2xl bg-white/[0.06] p-2 text-left ring-1 ring-white/10">
+      <div className="flex items-center px-1.5 pb-1">
+        <span className="flex-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Decline and text</span>
+        <button onClick={onClose} className="text-[11px] text-white/50 hover:text-white">Cancel</button>
+      </div>
+      {QUICK_REPLIES.map((q) => (
+        <button key={q} onClick={() => onSend(q)} className="block w-full rounded-xl px-2.5 py-2 text-left text-[12.5px] text-white/85 hover:bg-white/[0.08]">{q}</button>
+      ))}
+      <div className="mt-1 flex items-center gap-2 rounded-xl bg-white/[0.06] px-2.5 py-1.5 ring-1 ring-white/10 focus-within:ring-cyan/50">
+        <input value={own} onChange={(e) => setOwn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && own.trim() && onSend(own.trim())} placeholder="Write your own…" className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-white/35" />
+        <button disabled={!own.trim()} onClick={() => onSend(own.trim())} className="rounded-full bg-mint px-2.5 py-1 text-[11px] font-semibold text-ink-950 disabled:opacity-40">Send</button>
+      </div>
+    </motion.div>
   )
 }
 

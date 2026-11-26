@@ -107,6 +107,44 @@ class ControlService : AccessibilityService() {
     // press the first button whose text or description matches (the phone's own call screen)
     var lastScreen = ""
 
+    // In a list where each row is a person (e.g. "Manage conference"), press the button labelled
+    // one of [buttons] inside the row that mentions [who] (name or number).
+    fun clickInRow(who: List<String>, buttons: List<String>): Boolean {
+        val roots = windows.mapNotNull { it.root } + listOfNotNull(rootInActiveWindow)
+        val keys = who.filter { it.isNotBlank() }.map { it.lowercase() }
+        fun label(n: AccessibilityNodeInfo) = ((n.text ?: "").toString() + " " + (n.contentDescription ?: "").toString()).lowercase()
+        fun digits(s: String) = s.filter { it.isDigit() }.takeLast(10)
+        for (root in roots) {
+            val queue = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }
+            while (queue.isNotEmpty()) {
+                val n = queue.removeFirst()
+                val t = label(n)
+                val hit = keys.any { k -> (k.length > 2 && t.contains(k)) || (digits(k).length >= 6 && digits(t).endsWith(digits(k))) }
+                if (hit) {
+                    // climb to the row, then look for the end button inside it
+                    var row: AccessibilityNodeInfo? = n.parent
+                    repeat(4) {
+                        val r = row ?: return@repeat
+                        val inner = ArrayDeque<AccessibilityNodeInfo>().apply { add(r) }
+                        while (inner.isNotEmpty()) {
+                            val m = inner.removeFirst()
+                            val ml = label(m).trim()
+                            if (ml.isNotEmpty() && buttons.any { ml.contains(it) } && (m.isClickable || m.parent?.isClickable == true)) {
+                                val c = if (m.isClickable) m else m.parent
+                                if (c?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true) return true
+                            }
+                            for (i in 0 until m.childCount) m.getChild(i)?.let { inner.add(it) }
+                        }
+                        row = r.parent
+                    }
+                }
+                for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
+            }
+        }
+        clickByLabel(listOf("\u0000")) // record the screen for the report
+        return false
+    }
+
     // press the clickable control whose whole label is one of [labels] (not just containing it)
     fun clickExact(labels: List<String>): Boolean {
         val roots = windows.mapNotNull { it.root } + listOfNotNull(rootInActiveWindow)

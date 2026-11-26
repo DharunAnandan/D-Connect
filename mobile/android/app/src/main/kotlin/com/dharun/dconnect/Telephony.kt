@@ -171,6 +171,25 @@ object Telephony {
                 }
                 main.postDelayed({ attempt() }, 700)
             }
+            "drop" -> {
+                // end one person in a conference: Manage conference -> their row's end button
+                val who = target ?: return false
+                val names = listOf(who) + listOfNotNull(contactName(ctx, who))
+                val ends = listOf("end call", "hang up", "disconnect", "end", "remove")
+                var tries = 0
+                fun attempt() {
+                    tries++
+                    if (svc.clickInRow(names, ends)) return report("drop", true, "ended $who")
+                    if (svc.clickByLabel(listOf("manage conference", "manage", "conference call", "participants"))) main.postDelayed({
+                        if (svc.clickInRow(names, ends)) report("drop", true, "ended $who")
+                        else if (tries < 4) main.postDelayed({ attempt() }, 600)
+                        else report("drop", false, "no end button for $who: ${svc.lastScreen}")
+                    }, 900)
+                    else if (tries < 6) main.postDelayed({ attempt() }, 500)
+                    else report("drop", false, "no Manage conference on the call screen: ${svc.lastScreen}")
+                }
+                main.postDelayed({ attempt() }, 700)
+            }
             "audio-pc", "audio-phone", "audio-speaker" -> {
                 // the call screen can only be pressed while it's on: wake it for a few seconds
                 try {

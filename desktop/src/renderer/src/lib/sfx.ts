@@ -35,5 +35,7 @@ export const sfx = {
   notify: () => tone([880, 1174.66], 0.08, 0.05, 0.9),
   tap: () => tone([1318.5], 0, 0.025, 0.25),
   sent: () => tone([987.77, 1318.5], 0.06, 0.04, 0.6),
-  ring: () => tone([1046.5, 1318.5, 1046.5, 1318.5], 0.14, 0.12, 0.5, 'triangle')
+  ring: () => tone([1046.5, 1318.5, 1046.5, 1318.5], 0.14, 0.12, 0.5, 'triangle'),
+  // a second call while you're on one: two quiet short beeps, not a ring
+  waitBeep: () => tone([880, 880], 0.32, 0.035, 0.22)
 }

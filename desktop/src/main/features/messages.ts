@@ -15,6 +15,8 @@ export function messages(ctx: Ctx, openCall: (c: CallState) => void, closeCall: 
         body: data.body,
         reply: { kind: 'sms', address: data.address }
       })
+    } else if (type === 'call.route.result' && data?.action === 'drop' && !data.ok) {
+      ctx.emit('call.hint', "Couldn't remove them from here: the phone's call screen had no Manage conference / end button. Use the phone for this one.")
     } else if (type === 'call.route.result' && ['hold', 'swap', 'merge'].includes(data?.action) && !data.ok) {
       // hold / swap / merge couldn't be pressed on the phone's call screen: say so on the card
       ctx.emit('call.hint', `Couldn't ${data.action} from here: the phone's call screen had no ${data.action === 'hold' ? 'Hold' : data.action === 'swap' ? 'Swap' : 'Merge'} button. Use the phone for this one.`)
@@ -62,7 +64,7 @@ export function messages(ctx: Ctx, openCall: (c: CallState) => void, closeCall: 
     ctx.hub.send('call.dial', { number, sim })
   })
   ctx.handle('sims', async () => ((await ctx.hub.request('calls.sims', {}).catch(() => null)) as any)?.sims || [])
-  ctx.handle('callControl', (action: 'hold' | 'swap' | 'merge') => ctx.hub.request('call.control', { action }).catch(() => ({ ok: false })))
+  ctx.handle('callControl', (action: 'hold' | 'swap' | 'merge' | 'drop', target?: string) => ctx.hub.request('call.control', { action, target }).catch(() => ({ ok: false })))
   ctx.handle('callMute', (muted: boolean) => {
     muteHere(muted) // the laptop mic, when the call is on this PC
     ctx.hub.send('call.mute', { muted }) // and the phone's own mic
