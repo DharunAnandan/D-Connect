@@ -79,6 +79,16 @@ export function ToastHost() {
     return undefined
   }, [toasts.length])
 
+  // each app icon's main colour, worked out once per icon
+  const [colors, setColors] = useState<Record<string, string>>({})
+  useEffect(() => {
+    for (const t of toasts) {
+      if (!t.icon || t.icon in colors) continue
+      iconColor(t.icon).then((c) => setColors((m) => ({ ...m, [t.icon!]: c || '' })))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toasts])
+
   return (
     <div className="flex h-screen flex-col justify-end overflow-hidden">
     <div ref={stack} className="flex flex-col-reverse items-end gap-2.5 p-3">
@@ -102,11 +112,19 @@ export function ToastHost() {
                 if (!replying) call('toastHover', false)
               }}
               className="glass-strong group relative w-[390px] overflow-hidden rounded-[22px] p-4 text-white"
+              style={tint(colors[t.icon || ''])}
             >
-              <div className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${k.grad}`} />
-              <div className="flex gap-3">
+              {/* the app's own colour, glossy: tint, top highlight, a shine that sweeps once */}
+              {colors[t.icon || ''] && (
+                <>
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-[22px] bg-gradient-to-b from-white/[0.22] via-white/[0.06] to-transparent" />
+                  <motion.div className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent" initial={{ left: '-40%' }} animate={{ left: '130%' }} transition={{ duration: 1.1, delay: 0.25, ease: 'easeOut' }} />
+                </>
+              )}
+              <div className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${colors[t.icon || ''] ? '' : k.grad}`} style={colors[t.icon || ''] ? { background: `rgb(${colors[t.icon || '']})` } : undefined} />
+              <div className="relative flex gap-3">
                 {t.icon ? (
-                  <img src={t.icon} className="h-10 w-10 shrink-0 rounded-xl bg-white/10 p-1.5" />
+                  <img src={t.icon} className="h-10 w-10 shrink-0 rounded-xl bg-white/10 p-1.5" style={colors[t.icon] ? { boxShadow: `0 0 18px -2px rgba(${colors[t.icon]},0.75)`, background: `rgba(${colors[t.icon]},0.18)` } : undefined} />
                 ) : (
                   <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${k.grad} text-ink-950`}>
                     <k.icon size={18} />
@@ -164,4 +182,45 @@ export function ToastHost() {
     </div>
     </div>
   )
+}
+
+// the most colourful average of an icon (skips transparent, near-white and near-black pixels)
+function iconColor(src: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas')
+        c.width = c.height = 24
+        const g = c.getContext('2d')!
+        g.drawImage(img, 0, 0, 24, 24)
+        const d = g.getImageData(0, 0, 24, 24).data
+        let r = 0, gr = 0, b = 0, w = 0
+        for (let i = 0; i < d.length; i += 4) {
+          const [R, G, B, A] = [d[i], d[i + 1], d[i + 2], d[i + 3]]
+          if (A < 128) continue
+          const max = Math.max(R, G, B), min = Math.min(R, G, B)
+          if (max < 40 || (min > 215 && max - min < 25)) continue // black / white
+          const sat = (max - min) / max
+          const wt = 0.15 + sat * sat * 4 // favour the colourful parts
+          r += R * wt; gr += G * wt; b += B * wt; w += wt
+        }
+        if (!w) return resolve(null)
+        resolve(`${Math.round(r / w)},${Math.round(gr / w)},${Math.round(b / w)}`)
+      } catch {
+        resolve(null)
+      }
+    }
+    img.onerror = () => resolve(null)
+    img.src = src
+  })
+}
+
+// glass tinted with the app's colour (falls back to the plain glass)
+function tint(rgb?: string): React.CSSProperties | undefined {
+  if (!rgb) return undefined
+  return {
+    background: `linear-gradient(135deg, rgba(${rgb},0.42) 0%, rgba(${rgb},0.16) 48%, rgba(12,16,34,0.88) 100%)`,
+    boxShadow: `0 18px 50px -14px rgba(${rgb},0.55), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(${rgb},0.35)`
+  }
 }

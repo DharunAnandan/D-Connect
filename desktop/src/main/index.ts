@@ -192,6 +192,12 @@ app.whenReady().then(async () => {
   ctx.handle('lastCall', () => lastCall)
   // test only (DC_DEV_CONTROL): show the card with sample calls, no phone call needed
   if (process.env.DC_DEV_CONTROL) {
+    ctx.handle('devToast', () => {
+      const icon = (fill: string): string => 'data:image/svg+xml;base64,' + Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="28" fill="${fill}"/><circle cx="32" cy="32" r="12" fill="#fff"/></svg>`).toString('base64')
+      toast({ id: 'dev1', kind: 'notification', app: 'Sample Chat', title: 'Sample person', body: 'Green app icon, green banner.', icon: icon('#25d366'), ttl: 20000 })
+      toast({ id: 'dev2', kind: 'notification', app: 'Sample Photos', title: 'Someone liked your post', body: 'Pink app icon, pink banner.', icon: icon('#e1306c'), ttl: 20000 })
+      toast({ id: 'dev3', kind: 'notification', app: 'Sample Messenger', title: 'New message', body: 'Blue app icon, blue banner.', icon: icon('#2aabee'), ttl: 20000 })
+    })
     ctx.handle('devFakeCall', (preset: string) => {
       const t = Date.now() - 95000
       const a = { number: '+910000000001', name: 'Sample One', since: t }
