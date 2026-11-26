@@ -111,7 +111,7 @@ export function ToastHost() {
                 setHover(false)
                 if (!replying) call('toastHover', false)
               }}
-              className="glass-strong group relative w-[390px] overflow-hidden rounded-[22px] p-4 text-white"
+              className="group relative w-[390px] overflow-hidden rounded-[22px] p-4 text-white"
               style={tint(colors[t.icon || ''])}
             >
               {/* the app's own colour, glossy: tint, top highlight, a shine that sweeps once */}
@@ -216,11 +216,17 @@ function iconColor(src: string): Promise<string | null> {
   })
 }
 
-// glass tinted with the app's colour (falls back to the plain glass)
-function tint(rgb?: string): React.CSSProperties | undefined {
-  if (!rgb) return undefined
+// A solid dark card (the desktop behind must never show through: Linux can't blur behind a
+// pop-up window), tinted with the app's colour when there is one.
+const BASE = '#0d1124'
+function tint(rgb?: string): React.CSSProperties {
+  if (!rgb)
+    return {
+      background: `linear-gradient(135deg, rgba(124,92,255,0.16) 0%, rgba(53,224,255,0.06) 55%, rgba(0,0,0,0) 100%), ${BASE}`,
+      boxShadow: '0 18px 50px -14px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 0 1px rgba(255,255,255,0.08)'
+    }
   return {
-    background: `linear-gradient(135deg, rgba(${rgb},0.42) 0%, rgba(${rgb},0.16) 48%, rgba(12,16,34,0.88) 100%)`,
+    background: `linear-gradient(135deg, rgba(${rgb},0.38) 0%, rgba(${rgb},0.14) 50%, rgba(${rgb},0.04) 100%), ${BASE}`,
     boxShadow: `0 18px 50px -14px rgba(${rgb},0.55), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 0 0 1px rgba(${rgb},0.35)`
   }
 }
