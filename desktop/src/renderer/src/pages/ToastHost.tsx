@@ -100,7 +100,7 @@ export function ToastHost() {
               key={t.id}
               layout
               initial={{ opacity: 0, x: 80, scale: 0.92, filter: 'blur(8px)' }}
-              animate={{ opacity: 1 - i * 0.08, x: 0, scale: 1 - i * 0.015, filter: 'blur(0px)' }}
+              animate={{ opacity: 1, x: 0, scale: 1 - i * 0.015, filter: 'blur(0px)' }}
               exit={{ opacity: 0, x: 60, scale: 0.94, filter: 'blur(6px)', transition: { duration: 0.22 } }}
               transition={{ type: 'spring', stiffness: 420, damping: 34 }}
               onMouseEnter={() => {
