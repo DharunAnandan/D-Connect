@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The D-Connect mark for the quick-settings tile: a laptop (a D on its screen) and a phone.
-     One colour (the system tints quick-settings icons). Same drawing as the app icon. -->
+<!-- The D-Connect mark for the quick-settings tile: a laptop (a D on its screen) linked with a
+     phone in front of its corner. One colour (the system tints it). Same drawing as the app icon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="58"
-    android:viewportHeight="58">
-    <group android:translateX="-2" android:translateY="-0.5">
-        <path android:pathData="M12 15h24a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3h-24a3 3 0 0 1-3-3v-15a3 3 0 0 1 3-3z" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.2" android:strokeLineJoin="round" />
-        <path android:pathData="M4 39.5h40v1.2a3 3 0 0 1-3 3h-34a3 3 0 0 1-3-3zM20.5 39.5h7v.9a.6 .6 0 0 1-.6 .6h-5.8a.6 .6 0 0 1-.6-.6z" android:fillColor="#FFFFFFFF" android:fillType="evenOdd" />
-        <path android:pathData="M20.5 20.5h2.8c3 0 5 2.1 5 4.8s-2 4.8-5 4.8h-2.8z" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.8" android:strokeLineJoin="round" />
-        <path android:pathData="M49 22h6a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3v-17a3 3 0 0 1 3-3z" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.2" android:strokeLineJoin="round" />
-        <path android:pathData="M50.6 25.8h2.8" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" />
+    android:viewportWidth="51"
+    android:viewportHeight="51">
+    <group android:translateX="0" android:translateY="-5">
+        <path android:pathData="M31 36H12a3 3 0 0 1-3-3V18a3 3 0 0 1 3-3h24a3 3 0 0 1 3 3v3.5" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.2" android:strokeLineCap="round" android:strokeLineJoin="round" />
+        <path android:pathData="M4 39.5h27v1.2a3 3 0 0 1-3 3h-21a3 3 0 0 1-3-3zM14.5 39.5h6v.9a.6 .6 0 0 1-.6 .6h-4.8a.6 .6 0 0 1-.6-.6z" android:fillColor="#FFFFFFFF" android:fillType="evenOdd" />
+        <path android:pathData="M18 20.5h2.8c3 0 5 2.1 5 4.8s-2 4.8-5 4.8h-2.8z" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.8" android:strokeLineJoin="round" />
+        <path android:pathData="M38 24h6a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3v-16a3 3 0 0 1 3-3z" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.2" android:strokeLineJoin="round" />
+        <path android:pathData="M39.6 27.8h2.8" android:strokeColor="#FFFFFFFF" android:strokeWidth="2.2" android:strokeLineCap="round" />
     </group>
 </vector>
