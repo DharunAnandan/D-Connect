@@ -122,6 +122,7 @@ export function callAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m: b
     } catch {}
   }
   ctx.hub.on('message', (type, data) => {
+    if (type === 'call.debug') return routeLog(`dialer notification: ${JSON.stringify(data)}`)
     if (type !== 'call.route.result') return
     lastRouteResult = data
     routeLog(`phone: ${JSON.stringify(data)}`)

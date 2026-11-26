@@ -175,10 +175,16 @@ object CallLines {
         // timer (or "Ongoing call") once the other person picks up. That's the answer.
         lines.firstOrNull { it.status == "dialing" }?.let { d ->
             val t = "$title $text".lowercase()
+            // for diagnosing other dialers: what the call notification said, and when
+            Bridge.emit("call.debug", mapOf("title" to title, "text" to text, "chrono" to chrono, "when" to whenMs, "dialedAt" to d.since))
             val stillCalling = Regex("calling|dialing|dialling|ringing|connecting|outgoing").containsMatchIn(t)
-            if (!stillCalling && (chrono || Regex("ongoing|current call|on call|in call|active call|\\b\\d{1,2}:\\d{2}\\b").containsMatchIn(t))) {
+            // OnePlus starts the notification's timer when you dial: a timer that started then is
+            // still ringing. A timer that (re)starts later is the moment they picked up.
+            val timerFromAnswer = chrono && whenMs > d.since + 2500 && whenMs <= System.currentTimeMillis() + 2000
+            val saysOnCall = !chrono && Regex("ongoing|current call|on call|in call|active call").containsMatchIn(t)
+            if (!stillCalling && (timerFromAnswer || saysOnCall)) {
                 d.status = "active"
-                d.since = if (chrono && whenMs > 0 && whenMs <= System.currentTimeMillis() + 2000) whenMs else System.currentTimeMillis()
+                d.since = if (timerFromAnswer) whenMs else System.currentTimeMillis()
                 emit()
             }
             return

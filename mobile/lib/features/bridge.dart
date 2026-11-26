@@ -152,6 +152,7 @@ class Bridge {
         case 'call.state':
         case 'call.audio':
         case 'call.route.result':
+        case 'call.debug':
         case 'media.phone.state':
           link.send(type!, data);
         case 'mirror.control':
