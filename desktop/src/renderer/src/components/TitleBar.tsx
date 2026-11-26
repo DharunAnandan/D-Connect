@@ -52,19 +52,19 @@ export function Logo({ size = 28 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 64 64">
       <defs>
         <linearGradient id="lg-a" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" style={{ stopColor: "rgb(var(--c-violet))" }} />
-          <stop offset="0.55" style={{ stopColor: "rgb(var(--c-cyan))" }} />
-          <stop offset="1" style={{ stopColor: "rgb(var(--c-mint))" }} />
+          <stop offset="0" style={{ stopColor: "#5b3fe0" }} />
+          <stop offset="0.55" style={{ stopColor: "#2a8fe0" }} />
+          <stop offset="1" style={{ stopColor: "#21b394" }} />
         </linearGradient>
       </defs>
       <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#lg-a)" />
-      {/* a laptop with a D on its screen, and a phone beside it (outline style) */}
-      <g transform="translate(3 -1)" fill="none" stroke="#f4f6ff" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 38V20a3.5 3.5 0 0 1 3.5-3.5h23a3.5 3.5 0 0 1 3.5 3.5v4.5" strokeWidth="3.4" />
-      <path d="M6 42.5h27" strokeWidth="3.4" />
-      <path d="M20 22.5h3c3.3 0 5.5 2.2 5.5 5s-2.2 5-5.5 5h-3z" strokeWidth="3" />
-      <path d="M41.5 27h7a3.5 3.5 0 0 1 3.5 3.5v16a3.5 3.5 0 0 1-3.5 3.5h-7a3.5 3.5 0 0 1-3.5-3.5v-16a3.5 3.5 0 0 1 3.5-3.5z" strokeWidth="3.4" />
-      <path d="M43.5 31h3" strokeWidth="2.4" /></g>
+      {/* a laptop with a D on its screen, and a phone beside it */}
+      <g transform="translate(32 32) scale(0.8) translate(-31 -29.5)">
+      <path d="M12 15h24a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3h-24a3 3 0 0 1-3-3v-15a3 3 0 0 1 3-3z" fill="none" stroke="#0b1020" strokeWidth="3.2" strokeLinejoin="round" />
+      <path fillRule="evenodd" d="M4 39.5h40v1.2a3 3 0 0 1-3 3h-34a3 3 0 0 1-3-3zM20.5 39.5h7v.9a.6 .6 0 0 1-.6 .6h-5.8a.6 .6 0 0 1-.6-.6z" fill="#0b1020" />
+      <path d="M20.5 20.5h2.8c3 0 5 2.1 5 4.8s-2 4.8-5 4.8h-2.8z" fill="none" stroke="#0b1020" strokeWidth="2.8" strokeLinejoin="round" />
+      <path d="M49 22h6a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3v-17a3 3 0 0 1 3-3z" fill="none" stroke="#0b1020" strokeWidth="3.2" strokeLinejoin="round" />
+      <path d="M50.6 25.8h2.8" fill="none" stroke="#0b1020" strokeWidth="2.2" strokeLinecap="round" /></g>
     </svg>
   )
 }

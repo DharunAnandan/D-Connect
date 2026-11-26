@@ -22,6 +22,61 @@ export const NAV = [
 ]
 
 export function Sidebar({ route, go }: { route: string; go: (r: string) => void }) {
+  const { conn, status, notifs, eye, devices, settings } = useApp()
+  if (settings.navStyle === 'dock') return <Dock route={route} go={go} />
+  return <FullSidebar route={route} go={go} />
+}
+
+// The slim dock: icon above a short label, the phone as a round badge at the top.
+const SHORT: Record<string, string> = { '/notifications': 'Alerts', '/eye': 'Eyes', '/mirror': 'Screen' }
+function Dock({ route, go }: { route: string; go: (r: string) => void }) {
+  const { conn, status, notifs, devices } = useApp()
+  const [open, setOpen] = useState(false)
+  const many = devices.length > 1
+  const item = (to: string, label: string, Icon: any, badge = 0) => {
+    const active = to === '/' ? route === '/' : route.startsWith(to)
+    return (
+      <button key={to} onClick={() => go(to)} title={label} className="group relative flex w-full flex-col items-center gap-1 py-1.5">
+        <span className={`relative grid h-9 w-14 place-items-center rounded-2xl transition-colors ${active ? '' : 'group-hover:bg-white/[0.05]'}`}>
+          {active && <motion.span layoutId="dock-active" transition={spring} className="absolute inset-0 rounded-2xl bg-[linear-gradient(120deg,rgb(var(--c-violet)/0.32),rgb(var(--c-cyan)/0.16))] ring-1 ring-white/[0.1]" />}
+          <Icon size={19} className={`relative ${active ? 'text-white' : 'text-white/60 group-hover:text-white/90'}`} />
+          {badge > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-[16px] rounded-full bg-pink px-1 text-center text-[9.5px] font-bold leading-[16px] text-white">{badge > 99 ? '99+' : badge}</span>}
+        </span>
+        <span className={`text-[10.5px] font-medium ${active ? 'text-white' : 'text-white/50'}`}>{SHORT[to] || label}</span>
+      </button>
+    )
+  }
+  return (
+    <aside className="flex w-[84px] shrink-0 flex-col items-center px-1.5 pb-3">
+      <div className="relative mb-3 mt-1">
+        <button onClick={() => many && setOpen(!open)} title={`${conn.device?.name || 'No phone'}${status ? ` · ${status.battery}%` : ''}`} className="relative grid h-12 w-12 place-items-center rounded-2xl bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-ink-950 shadow-[0_8px_24px_-8px_rgb(var(--c-violet)/0.8)]">
+          <MonitorSmartphone size={20} />
+          <span className={`absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-ink-900 ${conn.connected ? 'bg-mint' : 'bg-white/30'}`} />
+        </button>
+        {conn.connected && status && <div className="mt-1 text-center text-[10px] font-semibold tabular-nums text-white/55">{status.battery}%</div>}
+        <AnimatePresence>
+          {open && (
+            <motion.div initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} className="glass-strong absolute left-full top-0 z-30 ml-2 w-56 rounded-2xl p-1.5">
+              {devices.map((d: any) => (
+                <button key={d.deviceId} onClick={async () => { await call('activateDevice', d.deviceId); setOpen(false) }} className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left ${d.active ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}>
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${d.active ? 'bg-mint' : d.online ? 'bg-amber' : 'bg-white/20'}`} />
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{d.name}</span>
+                  {d.active && <Check size={15} className="text-mint" />}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      <nav className="flex w-full flex-1 flex-col items-center gap-0.5 overflow-y-auto">
+        {NAV.map((n) => item(n.to, n.label, n.icon, n.to === '/notifications' ? notifs.length : 0))}
+      </nav>
+      {item('/settings', 'Settings', Settings)}
+    </aside>
+  )
+}
+
+function FullSidebar({ route, go }: { route: string; go: (r: string) => void }) {
   const { conn, status, notifs, eye, devices } = useApp()
   const [open, setOpen] = useState(false)
   const [bt] = useLive<{ connected: boolean; callLink: boolean }>('btLink', 'btlink', { connected: false, callLink: false })
