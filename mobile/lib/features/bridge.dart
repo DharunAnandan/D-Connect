@@ -64,7 +64,9 @@ class Bridge {
         case 'apps.list':
           link.reply(m, 'apps', {'apps': await Native.list('apps')});
         case 'photos.get':
-          link.reply(m, 'photos.list', {'items': await Native.list('photos', {'offset': d['offset'] ?? 0, 'limit': d['limit'] ?? 48})});
+          link.reply(m, 'photos.list', {'items': await Native.list('photos', {'offset': d['offset'] ?? 0, 'limit': d['limit'] ?? 48, 'kind': d['kind'], 'bucket': d['bucket']})});
+        case 'photos.albums':
+          link.reply(m, 'photos.albums', {'albums': await Native.list('albums', {'kind': d['kind']})});
         case 'photos.fetch':
           final p = await Native.map('photoFile', {'id': d['id']});
           if (p['path'] != null) Files.send(p['path'], name: p['name'], tag: 'photo');

@@ -122,7 +122,8 @@ object Bridge {
             "callMute" -> { Telephony.mute(ctx, a("muted") == true); result.success(null) }
             // photos
             "apps" -> bg(result) { AppsList.list(ctx) }
-            "photos" -> bg(result) { Photos.list(ctx, (a("offset") as Number).toInt(), (a("limit") as Number).toInt()) }
+            "photos" -> bg(result) { Photos.list(ctx, (a("offset") as Number).toInt(), (a("limit") as Number).toInt(), a("kind") as String?, a("bucket") as String?) }
+            "albums" -> bg(result) { Photos.albums(ctx, a("kind") as String?) }
             "photoFile" -> bg(result) { Photos.file(ctx, a("id").toString()) }
             // extras
             "findPhone" -> { if (a("on") == true) FindPhone.start(ctx) else FindPhone.stop(); result.success(null) }

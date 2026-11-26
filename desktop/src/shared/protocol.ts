@@ -126,6 +126,15 @@ export interface PhotoItem {
   h: number
   size: number
   thumb: string // base64 jpeg
+  video?: boolean
+  duration?: number // ms, videos
+}
+export interface PhotoAlbum {
+  id: string
+  name: string
+  count: number
+  videos: number
+  thumb: string
 }
 
 // ---------------------------------------------------------------- media

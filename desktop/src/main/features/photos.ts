@@ -13,7 +13,8 @@ export function photos(ctx: Ctx, onPhoto: (fn: (t: Transfer) => void) => void): 
       break
     }
   })
-  ctx.handle('photos', (offset = 0, limit = 60) => ctx.hub.request('photos.get', { offset, limit }, 30000))
+  ctx.handle('photos', (offset = 0, limit = 60, kind?: string, bucket?: string) => ctx.hub.request('photos.get', { offset, limit, kind, bucket }, 30000))
+  ctx.handle('photoAlbums', (kind?: string) => ctx.hub.request('photos.albums', { kind }, 60000))
   ctx.handle('photoFetch', (id: string, open = true) =>
     new Promise<string>((resolve) => {
       waiting.set(id, (p) => {

@@ -36,7 +36,7 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
 
   Future<void> _refresh() async {
     final p = await Native.permissions();
-    for (final e in {'sms': Permission.sms, 'phone': Permission.phone, 'contacts': Permission.contacts, 'photos': Permission.photos, 'notify': Permission.notification, 'bt': Permission.bluetoothConnect}.entries) {
+    for (final e in {'sms': Permission.sms, 'phone': Permission.phone, 'contacts': Permission.contacts, 'photos': Permission.photos, 'videos': Permission.videos, 'notify': Permission.notification, 'bt': Permission.bluetoothConnect}.entries) {
       _runtime[e.key] = await e.value.status;
     }
     if (mounted) setState(() => _perm = p);
@@ -90,7 +90,10 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
               _Perm(Icons.sms_rounded, 'SMS', 'Read and send texts from the PC', ok('sms'), () => _ask(Permission.sms)),
               _Perm(Icons.call_rounded, 'Phone & call log', 'Incoming calls, answer and dial from the PC', ok('phone'), () => _ask(Permission.phone)),
               _Perm(Icons.contacts_rounded, 'Contacts', 'Show names instead of numbers', ok('contacts'), () => _ask(Permission.contacts)),
-              _Perm(Icons.photo_library_rounded, 'Photos', 'Browse recent photos on the PC', ok('photos'), () => _ask(Permission.photos)),
+              _Perm(Icons.photo_library_rounded, 'Photos & videos', 'Browse your gallery and albums on the PC', ok('photos') && ok('videos'), () async {
+                await Permission.photos.request();
+                await _ask(Permission.videos);
+              }),
               _Perm(Icons.accessibility_new_rounded, 'Screen control', 'Let the PC tap and type while mirroring (Accessibility)', _perm['accessibility'] == true, () => Native.openSetting('accessibility')),
               _Perm(Icons.do_not_disturb_on_rounded, 'Do Not Disturb access', 'Let the PC switch focus mode', _perm['dnd'] == true, () => Native.openSetting('dnd')),
               _Perm(Icons.battery_charging_full_rounded, 'Run in background', 'Stay connected with the screen off', _perm['battery'] == true, () => Native.openSetting('battery')),
