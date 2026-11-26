@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
-import { Bell, Bluetooth, Mic, Cable, Clipboard, Copy, FolderDown, Headphones, Keyboard, Loader2, MousePointer2, Plus, Settings as Cog, Smartphone, Sparkles, Trash2, Volume2 } from 'lucide-react'
+import { Bell, Bluetooth, Mic, Cable, Clipboard, Copy, FolderDown, Headphones, Keyboard, Loader2, MousePointer2, Plus, Settings as Cog, Smartphone, Sparkles, Trash2, Volume2, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button, Card, PageHeader, Pill, Row, Toggle } from '@/components/ui'
 import { call, dc } from '@/lib/api'
 import { ago } from '@/lib/format'
 import { useApp } from '@/lib/store'
+import { useUpdate } from '@/components/UpdateGate'
 import { list } from '@/theme/motion'
 
 interface Bt {
@@ -52,7 +53,7 @@ export function Settings() {
 
       <Section title="Phones" icon={Smartphone}>
         {devices.map((d) => (
-          <Row key={d.deviceId} icon={Smartphone} title={d.name} body={`${d.model} · paired ${ago(d.pairedAt)} ago${conn.device?.deviceId === d.deviceId && conn.connected ? '' : ` · last seen ${ago(d.lastSeen)}`}`}>
+          <Row key={d.deviceId} icon={Smartphone} title={d.name} body={`${d.model}${d.app ? ` · app ${d.app}` : ''} · paired ${ago(d.pairedAt)} ago${conn.device?.deviceId === d.deviceId && conn.connected ? '' : ` · last seen ${ago(d.lastSeen)}`}`}>
             {d.active ? (
               <Pill color="mint">In use</Pill>
             ) : (
@@ -181,6 +182,8 @@ export function Settings() {
         <Row icon={Sparkles} title="Certificate fingerprint" body={info?.fingerprint ? info.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' ') + ' …' : ''} />
       </Section>
 
+      <Updates />
+
       <Section title="Notifications & clipboard" icon={Bell}>
         <Row icon={Bell} title="Desktop toasts" body="Show phone notifications in the corner of your screen.">
           <Toggle on={settings.notifyToasts !== false} onChange={(v) => setSetting('notifyToasts', v)} />
@@ -278,5 +281,28 @@ function Section({ title, icon: I, children }: { title: string; icon: any; child
       <h3 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-widest text-white/50"><I size={14} /> {title}</h3>
       <div className="divide-y divide-white/[0.06]">{children}</div>
     </Card>
+  )
+}
+
+const KIND: Record<string, string> = { snap: 'Snap', deb: '.deb package', appimage: 'AppImage', exe: 'Windows installer', other: '' }
+function Updates() {
+  const u = useUpdate()
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const check = async (): Promise<void> => {
+    setBusy(true)
+    const r = await call<any>('updateCheck')
+    setBusy(false)
+    setMsg(!r?.checkedAt ? 'Couldn\'t reach the update server' : r.available ? `Version ${r.latest} is available` : 'You have the newest version')
+  }
+  return (
+    <Section title="About & updates" icon={Download}>
+      <Row icon={Download} title={`D-Connect ${u?.current || ''}`} body={[KIND[u?.kind || ''], msg || (u?.available ? `Version ${u.latest} is available` : u?.checkedAt ? 'Up to date' : '')].filter(Boolean).join(' · ')}>
+        {u?.available ? <Button size="sm" variant="primary" icon={Download} onClick={() => call('updateOpen')}>Update</Button> : <Button size="sm" variant="ghost" disabled={busy} onClick={check}>{busy ? 'Checking…' : 'Check for updates'}</Button>}
+      </Row>
+      <Row icon={Smartphone} title={u?.phone?.version ? `Phone app ${u.phone.version}` : 'Phone app'} body={u?.phone?.tooOld ? 'Too old for this PC: update it on the phone' : u?.phone?.old ? `Version ${u.phone.latest} is available for the phone` : u?.phone ? 'Up to date' : 'Get D-Connect for Android from Google Play'}>
+        <Button size="sm" variant="ghost" onClick={() => call('openPhoneAppLink')}>Get the app</Button>
+      </Row>
+    </Section>
   )
 }

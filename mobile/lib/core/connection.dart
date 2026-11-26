@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import 'native.dart';
+import 'updates.dart';
 import 'protocol.dart';
 
 enum LinkState { unpaired, searching, connecting, handshake, standby, connected }
@@ -30,6 +31,7 @@ class Link extends ChangeNotifier {
   String deviceName = 'Android';
   String model = '';
   String android = '';
+  String appVersion = '';
 
   WebSocket? _ws;
   bool _running = false;
@@ -67,6 +69,8 @@ class Link extends ChangeNotifier {
     deviceName = prefs.getString('deviceName') ?? info['name'] ?? 'Android';
     model = info['model'] ?? '';
     android = info['android'] ?? '';
+    appVersion = info['app'] ?? '';
+    unawaited(Updates.I.init(info));
     await prefs.reload(); // the tile may have changed it while the app wasn't running
     offline = prefs.getBool('offline') ?? false;
     state = pc == null ? LinkState.unpaired : LinkState.searching;
@@ -268,6 +272,7 @@ class Link extends ChangeNotifier {
       'name': deviceName,
       'model': model,
       'android': android,
+      'app': appVersion,
       if (token != null) 'token': token,
       if (token == null) 'key': target.key,
     }).encode());
@@ -286,6 +291,7 @@ class Link extends ChangeNotifier {
       }
       return false;
     }
+    Updates.I.fromPc(w);
     if (w['key'] != null) target.key = w['key'];
     target.name = w['name'] ?? target.name;
     if (host != '127.0.0.1' && !target.hosts.contains(host)) target.hosts = [host, ...target.hosts];

@@ -9,6 +9,7 @@ import '../../core/protocol.dart';
 import '../../features/bridge.dart';
 import '../../theme/tokens.dart';
 import '../widgets/connect_scene.dart';
+import '../widgets/update_gate.dart';
 import 'home_shell.dart';
 import 'pair_screen.dart';
 
@@ -130,6 +131,7 @@ class _RootState extends State<Root> with WidgetsBindingObserver {
                 ),
         ),
       ),
+      const Positioned.fill(child: UpdateGate()),
     ]);
   }
 }

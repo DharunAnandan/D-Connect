@@ -28,6 +28,7 @@ export interface Hello {
   android: string
   token?: string // one-time pairing token from the QR
   key?: string // long-term key issued at pairing
+  app?: string // the phone app's version
 }
 export interface Welcome {
   deviceId: string
@@ -36,6 +37,8 @@ export interface Welcome {
   key?: string // only sent right after pairing
   features: string[]
   standby?: boolean // another phone is the active one; this one waits
+  app?: string // the PC app's version
+  minPhone?: string // the oldest phone app this PC works with
 }
 
 // ---------------------------------------------------------------- phone status

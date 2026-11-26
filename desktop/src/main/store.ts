@@ -11,6 +11,7 @@ export interface TrustedDevice {
   pairedAt: number
   lastSeen: number
   btAddress?: string
+  app?: string // the phone app's version, as it last said
 }
 
 export const DEFAULTS = {

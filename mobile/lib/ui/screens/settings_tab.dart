@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/connection.dart';
+import '../../core/updates.dart';
+import '../widgets/update_gate.dart';
 import '../../core/native.dart';
 import '../../theme/tokens.dart';
 import '../widgets/glass.dart';
@@ -116,6 +118,8 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
             }),
           ),
+          const SectionTitle('Your PC app'),
+          const GetPcApp(),
           const SectionTitle('About'),
           Glass(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -123,7 +127,25 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
               const SizedBox(height: 4),
               Text('${Link.I.model} · Android ${Link.I.android}', style: const TextStyle(color: C.muted, fontSize: 12)),
               const SizedBox(height: 4),
-              const Text('D-Connect 0.1.0 · end-to-end TLS pinned to your PC', style: TextStyle(color: C.muted, fontSize: 12)),
+              Text('D-Connect ${Link.I.appVersion} · end-to-end TLS pinned to your PC', style: const TextStyle(color: C.muted, fontSize: 12)),
+              if (Updates.I.pcVersion != null) ...[
+                const SizedBox(height: 4),
+                Text('${Link.I.pc?.name ?? 'PC'}: D-Connect ${Updates.I.pcVersion}${Updates.I.pcOld ? ' · update available ${Updates.I.pcLatest}' : ''}', style: TextStyle(color: Updates.I.pcOld ? C.amber : C.muted, fontSize: 12)),
+              ],
+              const SizedBox(height: 8),
+              Row(children: [
+                TextButton.icon(
+                  onPressed: () async {
+                    await Updates.I.check();
+                    if (!context.mounted) return;
+                    final u = Updates.I;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(u.latest.isEmpty ? 'Couldn\'t reach the update server' : cmpVersion(u.version, u.latest) < 0 ? 'Version ${u.latest} is available' : 'You have the newest version')));
+                    if (u.latest.isNotEmpty && cmpVersion(u.version, u.latest) < 0) u.open();
+                  },
+                  icon: const Icon(Icons.system_update_rounded, size: 18),
+                  label: const Text('Check for updates'),
+                ),
+              ]),
             ]),
           ),
         ],

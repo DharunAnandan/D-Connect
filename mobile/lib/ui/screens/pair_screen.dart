@@ -8,6 +8,7 @@ import '../../theme/tokens.dart';
 import '../widgets/aurora.dart';
 import '../widgets/connect_scene.dart';
 import '../widgets/glass.dart';
+import '../widgets/update_gate.dart';
 
 class PairScreen extends StatefulWidget {
   const PairScreen({super.key});
@@ -72,7 +73,7 @@ class _PairScreenState extends State<PairScreen> {
                       style: TextStyle(fontSize: 15, height: 1.5, color: Colors.white.withValues(alpha: .6)))
                   .animate()
                   .fadeIn(delay: 260.ms, duration: 500.ms),
-              Expanded(child: Center(child: ConnectScene(state: SceneState.searching, phoneName: Link.I.deviceName, height: 260))),
+              Expanded(child: Center(child: ConnectScene(state: SceneState.searching, phoneName: Link.I.deviceName, height: 200))),
               Glass(
                 strong: true,
                 padding: const EdgeInsets.all(20),
@@ -88,7 +89,9 @@ class _PairScreenState extends State<PairScreen> {
                   TextButton(onPressed: _busy ? null : _paste, child: Text('Paste a pairing link instead', style: TextStyle(color: Colors.white.withValues(alpha: .6)))),
                 ]),
               ).animate().fadeIn(delay: 350.ms, duration: 600.ms).slideY(begin: .25, curve: M.ease),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+              const GetPcApp().animate().fadeIn(delay: 450.ms, duration: 600.ms),
+              const SizedBox(height: 16),
             ]),
           ),
         ),

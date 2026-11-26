@@ -87,12 +87,18 @@ jobs:
         with: { flutter-version: '3.44.6', channel: stable, cache: true }
       - run: flutter --version
       - run: flutter pub get
-      - run: flutter build apk --release
-      - name: Name the APK after the version
+      # one version for every app: the desktop's package.json (0.1.3 -> versionCode 103)
+      - name: Build the APK and the Play bundle
         run: |
           v=$(node -p "require('../desktop/package.json').version")
+          code=$(node -p "const [a,b,c]='$v'.split('.').map(Number); a*10000+b*100+c")
+          flutter build apk --release --build-name=$v --build-number=$code
+          flutter build appbundle --release --build-name=$v --build-number=$code
           cp build/app/outputs/flutter-apk/app-release.apk "D-Connect-$v-android.apk"
+          cp build/app/outputs/bundle/release/app-release.aab "D-Connect-$v-android.aab"
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
-          files: mobile/D-Connect-*-android.apk
+          files: |
+            mobile/D-Connect-*-android.apk
+            mobile/D-Connect-*-android.aab

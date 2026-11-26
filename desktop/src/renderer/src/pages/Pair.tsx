@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Cable, QrCode, RefreshCw, ShieldCheck, Wifi } from 'lucide-react'
+import { Cable, ExternalLink, QrCode, RefreshCw, ShieldCheck, Smartphone, Wifi } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { ConnectScene } from '@/components/ConnectScene'
 import { Logo } from '@/components/TitleBar'
@@ -21,6 +21,10 @@ export function Pair() {
   const [info, setInfo] = useState<PairInfo | null>(null)
   const [usb, setUsb] = useState<{ devices: { model: string; state: string }[] }>({ devices: [] })
   const devices = useApp((s) => s.devices)
+  // first: get the phone app (scan to open its store page); then: scan the pairing code with it
+  const [getApp, setGetApp] = useState(false)
+  const [appLink, setAppLink] = useState<{ url: string; qr: string } | null>(null)
+  useEffect(() => void call('phoneAppLink').then(setAppLink), [])
 
   useEffect(() => {
     call<PairInfo>('pairInfo').then(setInfo)
@@ -61,8 +65,15 @@ export function Pair() {
       <Card strong className="relative overflow-hidden p-7">
         <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgb(var(--c-violet)/0.30)_0%,transparent_70%)]" />
         <div className="relative">
-          <div className="flex items-center gap-2 text-sm font-semibold text-white/80">
-            <QrCode size={17} className="text-cyan" /> Scan with the D-Connect app
+          <div className="flex rounded-xl bg-white/5 p-1 text-sm font-semibold ring-1 ring-white/10">
+            {[
+              { on: true, icon: Smartphone, label: '1 · Get the phone app' },
+              { on: false, icon: QrCode, label: '2 · Pair' }
+            ].map((t) => (
+              <button key={t.label} onClick={() => setGetApp(t.on)} className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 transition ${getApp === t.on ? 'bg-white/10 text-white' : 'text-white/55 hover:text-white/80'}`}>
+                <t.icon size={15} className={getApp === t.on ? 'text-cyan' : ''} /> {t.label}
+              </button>
+            ))}
           </div>
           <div className="relative mx-auto mt-5 w-fit">
             <motion.div
@@ -71,7 +82,9 @@ export function Pair() {
               transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
             />
             <div className="relative rounded-3xl bg-white p-3.5">
-              {info ? (
+              {getApp ? (
+                appLink ? <motion.img key="app" initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} src={appLink.qr} className="h-[236px] w-[236px]" /> : <div className="shimmer h-[236px] w-[236px] rounded-xl" />
+              ) : info ? (
                 <motion.img key={info.qr} initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} src={info.qr} className="h-[236px] w-[236px]" />
               ) : (
                 <div className="shimmer h-[236px] w-[236px] rounded-xl" />
@@ -79,7 +92,10 @@ export function Pair() {
             </div>
           </div>
           <ol className="mt-7 space-y-3 text-sm">
-            {['Install D-Connect on your Android phone', 'Open it and tap “Pair with PC”', 'Point the camera at this code'].map((s, i) => (
+            {(getApp
+              ? ['Scan this with your phone\'s camera', 'Install D-Connect from Google Play', 'Come back here and tap “2 · Pair”']
+              : ['Open D-Connect on your Android phone', 'Tap “Scan QR code”', 'Point the camera at this code']
+            ).map((s, i) => (
               <li key={s} className="flex items-center gap-3">
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-[linear-gradient(135deg,rgb(var(--c-violet)),rgb(var(--c-cyan)))] text-[11px] font-bold text-ink-950">{i + 1}</span>
                 <span className="text-white/80">{s}</span>
@@ -91,9 +107,15 @@ export function Pair() {
               {info ? `${info.hosts.join(' · ') || 'no network'} : ${info.port}` : '…'}
               {usb.devices.length > 0 && <span className="ml-2 text-mint">· USB: {usb.devices[0].model}</span>}
             </span>
-            <Button size="sm" variant="ghost" icon={RefreshCw} onClick={() => call('rotateToken')}>
-              New code
-            </Button>
+            {getApp ? (
+              <Button size="sm" variant="ghost" icon={ExternalLink} onClick={() => call('openPhoneAppLink')}>
+                Open link
+              </Button>
+            ) : (
+              <Button size="sm" variant="ghost" icon={RefreshCw} onClick={() => call('rotateToken')}>
+                New code
+              </Button>
+            )}
           </div>
         </div>
       </Card>

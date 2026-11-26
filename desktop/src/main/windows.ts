@@ -81,7 +81,12 @@ export function fitToastWindow(win: BrowserWindow, height: number): void {
   const W = 420
   const H = Math.min(Math.ceil(height), wa.height - 16)
   win.setBounds({ x: wa.x + wa.width - W - 8, y: wa.y + wa.height - H - 8, width: W, height: H })
-  if (!win.isVisible()) win.showInactive()
+  if (!win.isVisible()) {
+    // appear only once the first frame is on screen (a just-shown transparent window can flash black)
+    win.setOpacity(0)
+    win.showInactive()
+    setTimeout(() => !win.isDestroyed() && win.setOpacity(1), 90)
+  }
 }
 
 export function createCallWindow(): BrowserWindow {

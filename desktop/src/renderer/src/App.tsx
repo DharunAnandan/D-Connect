@@ -4,6 +4,7 @@ import { Background } from './components/Background'
 import { ConnectScene, type SceneState } from './components/ConnectScene'
 import { Sidebar } from './components/Sidebar'
 import { TitleBar } from './components/TitleBar'
+import { UpdateGate } from './components/UpdateGate'
 import { dc } from './lib/api'
 import { sfx } from './lib/sfx'
 import { useApp } from './lib/store'
@@ -116,6 +117,7 @@ export function App() {
         )}
       </AnimatePresence>
       <FindPcOverlay />
+      <UpdateGate />
     </div>
   )
 }

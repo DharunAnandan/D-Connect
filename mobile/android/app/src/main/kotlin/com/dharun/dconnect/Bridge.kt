@@ -65,6 +65,18 @@ object Bridge {
         main.post { video?.success(mapOf("data" to data, "config" to config, "key" to key, "pts" to pts)) }
     }
 
+    // the installed app's version (versionName), as the system knows it
+    private fun appVersion(): String = try {
+        ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: ""
+    } catch (_: Exception) { "" }
+
+    // installed from Google Play (then updates go through Play), or sideloaded as an APK
+    private fun fromPlayStore(): Boolean = try {
+        val who = if (Build.VERSION.SDK_INT >= 30) ctx.packageManager.getInstallSourceInfo(ctx.packageName).installingPackageName
+        else @Suppress("DEPRECATION") ctx.packageManager.getInstallerPackageName(ctx.packageName)
+        who == "com.android.vending"
+    } catch (_: Exception) { false }
+
     private fun bg(result: MethodChannel.Result, fn: () -> Any?) {
         io.execute {
             val r = try { Result.success(fn()) } catch (e: Exception) { Result.failure(e) }
@@ -78,8 +90,17 @@ object Bridge {
             "deviceInfo" -> result.success(mapOf(
                 "name" to (Settings.Global.getString(ctx.contentResolver, "device_name") ?: Build.MODEL),
                 "model" to "${Build.MANUFACTURER.replaceFirstChar { it.uppercase() }} ${Build.MODEL}",
-                "android" to Build.VERSION.RELEASE
+                "android" to Build.VERSION.RELEASE,
+                "app" to appVersion(),
+                "store" to fromPlayStore()
             ))
+            "openUrl" -> {
+                val u = a("url") as String
+                if (u.startsWith("https://") || u.startsWith("market://")) {
+                    try { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(u)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+                }
+                result.success(null)
+            }
             "status" -> result.success(status())
             "btInfo" -> result.success(btInfo())
             "btPair" -> result.success(BtPair.start(ctx, a("address") as String))

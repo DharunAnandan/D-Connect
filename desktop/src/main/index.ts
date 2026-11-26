@@ -28,6 +28,7 @@ import { bluetooth } from './features/bluetooth'
 import { appWindows } from './features/appwindows'
 import { callAudio } from './features/callaudio'
 import { sound } from './features/sound'
+import { updates } from './features/updates'
 
 const isLinux = process.platform === 'linux'
 // Transparent always-on-top windows that can place themselves (toasts, call card, eye break)
@@ -87,7 +88,9 @@ app.whenReady().then(async () => {
     if (!toastWin || toastWin.isDestroyed()) toastWin = createToastWindow()
     const send = (): void => {
       toastWin!.webContents.send('evt', 'toast', full)
-      toastWin!.showInactive()
+      // Linux: shown once the page has drawn the banner and sized the window (fitToastWindow),
+      // so there's never an empty black box first. Elsewhere it's click-through and full size.
+      if (process.platform !== 'linux') toastWin!.showInactive()
     }
     if (toastWin.webContents.isLoading()) toastWin.webContents.once('did-finish-load', send)
     else send()
@@ -327,6 +330,8 @@ app.whenReady().then(async () => {
   bluetooth(ctx)
   appWindows(ctx)
   sound(ctx)
+  updates(ctx)
+  ctx.handle('quit', () => { quitting = true; app.quit() })
 
   // ---------------------------------------------------------------- eye care (20-20-20)
   let phoneEnd: ((r: EyeResult) => void) | null = null

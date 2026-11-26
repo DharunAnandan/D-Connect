@@ -16,6 +16,8 @@ import {
   PROTOCOL_VERSION,
   Welcome
 } from '@shared/protocol'
+import { app } from 'electron'
+import { MIN_PHONE_VERSION } from '@shared/links'
 import type { Identity } from './cert'
 import type { Store, TrustedDevice } from './store'
 
@@ -239,7 +241,7 @@ export class Hub extends EventEmitter {
       ws.close(4003, 'not paired')
       return null
     }
-    device = { ...device, name: hello.name || device.name, model: hello.model || device.model, lastSeen: Date.now() }
+    device = { ...device, name: hello.name || device.name, model: hello.model || device.model, app: hello.app || undefined, lastSeen: Date.now() }
     trusted[device.deviceId] = device
     this.store.set('trusted', trusted)
 
@@ -260,7 +262,7 @@ export class Hub extends EventEmitter {
     // active if: nobody is, it's the chosen phone, it was active a moment ago, or it was just paired
     const becomeActive = !this.session || wasActive || !!issuedKey || this.preferred() === device.deviceId
     if (issuedKey) this.store.set('activeDevice', device.deviceId)
-    const welcome: Welcome = { deviceId: this.identity.id, name: this.name, os: process.platform, key: issuedKey, features: FEATURES, standby: !becomeActive }
+    const welcome: Welcome = { deviceId: this.identity.id, name: this.name, os: process.platform, key: issuedKey, features: FEATURES, standby: !becomeActive, app: app.getVersion(), minPhone: MIN_PHONE_VERSION }
     this.sendTo(ws, 'welcome', welcome)
     if (issuedKey) this.emit('paired', device)
     if (becomeActive) {
