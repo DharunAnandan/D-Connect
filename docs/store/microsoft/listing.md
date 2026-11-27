@@ -62,7 +62,7 @@ No accounts, no servers, encrypted
 
 **Search terms** (up to 7)
 ```
-phone link
+phone to computer
 android
 sms
 notifications
@@ -71,7 +71,7 @@ file transfer
 mirror
 ```
 
-**Copyright:** `© 2026 Dharun.A`
+**Copyright:** `© 2026 Dharun Anandan`
 **Privacy policy URL:** `https://github.com/DharunAnandan/D-Connect/blob/main/docs/PRIVACY.md`
 **Website:** `https://github.com/DharunAnandan/D-Connect`
 **Support contact:** `https://github.com/DharunAnandan/D-Connect/issues` (or your email)
