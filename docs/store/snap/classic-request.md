@@ -1,6 +1,6 @@
 # Snap Store: classic confinement request
 
-Post at https://forum.snapcraft.io → **New Topic** → category **store-requests**.
+Post at https://forum.snapcraft.io/c/store-requests/classic-confinement/26 → **New Topic** (category **store-requests → classic-confinement**).
 Sign in with the same Ubuntu One account that registered `d-connect`.
 
 **Title**
