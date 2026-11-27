@@ -8,7 +8,7 @@ Send these three values so the MSIX package can be built:
 
 ## Store listing (Submission → Store listings → English)
 
-**Product name:** `D-Connect – Phone to PC Link` (or `D-Connect`, whichever was reserved)
+**Product name:** `D-Connect – Phone to PC Link` (reserved; Store ID `9N981DC1LCQ6`)
 
 **Description**
 ```

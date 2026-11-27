@@ -287,7 +287,7 @@ function Section({ title, icon: I, children }: { title: string; icon: any; child
   )
 }
 
-const KIND: Record<string, string> = { snap: 'Snap', deb: '.deb package', appimage: 'AppImage', exe: 'Windows installer', other: '' }
+const KIND: Record<string, string> = { snap: 'Snap', deb: '.deb package', appimage: 'AppImage', exe: 'Windows installer', msstore: 'Microsoft Store', other: '' }
 function Updates() {
   const u = useUpdate()
   const [busy, setBusy] = useState(false)

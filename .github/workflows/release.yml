@@ -50,11 +50,14 @@ jobs:
           New-Item -ItemType Directory -Force resources-win/adb | Out-Null
           Copy-Item pt/platform-tools/adb.exe, pt/platform-tools/AdbWinApi.dll, pt/platform-tools/AdbWinUsbApi.dll, pt/platform-tools/NOTICE.txt resources-win/adb/
       - run: npx electron-vite build
-      - run: npx electron-builder --win nsis --x64 --publish never
+      # the installer (.exe) and the Microsoft Store package (.appx; Microsoft signs it on submission)
+      - run: npx electron-builder --win nsis appx --x64 --publish never
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
-          files: desktop/dist/*.exe
+          files: |
+            desktop/dist/*.exe
+            desktop/dist/*.appx
 
   linux:
     needs: release

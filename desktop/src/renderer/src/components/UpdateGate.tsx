@@ -9,7 +9,7 @@ import { call, useLive } from '@/lib/api'
 
 export interface UpdateState {
   current: string
-  kind: 'snap' | 'appimage' | 'deb' | 'exe' | 'other'
+  kind: 'snap' | 'appimage' | 'deb' | 'exe' | 'msstore' | 'other'
   latest?: string
   min?: string
   notes?: string
@@ -22,7 +22,7 @@ export interface UpdateState {
 export const useUpdate = (): UpdateState | null => useLive<UpdateState | null>('updateState', 'update', null)[0]
 
 const howTo = (k: UpdateState['kind']): string =>
-  k === 'snap' ? 'The Snap Store updates it for you, or run: snap refresh d-connect' : k === 'exe' ? 'Download the new installer and run it; your pairing stays.' : k === 'appimage' ? 'Download the new AppImage and use it in place of this one.' : 'Download the new .deb and open it to install; your pairing stays.'
+  k === 'msstore' ? 'The Microsoft Store updates it for you: open D-Connect in the Store and click Update.' : k === 'snap' ? 'The Snap Store updates it for you, or run: snap refresh d-connect' : k === 'exe' ? 'Download the new installer and run it; your pairing stays.' : k === 'appimage' ? 'Download the new AppImage and use it in place of this one.' : 'Download the new .deb and open it to install; your pairing stays.'
 
 export function UpdateGate() {
   const u = useUpdate()

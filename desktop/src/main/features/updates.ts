@@ -12,7 +12,7 @@ import { cmpVersion, LINKS, MIN_PHONE_VERSION } from '@shared/links'
 import { openUrlSafely } from '../safety'
 import type { Ctx } from '../context'
 
-type Kind = 'snap' | 'appimage' | 'deb' | 'exe' | 'other'
+type Kind = 'snap' | 'appimage' | 'deb' | 'exe' | 'msstore' | 'other'
 export interface UpdateState {
   current: string
   kind: Kind
@@ -26,7 +26,7 @@ export interface UpdateState {
 }
 
 const kind = (): Kind =>
-  process.platform === 'win32' ? 'exe' : process.platform !== 'linux' ? 'other' : process.env.SNAP ? 'snap' : process.env.APPIMAGE ? 'appimage' : 'deb'
+  process.platform === 'win32' ? ((process as any).windowsStore ? 'msstore' : 'exe') : process.platform !== 'linux' ? 'other' : process.env.SNAP ? 'snap' : process.env.APPIMAGE ? 'appimage' : 'deb'
 
 export function updates(ctx: Ctx): void {
   let manifest: any = null
@@ -73,7 +73,7 @@ export function updates(ctx: Ctx): void {
   ctx.handle('updateOpen', () => {
     const d = manifest?.desktop || {}
     const k = kind()
-    const url = k === 'snap' ? d.snap || 'https://snapcraft.io/d-connect' : k === 'exe' ? d.exe : k === 'appimage' ? d.appimage : k === 'deb' ? d.deb : undefined
+    const url = k === 'msstore' ? 'https://apps.microsoft.com/detail/9N981DC1LCQ6' : k === 'snap' ? d.snap || 'https://snapcraft.io/d-connect' : k === 'exe' ? d.exe : k === 'appimage' ? d.appimage : k === 'deb' ? d.deb : undefined
     openUrlSafely(url || d.page || LINKS.pcApp)
   })
   ctx.handle('phoneAppLink', async () => ({ url: LINKS.phoneApp, qr: await QRCode.toDataURL(LINKS.phoneApp, { margin: 1, width: 360, color: { dark: '#0b1020', light: '#ffffff' } }) }))

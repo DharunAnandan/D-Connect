@@ -38,6 +38,19 @@ win:
     - from: resources-win
       to: win
       filter: ['**/*']
+# Microsoft Store package (MSIX/AppX). Microsoft signs it on submission, so no certificate here.
+# Identity from Partner Center → D-Connect → Product identity.
+appx:
+  identityName: DharunAnandan.D-ConnectPhonetoPCLink
+  publisher: CN=4A0E949F-AF67-4A4A-B052-93D7C102646D
+  publisherDisplayName: Dharun Anandan
+  applicationId: DConnect
+  displayName: D-Connect – Phone to PC Link
+  backgroundColor: transparent
+  languages: [en-US]
+  # full trust (desktop app) + accepting the phone's connection on the local network
+  capabilities: [runFullTrust, internetClientServer, privateNetworkClientServer]
+  artifactName: D-Connect-${version}-microsoft-store.${ext}
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
