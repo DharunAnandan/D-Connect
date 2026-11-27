@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The launcher icon's outer box: black, with the colour tile (foreground) inside it -->
+<!-- Transparent: the icon itself (a black ring around the colour circle, in the foreground) is round -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#FF000000" />
+    <solid android:color="#00000000" />
 </shape>
