@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../core/connection.dart';
 import '../../core/updates.dart';
 import '../widgets/update_gate.dart';
+import '../widgets/disclosure.dart';
 import '../../core/native.dart';
 import '../../theme/tokens.dart';
 import '../widgets/glass.dart';
@@ -44,7 +45,9 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
     if (mounted) setState(() => _perm = p);
   }
 
-  Future<void> _ask(Permission p) async {
+  // explain first (what, why, where it goes); only "Allow" goes on to Android's prompt
+  Future<void> _ask(Permission p, [String? kind]) async {
+    if (kind != null && !await disclose(context, kind)) return;
     final s = await p.request();
     if (s.isPermanentlyDenied) await openAppSettings();
     _refresh();
@@ -89,18 +92,25 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
           Glass(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             child: Column(children: [
-              _Perm(Icons.notifications_active_rounded, 'Notification access', 'Mirror notifications, reply, media controls', _perm['notifications'] == true, () => Native.openSetting('notifications')),
-              _Perm(Icons.sms_rounded, 'SMS', 'Read and send texts from the PC', ok('sms'), () => _ask(Permission.sms)),
-              _Perm(Icons.call_rounded, 'Phone & call log', 'Incoming calls, answer and dial from the PC', ok('phone'), () => _ask(Permission.phone)),
-              _Perm(Icons.contacts_rounded, 'Contacts', 'Show names instead of numbers', ok('contacts'), () => _ask(Permission.contacts)),
+              _Perm(Icons.notifications_active_rounded, 'Notification access', 'Mirror notifications, reply, media controls', _perm['notifications'] == true, () async {
+                if (await disclose(context, 'notifications')) Native.openSetting('notifications');
+              }),
+              _Perm(Icons.sms_rounded, 'SMS', 'Read and send texts from the PC', ok('sms'), () => _ask(Permission.sms, 'sms')),
+              _Perm(Icons.call_rounded, 'Phone & call log', 'Incoming calls, answer and dial from the PC', ok('phone'), () => _ask(Permission.phone, 'phone')),
+              _Perm(Icons.contacts_rounded, 'Contacts', 'Show names instead of numbers', ok('contacts'), () => _ask(Permission.contacts, 'contacts')),
               _Perm(Icons.photo_library_rounded, 'Photos & videos',
                   ok('photos') && !ok('videos') ? 'Photos are allowed. Tap to allow videos too' : !ok('photos') && ok('videos') ? 'Videos are allowed. Tap to allow photos too' : 'Browse your gallery and albums on the PC',
                   ok('photos') && ok('videos'), () async {
+                if (!await disclose(context, 'photos')) return;
                 await Permission.photos.request();
                 await _ask(Permission.videos);
               }),
-              _Perm(Icons.accessibility_new_rounded, 'Screen control', 'Let the PC tap and type while mirroring (Accessibility)', _perm['accessibility'] == true, () => Native.openSetting('accessibility')),
-              _Perm(Icons.do_not_disturb_on_rounded, 'Do Not Disturb access', 'Let the PC switch focus mode', _perm['dnd'] == true, () => Native.openSetting('dnd')),
+              _Perm(Icons.accessibility_new_rounded, 'Screen control', 'Let the PC tap and type while mirroring (Accessibility)', _perm['accessibility'] == true, () async {
+                if (await disclose(context, 'accessibility')) Native.openSetting('accessibility');
+              }),
+              _Perm(Icons.do_not_disturb_on_rounded, 'Do Not Disturb access', 'Let the PC switch focus mode', _perm['dnd'] == true, () async {
+                if (await disclose(context, 'dnd')) Native.openSetting('dnd');
+              }),
               _Perm(Icons.battery_charging_full_rounded, 'Run in background', 'Stay connected with the screen off', _perm['battery'] == true, () => Native.openSetting('battery')),
               _Perm(Icons.lock_clock_rounded, 'Work when locked', 'App info → Battery usage → Allow background activity. Without it the phone freezes D-Connect when locked', _perm['background'] == true, () => Native.openSetting('background')),
               _Perm(Icons.bluetooth_rounded, 'Nearby devices', 'Lets the PC pick this phone for call audio', ok('bt'), () => _ask(Permission.bluetoothConnect)),

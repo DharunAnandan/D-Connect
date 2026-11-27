@@ -1,7 +1,7 @@
 {
   "name": "d-connect",
   "productName": "D-Connect",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Your phone, on your PC. Linux-first phone link with eye care.",
   "main": "out/main/index.js",
   "author": "Dharun",

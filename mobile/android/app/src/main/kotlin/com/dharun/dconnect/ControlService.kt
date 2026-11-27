@@ -184,7 +184,12 @@ class ControlService : AccessibilityService() {
                 for (i in 0 until n.childCount) n.getChild(i)?.let { queue.add(it) }
             }
         }
-        // not found: log what the screen offers, so labels can be matched
+        // not found: in test (debuggable) builds only, note what the screen offers so labels can be
+        // matched. Release builds never read, keep or send screen text.
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0) {
+            lastScreen = ""
+            return false
+        }
         val seen = mutableListOf<String>()
         for (root in roots) {
             val q = ArrayDeque<AccessibilityNodeInfo>().apply { add(root) }

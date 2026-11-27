@@ -6,6 +6,8 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../core/connection.dart';
 import '../core/native.dart';
+import '../ui/widgets/disclosure.dart';
+import 'eye.dart';
 import '../core/protocol.dart';
 import 'app_state.dart';
 import 'files.dart';
@@ -129,7 +131,14 @@ class Bridge {
         case 'control.status':
           if (m.id != null) link.reply(m, 'control.status', {'on': await Native.call<bool>('controlAvailable') == true});
         case 'open.setting':
-          Native.openSetting(d['which'] ?? 'app');
+          // the PC asked to open a settings page; sensitive ones get the explanation first
+          final which = (d['which'] ?? 'app') as String;
+          if (const {'accessibility', 'notifications', 'dnd'}.contains(which)) {
+            final ctx = Eye.navigatorKey.currentContext;
+            if (ctx != null && await disclose(ctx, which)) Native.openSetting(which);
+          } else {
+            Native.openSetting(which);
+          }
         case 'input.touch':
           if (await Native.call<bool>('controlAvailable') != true) {
             link.send('mirror.control', {'control': false});
