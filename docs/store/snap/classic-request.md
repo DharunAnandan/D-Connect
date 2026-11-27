@@ -24,7 +24,7 @@ D-Connect is a phone-to-PC companion (similar to Microsoft Phone Link) that link
 4. **adb.** App windows and USB mode run the host's `adb` (Android platform tools) to start the phone's screen server and set up `adb reverse` port forwarding over USB.
 5. **Host tools.** It calls host tools such as `pactl`, `loginctl lock-session`, `systemctl --user`, `gdbus`, and GNOME Shell's Screencast/Screenshot D-Bus APIs for screen recording and screenshots.
 
-**Category** this fits under the "IDEs / development and system tools that need arbitrary host access" style of classic use: the app integrates the host's audio, Bluetooth and input stack with a connected device.
+If some of this can be done under strict confinement with specific interfaces, I'm happy to adjust. Please advise which parts.
 
 The app is open source; no data leaves the user's phone and PC (no servers or accounts).
 
