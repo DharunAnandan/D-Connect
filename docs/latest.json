@@ -1,8 +1,8 @@
 {
   "desktop": {
-    "latest": "1.0.0",
+    "latest": "1.0.1",
     "min": "0.1.0",
-    "notes": "Update checks, a get-the-app guide when pairing, and smoother notification pop-ups.",
+    "notes": "Small fixes and improvements.",
     "page": "https://github.com/DharunAnandan/D-Connect/releases/latest",
     "deb": "https://github.com/DharunAnandan/D-Connect/releases/latest",
     "appimage": "https://github.com/DharunAnandan/D-Connect/releases/latest",
@@ -10,9 +10,9 @@
     "snap": "https://snapcraft.io/d-connect"
   },
   "android": {
-    "latest": "1.0.0",
+    "latest": "1.0.1",
     "min": "0.1.0",
-    "notes": "Update checks and a get-the-PC-app guide when pairing.",
+    "notes": "Clear explanations before each permission, and better privacy for screen control.",
     "apk": "https://github.com/DharunAnandan/D-Connect/releases/latest",
     "play": "https://play.google.com/store/apps/details?id=com.dharun.dconnect"
   }
