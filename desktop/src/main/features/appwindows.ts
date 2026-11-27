@@ -50,8 +50,16 @@ export function appWindows(ctx: Ctx): void {
   const wins = new Map<string, AppWin>()
 
   // the adb serial of the phone that's linked now (several may be plugged in)
+  const listDevices = async (): Promise<string> => (await run(['devices', '-l'])).out
   const serialForPhone = async (): Promise<{ serial?: string; error?: string }> => {
-    const out = (await run(['devices', '-l'])).out
+    let out = await listDevices()
+    // nothing on USB: reach the linked phone over Wi-Fi (works after it was plugged in once since
+    // it last restarted, with "Apps over Wi-Fi" on)
+    const ip = (ctx.hub.session?.address || '').replace(/^::ffff:/, '')
+    if (!/\sdevice(\s|$)/m.test(out.split('\n').slice(1).join('\n')) && ip && ip !== '127.0.0.1' && ctx.store.get('appsOverWifi')) {
+      await run(['connect', `${ip}:5555`], 6000)
+      out = await listDevices()
+    }
     const devices = out
       .split('\n')
       .slice(1)
@@ -60,7 +68,7 @@ export function appWindows(ctx: Ctx): void {
       .map((l) => ({ serial: l.split(/\s+/)[0], model: /model:(\S+)/.exec(l)?.[1] || '' }))
     if (!devices.length) {
       const unauthorized = /unauthorized|no permissions/.test(out)
-      return { error: unauthorized ? 'Allow USB debugging on the phone (a prompt is waiting on its screen).' : 'Connect the phone by USB with USB debugging on (or turn on Wireless debugging) to open apps here.' }
+      return { error: unauthorized ? 'Allow USB debugging on the phone (a prompt is waiting on its screen).' : ctx.hub.session?.via === 'wifi' && ctx.store.get('appsOverWifi') ? 'To open apps over Wi-Fi, plug the phone in by USB once (with USB debugging on); after that it works without the cable until the phone restarts.' : 'Connect the phone by USB with USB debugging on to open apps here.' }
     }
     const model = (ctx.hub.session?.device.model || '').toLowerCase().replace(/[^a-z0-9]/g, '')
     const match = devices.find((d) => model && model.includes(d.model.toLowerCase().replace(/[^a-z0-9]/g, '')))

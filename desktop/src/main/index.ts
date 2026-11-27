@@ -444,7 +444,7 @@ app.whenReady().then(async () => {
   const discovery = new Discovery()
   discovery.start(store.get('deviceName'), hub.port, identity.id, identity.fingerprint)
   const usb = new Usb()
-  usb.start(hub.port, () => store.get('usbAuto'))
+  usb.start(hub.port, () => store.get('usbAuto'), () => !!store.get('appsOverWifi'))
   usb.on('change', (list) => emit('usb', list))
   ctx.handle('usb', () => ({ devices: usb.devices, available: usb.available }))
 

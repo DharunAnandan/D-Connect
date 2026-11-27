@@ -40,9 +40,10 @@ export class Usb extends EventEmitter {
   available = true
   private timer: NodeJS.Timeout | null = null
   private reversed = new Set<string>()
+  private tcpTried = new Set<string>()
   private bin = adbPath()
 
-  start(port: number, enabled: () => boolean): void {
+  start(port: number, enabled: () => boolean, wifiAdb: () => boolean = () => false): void {
     const tick = async (): Promise<void> => {
       if (!enabled() || !this.bin) return
       try {
@@ -62,11 +63,23 @@ export class Usb extends EventEmitter {
         this.devices = list
         for (const d of list) {
           if (d.state !== 'device' || this.reversed.has(d.serial)) continue
+          // app windows over Wi-Fi: let the phone accept adb on the network too (until it restarts).
+          // Doing so restarts adb on the phone, so it comes before the reverse tunnel. Any new
+          // computer that tries it still has to be allowed on the phone's screen.
+          if (wifiAdb()) {
+            const tcp = (await run(this.bin, ['-s', d.serial, 'shell', 'getprop', 'service.adb.tcp.port']).catch(() => '')).trim()
+            if (tcp !== '5555' && !this.tcpTried.has(d.serial)) {
+              this.tcpTried.add(d.serial) // once per plug-in, so a phone that refuses still links
+              await run(this.bin, ['-s', d.serial, 'tcpip', '5555']).catch(() => '')
+              continue // adb on the phone restarts: set up the tunnel on the next round
+            }
+          }
           await run(this.bin, ['-s', d.serial, 'reverse', `tcp:${port}`, `tcp:${port}`])
           this.reversed.add(d.serial)
           this.emit('reversed', d)
         }
         for (const s of [...this.reversed]) if (!list.find((d) => d.serial === s)) this.reversed.delete(s)
+        for (const s of [...this.tcpTried]) if (!list.find((d) => d.serial === s)) this.tcpTried.delete(s)
         if (changed) this.emit('change', list)
       } catch {
         if (this.available) {

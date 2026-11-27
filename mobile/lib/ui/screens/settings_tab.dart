@@ -52,7 +52,8 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    bool ok(String k) => _runtime[k]?.isGranted == true;
+    // "limited" (Android 14: only some photos chosen) still works for browsing
+    bool ok(String k) => _runtime[k]?.isGranted == true || _runtime[k]?.isLimited == true;
     return ListenableBuilder(
       listenable: Link.I,
       builder: (context, _) => PinnedPage(
@@ -92,7 +93,9 @@ class _SettingsTabState extends State<SettingsTab> with WidgetsBindingObserver {
               _Perm(Icons.sms_rounded, 'SMS', 'Read and send texts from the PC', ok('sms'), () => _ask(Permission.sms)),
               _Perm(Icons.call_rounded, 'Phone & call log', 'Incoming calls, answer and dial from the PC', ok('phone'), () => _ask(Permission.phone)),
               _Perm(Icons.contacts_rounded, 'Contacts', 'Show names instead of numbers', ok('contacts'), () => _ask(Permission.contacts)),
-              _Perm(Icons.photo_library_rounded, 'Photos & videos', 'Browse your gallery and albums on the PC', ok('photos') && ok('videos'), () async {
+              _Perm(Icons.photo_library_rounded, 'Photos & videos',
+                  ok('photos') && !ok('videos') ? 'Photos are allowed. Tap to allow videos too' : !ok('photos') && ok('videos') ? 'Videos are allowed. Tap to allow photos too' : 'Browse your gallery and albums on the PC',
+                  ok('photos') && ok('videos'), () async {
                 await Permission.photos.request();
                 await _ask(Permission.videos);
               }),

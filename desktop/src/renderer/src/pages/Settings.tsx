@@ -179,6 +179,9 @@ export function Settings() {
         <Row icon={Cable} title="USB connection" body={usb?.available === false ? 'adb was not found. Install Android platform-tools to use USB.' : usb?.devices.length ? `Phone on USB: ${usb.devices.map((d) => `${d.model} (${d.state})`).join(', ')}` : 'Plug the phone in with USB debugging on, and it connects over the cable.'}>
           <Toggle on={settings.usbAuto !== false} onChange={(v) => setSetting('usbAuto', v)} />
         </Row>
+        <Row icon={Smartphone} title="Apps over Wi-Fi" body="When the phone is plugged in by USB, also let app windows open over Wi-Fi afterwards (until the phone restarts). A new computer trying this still has to be allowed on the phone.">
+          <Toggle on={settings.appsOverWifi !== false} onChange={(v) => setSetting('appsOverWifi', v)} />
+        </Row>
         <Row icon={Sparkles} title="Certificate fingerprint" body={info?.fingerprint ? info.fingerprint.match(/.{1,4}/g)!.slice(0, 8).join(' ') + ' …' : ''} />
       </Section>
 
@@ -225,7 +228,7 @@ export function Settings() {
             ))}
           </div>
         </Row>
-        <Row icon={Sparkles} title="Theme" body="Colours for the whole app, pop-ups and call card. Auto blends through all of them, a new one every 5 seconds.">
+        <Row icon={Sparkles} title="Theme" body="Colours for the whole app, pop-ups and call card. Auto blends through all of them, a new one every 10 seconds.">
           <div className="flex gap-2">
             {THEMES.map((t) => {
               const on = (settings.theme || 'aurora') === t.id

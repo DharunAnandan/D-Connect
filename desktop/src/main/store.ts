@@ -29,6 +29,7 @@ export const DEFAULTS = {
   downloadDir: '',
   // usb
   usbAuto: true,
+  appsOverWifi: true, // when the phone is plugged in, also let app windows reach it over Wi-Fi
   // extras
   theme: 'auto', // colour theme: auto (blends through all) | aurora | sunset | ocean | forest | graphite
   navStyle: 'dock', // dock | sidebar

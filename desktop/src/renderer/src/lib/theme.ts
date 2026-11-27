@@ -12,7 +12,7 @@ const P: Record<string, Palette> = {
   graphite: { 'ink-950': [8, 8, 10], 'ink-900': [12, 12, 15], 'ink-850': [20, 20, 24], 'ink-800': [28, 28, 34], 'ink-700': [40, 40, 48], violet: [160, 170, 190], 'violet-soft': [200, 206, 220], cyan: [226, 232, 240], 'cyan-soft': [240, 244, 250], mint: [134, 239, 172], pink: [244, 114, 182] }
 }
 const ORDER = ['aurora', 'ocean', 'forest', 'sunset', 'graphite']
-const STEP = 5000 // ms per theme
+const STEP = 10000 // ms per theme
 const FADE = 0.3 // the last 30% of each step blends into the next
 
 let timer: ReturnType<typeof setInterval> | null = null

@@ -37,7 +37,7 @@ object Notifs {
     }
 
     fun keepAlive(ctx: Context, pc: String?): Notification = NotificationCompat.Builder(ctx, LINK)
-        .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+        .setSmallIcon(R.drawable.ic_tile_clip) // the D-Connect mark in the status bar
         .setContentTitle(if (pc != null) "Linked to $pc" else "D-Connect")
         .setContentText("Notifications, messages and calls are reaching your PC")
         .setOngoing(true)
