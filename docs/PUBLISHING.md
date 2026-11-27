@@ -28,15 +28,13 @@ All three apps use **one version number**: `desktop/package.json` → `"version"
 
 **One-time setup**
 
-1. Make the upload key (keep it safe; losing it means a key reset through Play support):
-   `keytool -genkey -v -keystore ~/dconnect-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`
-2. Create `mobile/android/key.properties` (git-ignored):
-   ```
-   storePassword=...
-   keyPassword=...
-   keyAlias=upload
-   storeFile=/home/you/dconnect-upload.jks
-   ```
+1. **Upload key** (done). It lives in `~/dconnect-keys/dconnect-upload.jks`; its password is in `~/dconnect-keys/github-secrets.txt` and `mobile/android/key.properties`. None of these are in git.
+   - **Back up the `~/dconnect-keys` folder** to a USB drive or a password manager. Losing it means asking Play support for an upload-key reset.
+   - The key is also stored in the repository's Actions secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_PASSWORD`, `ANDROID_KEY_ALIAS`), so GitHub release builds come out signed.
+2. **On a new computer:**
+   - Copy the backed-up `dconnect-keys` folder to the home folder.
+   - Create `mobile/android/key.properties` with the four lines `storePassword=`, `keyPassword=`, `keyAlias=upload` and `storeFile=/home/<you>/dconnect-keys/dconnect-upload.jks`.
+   - Or skip local signing and use the signed `.aab` from the GitHub release.
 3. Play Console → **Create app**:
    - Name: D-Connect
    - Default language
@@ -58,7 +56,7 @@ All three apps use **one version number**: `desktop/package.json` → `"version"
 
 **Each release**
 
-1. Build `flutter build appbundle --release` locally (signed with your key), or take the `.aab` from the GitHub release. The CI `.aab` is only usable if you add the key to CI as secrets; otherwise it is debug-signed and Play rejects it.
+1. Take the signed `D-Connect-<v>-android.aab` from the GitHub release (built when you push the tag), or build it locally with `flutter build appbundle --release`. Both are signed with the upload key.
 2. Play Console → Testing or Production → **Create new release** → upload the `.aab` → release notes → **Review and roll out**.
 3. Review takes from a few hours to a few days.
 4. Updates reach phones through Play automatically. The in-app banner and forced screen open the Play page (`market://`) when the app came from Play, or the download page when it was installed from the APK.
