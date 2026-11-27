@@ -9,8 +9,32 @@ do, plus 20-20-20 eye care that follows you from screen to screen.
 | `mobile/` | Flutter (Android), with native Kotlin services |
 | `protocol/PROTOCOL.md` | the wire protocol both sides speak |
 
+## Screenshots
+
+**On the PC** (Ubuntu shown; Windows looks the same)
+
+| | |
+|---|---|
+| ![Home](docs/screenshots/pc-home.png) | ![Messages](docs/screenshots/pc-messages.png) |
+| Home: phone status, quick actions, latest notifications, phone music | Messages: SMS threads, read and reply |
+| ![Notifications](docs/screenshots/pc-notifications.png) | ![Calls](docs/screenshots/pc-calls.png) |
+| Notifications, filtered by app, with reply and open | Calls: dialler, recent calls, contacts |
+| ![Eye care](docs/screenshots/pc-eye.png) | ![Pairing](docs/screenshots/pc-pair.png) |
+| 20-20-20 eye care with streaks | First run: get the phone app, then scan to pair |
+
+<p align="center"><img src="docs/screenshots/pc-incoming-call.png" width="300" alt="Incoming call card"><br><sub>Incoming call card: answer, decline, silence or reply with a message</sub></p>
+
+**On the phone**
+
+| | | | |
+|---|---|---|---|
+| ![Phone home](docs/screenshots/phone-home.png) | ![Remote](docs/screenshots/phone-remote.png) | ![Eye care](docs/screenshots/phone-eye.png) | ![Eye break](docs/screenshots/phone-eyebreak.png) |
+| Home: quick and PC actions | Touchpad, keyboard, presenter | Eye care stats | The break, in sync with the PC |
+
+<sub>Screenshots use demo data.</sub>
+
 ## Download
-Get the Windows installer (.exe), Linux .deb / AppImage and the Android .apk from the
+Get the Windows installer (.exe), Linux .deb / AppImage, the Android .apk (and the Play .aab) from the
 [latest release](https://github.com/DharunAnandan/D-Connect/releases/latest).
 How to install each one: [docs/INSTALL.md](docs/INSTALL.md).
 

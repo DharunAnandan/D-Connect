@@ -1,5 +1,10 @@
 # Installing D-Connect
 
+<p align="center">
+<img src="https://raw.githubusercontent.com/DharunAnandan/D-Connect/main/docs/screenshots/pc-home.png" width="62%" alt="D-Connect on the PC">
+<img src="https://raw.githubusercontent.com/DharunAnandan/D-Connect/main/docs/screenshots/phone-home.png" width="22%" alt="D-Connect on the phone">
+</p>
+
 D-Connect has two parts:
 
 - an app for your **PC** (Linux or Windows), and
@@ -12,6 +17,7 @@ Download the files from the **Assets** list under this release:
 | File | For |
 |---|---|
 | `D-Connect-<version>-android.apk` | Android phone (Android 8 or newer) |
+| `D-Connect-<version>-android.aab` | Google Play upload only (not installable on a phone) |
 | `d-connect_<version>_amd64.deb` | Ubuntu, Debian, Linux Mint, Pop!_OS |
 | `D-Connect-<version>-linux-x86_64.AppImage` | Any other 64-bit Linux (no install needed) |
 | `D-Connect-<version>-windows-setup.exe` | Windows 10 / 11 (64-bit) |
