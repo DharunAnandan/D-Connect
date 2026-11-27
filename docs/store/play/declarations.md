@@ -66,3 +66,13 @@ Browsing the phone's gallery from the computer is a core feature: the Photos pag
 - **REQUEST_IGNORE_BATTERY_OPTIMIZATIONS:** "Companion device app: keeps the link to the user's computer alive with the screen off so calls and messages arrive on time. The user grants it in system settings after an in-app explanation."
 - **CAMERA:** used only to scan the pairing QR code. Usually no form is needed.
 - **ANSWER_PHONE_CALLS / CALL_PHONE / READ_PHONE_STATE:** covered by the companion-app description: answering, declining and dialling from the computer.
+
+---
+
+## Review videos (YouTube, unlisted)
+| Form | Video |
+|---|---|
+| Accessibility services | https://www.youtube.com/watch?v=fz6eBob_DNE |
+| SMS and Call log | https://www.youtube.com/watch?v=nmtNk5c0b_g |
+| Photo and video permissions | https://www.youtube.com/watch?v=zMzZMjIQx7M |
+| Foreground service | https://www.youtube.com/watch?v=imKv1ijNjtc |
