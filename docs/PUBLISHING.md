@@ -2,14 +2,14 @@
 
 All three apps use **one version number**: `desktop/package.json` → `"version"`.
 
-- The phone app's versionCode is derived from it: 0.1.3 → 103, 1.2.0 → 10200.
-- Keep `mobile/pubspec.yaml` the same (`version: 0.1.3+103`) so local builds match.
+- The phone app's versionCode is derived from it: 1.0.0 → 10000, 1.2.3 → 10203.
+- Keep `mobile/pubspec.yaml` the same (`version: 1.0.0+10000`) so local builds match.
 
 ## Every release
 
 1. Bump the version in `desktop/package.json` and `mobile/pubspec.yaml`.
 2. If the PC↔phone messages changed incompatibly, raise `MIN_PHONE_VERSION` in `desktop/src/shared/links.ts`.
-3. Commit and push, then `git tag v0.1.4 && git push origin v0.1.4`.
+3. Commit and push, then `git tag v1.0.1 && git push origin v0.1.4`.
    - GitHub Actions builds the `.exe`, `.deb`, `.AppImage`, `.apk` and `.aab` into the release.
 4. Upload to the stores (below).
 5. After the stores have the new version, edit `docs/latest.json` on `main`:

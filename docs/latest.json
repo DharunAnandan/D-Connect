@@ -1,6 +1,6 @@
 {
   "desktop": {
-    "latest": "0.1.3",
+    "latest": "1.0.0",
     "min": "0.1.0",
     "notes": "Update checks, a get-the-app guide when pairing, and smoother notification pop-ups.",
     "page": "https://github.com/DharunAnandan/D-Connect/releases/latest",
@@ -10,7 +10,7 @@
     "snap": "https://snapcraft.io/d-connect"
   },
   "android": {
-    "latest": "0.1.3",
+    "latest": "1.0.0",
     "min": "0.1.0",
     "notes": "Update checks and a get-the-PC-app guide when pairing.",
     "apk": "https://github.com/DharunAnandan/D-Connect/releases/latest",
