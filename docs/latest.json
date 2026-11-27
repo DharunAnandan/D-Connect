@@ -1,8 +1,8 @@
 {
   "desktop": {
-    "latest": "1.0.1",
+    "latest": "1.0.2",
     "min": "0.1.0",
-    "notes": "Small fixes and improvements.",
+    "notes": "Microsoft Store support and small improvements.",
     "page": "https://github.com/DharunAnandan/D-Connect/releases/latest",
     "deb": "https://github.com/DharunAnandan/D-Connect/releases/latest",
     "appimage": "https://github.com/DharunAnandan/D-Connect/releases/latest",
@@ -10,7 +10,7 @@
     "snap": "https://snapcraft.io/d-connect"
   },
   "android": {
-    "latest": "1.0.1",
+    "latest": "1.0.2",
     "min": "0.1.0",
     "notes": "Clear explanations before each permission, and better privacy for screen control.",
     "apk": "https://github.com/DharunAnandan/D-Connect/releases/latest",
