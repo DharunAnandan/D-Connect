@@ -75,6 +75,33 @@ jobs:
             desktop/dist/*.AppImage
             desktop/dist/*.deb
 
+  # Snap Store (Ubuntu App Center). Kept separate so a snap problem never blocks the other builds.
+  # The store upload runs only when the SNAPCRAFT_STORE_CREDENTIALS secret exists.
+  snap:
+    needs: release
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    defaults: { run: { working-directory: desktop } }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm, cache-dependency-path: desktop/package-lock.json }
+      - run: sudo snap install snapcraft --classic
+      - run: npm ci
+      - run: npx electron-vite build
+      - run: npx electron-builder --linux snap --x64 --publish never
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          files: desktop/dist/*.snap
+      - name: Upload to the Snap Store
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          if [ -z "$SNAPCRAFT_STORE_CREDENTIALS" ]; then echo "No Snap Store login in secrets: skipping upload"; exit 0; fi
+          # "stable" once classic confinement is approved; until then the store holds it for review
+          snapcraft upload --release=stable dist/*.snap
+
   android:
     needs: release
     runs-on: ubuntu-latest

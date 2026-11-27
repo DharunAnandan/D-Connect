@@ -15,6 +15,22 @@ linux:
   executableArgs: ['--ozone-platform=x11']
 appImage:
   artifactName: D-Connect-${version}-linux-x86_64.${ext}
+# Snap Store (Ubuntu App Center). Classic confinement: D-Connect loads PulseAudio modules for calls,
+# talks to BlueZ, sends input through /dev/uinput and runs adb, which strict snaps can't do.
+snap:
+  title: 'D-Connect: Phone to PC Link'
+  summary: Your phone, right on your PC
+  description: >-
+    D-Connect puts your Android phone on your Linux computer: notifications with reply, SMS,
+    calls (answer and talk through your laptop's speakers and mic), files both ways, shared
+    clipboard, photo gallery, screen mirroring with mouse and keyboard control, phone as touchpad
+    and keyboard, media control, find my phone, PC actions from the phone, battery alerts and
+    20-20-20 eye care. Private by design: no accounts or servers; everything stays between your
+    phone and your PC over an encrypted local connection. Get the phone app from Google Play.
+  confinement: classic
+  grade: stable
+  base: core22
+  artifactName: d-connect_${version}_amd64.${ext}
 win:
   target: nsis
   # adb for app windows and USB mode (downloaded by the release workflow; Apache-2.0)
