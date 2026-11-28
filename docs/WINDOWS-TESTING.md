@@ -16,7 +16,9 @@ A checklist for a session working on the Windows PC (for example Claude Code ove
 ```
 cd desktop
 npm ci
-npm run dev        # runs the app from source
+# PowerShell. VS Code's terminal sets ELECTRON_RUN_AS_NODE, which stops Electron opening windows,
+# and `npm run dev` uses a Linux-only `env -u`, so start it like this on Windows:
+Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue; npx electron-vite dev
 ```
 Building the installer: `npx electron-vite build && npx electron-builder --win nsis --x64` (output in `desktop/dist`).
 
