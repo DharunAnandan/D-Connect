@@ -33,7 +33,28 @@ if (!state.pair) {
 const host = process.env.HOST || state.pair.hosts[0] || '127.0.0.1'
 const url = `wss://${host}:${state.pair.port}`
 console.log('connecting to', url)
-const ws = new WebSocket(url, { rejectUnauthorized: false, checkServerIdentity: () => undefined })
+// Trust exactly the PC's own certificate (read from the D-Connect app on this computer; or
+// DC_CERT=<file.pem>), checked against the fingerprint in the pairing code. Certificate checks
+// stay on: the self-signed certificate is the only one accepted.
+const certFile = process.env.DC_CERT || path.join(os.homedir(), '.config', 'D-Connect', 'identity.json')
+let pcCert
+try {
+  const raw = fs.readFileSync(certFile, 'utf8')
+  pcCert = certFile.endsWith('.json') ? JSON.parse(raw).cert : raw
+} catch {
+  console.log(`Can't read the PC's certificate (${certFile}). Run this on the PC itself, or set DC_CERT=<cert.pem>.`)
+  process.exit(1)
+}
+const pinned = new crypto.X509Certificate(pcCert).fingerprint256.replace(/:/g, '').toLowerCase()
+if (pinned !== state.pair.fp) {
+  console.log('That certificate is not the one in the pairing code, refusing')
+  process.exit(2)
+}
+const ws = new WebSocket(url, {
+  ca: pcCert,
+  // the certificate is for the PC's name, not its IP address: the fingerprint check stands in
+  checkServerIdentity: (_host, cert) => (cert.fingerprint256.replace(/:/g, '').toLowerCase() === pinned ? undefined : new Error('certificate mismatch'))
+})
 const send = (type, data, id) => ws.send(JSON.stringify({ type, data, id }))
 const sendBin = (ch, header, payload) => {
   const h = Buffer.from(JSON.stringify(header))

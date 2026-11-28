@@ -28,7 +28,9 @@ export interface Mixer {
 }
 
 const pctOf = (s: string): number => Number(/(\d+)%/.exec(s)?.[1] ?? 100)
-const prop = (block: string, key: string): string | undefined => new RegExp(`${key.replace(/\./g, '\\.')} = "([^"]*)"`).exec(block)?.[1]
+// every regex special character in the key is escaped, not only the dots
+const reEscape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const prop = (block: string, key: string): string | undefined => new RegExp(`${reEscape(key)} = "([^"]*)"`).exec(block)?.[1]
 
 // ---------------------------------------------------------------- Windows
 // A PowerShell helper (resources/win/mixer.ps1) that stays running and answers one JSON line
