@@ -49,6 +49,19 @@ export declare interface Hub {
 }
 
 export class Hub extends EventEmitter {
+  // the phone that switched itself off (the PC shows "offline" for it, not "looking")
+  phoneOffline: string | null = null
+
+  // switch this PC off (true) or on: off closes every phone link and refuses new ones
+  setOffline(on: boolean): void {
+    this.store.set('pcOffline', on)
+    if (!on) return
+    for (const s of [...this.online.values()]) {
+      this.sendTo(s.ws, 'pc.offline', {})
+      s.ws.close(4005, 'pc offline')
+    }
+  }
+
   session: Session | null = null
   private wss: WebSocketServer | null = null
   private server: https.Server | null = null
@@ -192,6 +205,11 @@ export class Hub extends EventEmitter {
         return
       }
       if (msg.type === 'ping') return this.sendTo(ws, 'pong', msg.data)
+      if (msg.type === 'link.offline') {
+        // the phone is switching itself off: not a lost connection, so don't look for it
+        this.phoneOffline = session.device.deviceId
+        return
+      }
       if (msg.type === 'standby.claim') {
         this.activate(session.device.deviceId)
         return
@@ -241,6 +259,13 @@ export class Hub extends EventEmitter {
       ws.close(4003, 'not paired')
       return null
     }
+    // this PC is switched off: say so (the phone keeps its pairing) and close
+    if (this.store.get('pcOffline')) {
+      this.sendTo(ws, 'pc.offline', {})
+      ws.close(4005, 'pc offline')
+      return null
+    }
+    if (this.phoneOffline === hello.deviceId) this.phoneOffline = null
     device = { ...device, name: hello.name || device.name, model: hello.model || device.model, app: hello.app || undefined, lastSeen: Date.now() }
     trusted[device.deviceId] = device
     this.store.set('trusted', trusted)

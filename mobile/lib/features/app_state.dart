@@ -1,6 +1,8 @@
+import 'dart:async';
 // Everything the phone UI shows that comes from the PC.
 import 'package:flutter/foundation.dart';
 import '../core/connection.dart';
+import '../core/native.dart';
 
 class PcPlayer {
   final String id, app, title;
@@ -46,8 +48,32 @@ class AppState extends ChangeNotifier {
   void changed() => notifyListeners();
   final List<Transfer> transfers = [];
   bool clipboardSync = true;
+  // "find": this phone is ringing (started from the PC), or the PC is (started here)
+  bool phoneRinging = false;
+  bool pcRinging = false;
+  Timer? _pcRingEnd;
+
+  void findPc(bool on) {
+    Link.I.send('find.pc', {'on': on});
+    _setPcRinging(on);
+  }
+
+  void _setPcRinging(bool on) {
+    pcRinging = on;
+    _pcRingEnd?.cancel();
+    if (on) _pcRingEnd = Timer(const Duration(seconds: 30), () => _setPcRinging(false));
+    notifyListeners();
+  }
+
+  void stopPhoneRinging() => Native.call('findPhone', {'on': false});
 
   void init() {
+    Link.I.on('find.pc.state').listen((m) => _setPcRinging(m.data?['on'] == true));
+    Native.events.where((e) => e['type'] == 'find.phone').listen((e) {
+      phoneRinging = e['data'] == true;
+      Link.I.send('find.ring.state', {'on': phoneRinging});
+      notifyListeners();
+    });
     Link.I.on('media.pc.state').listen((m) {
       pcPlayers = ((m.data?['players'] as List?) ?? []).map((e) => PcPlayer.fromJson(e as Map)).toList();
       notifyListeners();

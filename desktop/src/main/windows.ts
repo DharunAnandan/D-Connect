@@ -142,7 +142,8 @@ export function createMixerWindow(): BrowserWindow {
 // `external` lets the phone end it too.
 export function showEyeBreak(
   { seconds, sound }: { seconds: number; sound: boolean },
-  external: (end: (r: EyeResult) => void) => void
+  external: (end: (r: EyeResult) => void) => void,
+  onShown?: () => void // the break is on screen here (start the phone's at the same moment)
 ): Promise<EyeResult> {
   return new Promise((resolve) => {
     const primary = screen.getPrimaryDisplay().id
@@ -184,7 +185,10 @@ export function showEyeBreak(
       load(w, 'eyebreak', '', `?s=${seconds}&sound=${sound ? 1 : 0}&primary=${isPrimary ? 1 : 0}`)
       w.once('ready-to-show', () => {
         w.showInactive()
-        if (isPrimary) w.focus() // so Esc works
+        if (isPrimary) {
+          w.focus() // so Esc works
+          onShown?.()
+        }
       })
       w.on('closed', () => !settled && end('skip'))
       return w

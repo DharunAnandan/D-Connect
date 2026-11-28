@@ -22,7 +22,7 @@ export interface UpdateState {
 export const useUpdate = (): UpdateState | null => useLive<UpdateState | null>('updateState', 'update', null)[0]
 
 const howTo = (k: UpdateState['kind']): string =>
-  k === 'msstore' ? 'The Microsoft Store updates it for you: open D-Connect in the Store and click Update.' : k === 'snap' ? 'The Snap Store updates it for you, or run: snap refresh d-connect' : k === 'exe' ? 'Download the new installer and run it; your pairing stays.' : k === 'appimage' ? 'Download the new AppImage and use it in place of this one.' : 'Download the new .deb and open it to install; your pairing stays.'
+  k === 'msstore' || k === 'exe' ? 'Get it from the Microsoft Store; your pairing stays.' : 'Get it from the Snap Store (Ubuntu App Center); your pairing stays.'
 
 export function UpdateGate() {
   const u = useUpdate()

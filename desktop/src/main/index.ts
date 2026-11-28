@@ -107,7 +107,20 @@ app.whenReady().then(async () => {
 
   // ---------------------------------------------------------------- core rpc
   const connState = (s: Session | null = hub.session): any =>
-    s ? { connected: true, device: { ...s.device, key: undefined }, via: s.via, address: s.address, since: s.since, rtt: s.rtt } : { connected: false }
+    s
+      ? { connected: true, device: { ...s.device, key: undefined }, via: s.via, address: s.address, since: s.since, rtt: s.rtt }
+      : { connected: false, pcOffline: !!store.get('pcOffline'), phoneOffline: !!hub.phoneOffline, device: lastDevice() }
+  // the phone shown while not connected: the one used last
+  const lastDevice = (): any => {
+    const t = Object.values(store.get('trusted')) as any[]
+    const d = t.find((x) => x.deviceId === (hub.phoneOffline || store.get('activeDevice'))) || t.sort((a, b) => b.lastSeen - a.lastSeen)[0]
+    return d ? { ...d, key: undefined } : undefined
+  }
+  ctx.handle('setPcOffline', (on: boolean) => {
+    hub.setOffline(on)
+    emit('conn', connState())
+    updateTray()
+  })
 
   ctx.handle('conn', () => connState())
   ctx.handle('pairInfo', async () => {
@@ -196,11 +209,29 @@ app.whenReady().then(async () => {
     if (appWaiting && !c.app && c.state !== 'ringing' && !c.waitingCall?.number) c = { ...c, waitingCall: appWaiting }
     lastCall = c
     for (const w of allWindows()) w.webContents.send('evt', 'call', lastCall)
-    if (!callWin || callWin.isDestroyed()) {
-      callWin = createCallWindow()
-      callWin.once('ready-to-show', () => callWin?.showInactive())
-    } else callWin.showInactive()
+    const w = callWindow()
+    if (w.isVisible()) return
+    // shown once the card has drawn this call (callDrawn), never as an empty box first
+    callShowTimer && clearTimeout(callShowTimer)
+    callShowTimer = setTimeout(showCallWin, 1500) // in case the card never says so
   }
+  // one call window, made ahead and kept (hidden) between calls, so it opens at once
+  let callShowTimer: NodeJS.Timeout | null = null
+  const callWindow = (): BrowserWindow => {
+    if (!callWin || callWin.isDestroyed()) callWin = createCallWindow()
+    return callWin
+  }
+  const showCallWin = (): void => {
+    callShowTimer && clearTimeout(callShowTimer)
+    callShowTimer = null
+    const w = callWin
+    if (!w || w.isDestroyed() || lastCall.state === 'idle' || w.isVisible()) return
+    w.setOpacity(0)
+    w.showInactive()
+    setTimeout(() => !w.isDestroyed() && w.setOpacity(1), 60)
+  }
+  ctx.handle('callDrawn', () => showCallWin())
+  setTimeout(() => callWindow(), 4000) // warm it up after start
   const closeCall = (): void => {
     phoneCall = { state: 'idle' }
     appWaiting = null
@@ -208,7 +239,9 @@ app.whenReady().then(async () => {
     const w = callWin
     if (!w || w.isDestroyed()) return
     w.webContents.send('evt', 'call', lastCall)
-    setTimeout(() => !w.isDestroyed() && lastCall.state === 'idle' && w.destroy(), 700)
+    callShowTimer && clearTimeout(callShowTimer)
+    // hide (not destroy): the next call opens straight away
+    setTimeout(() => !w.isDestroyed() && lastCall.state === 'idle' && w.hide(), 700)
   }
   ctx.handle('lastCall', () => lastCall)
   // test only (DC_DEV_CONTROL): show the card with sample calls, no phone call needed
@@ -341,8 +374,8 @@ app.whenReady().then(async () => {
     busy: () => lastCall.state === 'offhook',
     show: async ({ seconds, sound }) => {
       const sync = store.get('eyePhoneSync') && !!hub.session
-      if (sync) hub.send('eye.start', { seconds })
-      const result = await showEyeBreak({ seconds, sound }, (end) => (phoneEnd = end))
+      // the phone starts when the break is actually on this screen, so both count down together
+      const result = await showEyeBreak({ seconds, sound }, (end) => (phoneEnd = end), () => sync && hub.send('eye.start', { seconds }))
       phoneEnd = null
       if (sync) hub.send('eye.end', { result })
       return result
@@ -475,7 +508,8 @@ app.whenReady().then(async () => {
     const es = eye.status()
     tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: s ? `● Connected · ${s.device.name} (${s.via === 'usb' ? 'USB' : 'Wi-Fi'})` : '○ Not connected', enabled: false },
+        { label: s ? `● Connected · ${s.device.name} (${s.via === 'usb' ? 'USB' : 'Wi-Fi'})` : store.get('pcOffline') ? '○ Offline' : '○ Not connected', enabled: false },
+        { label: 'Online (phones can connect)', type: 'checkbox', checked: !store.get('pcOffline'), click: (i) => { hub.setOffline(!i.checked); emit('conn', connState()); updateTray() } },
         { type: 'separator' },
         { label: 'Open D-Connect', click: () => focusMain() },
         { label: 'Find my phone', enabled: !!s, click: () => hub.send('find.ring', { on: true }) },

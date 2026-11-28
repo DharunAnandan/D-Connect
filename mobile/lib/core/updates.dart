@@ -18,8 +18,9 @@ class AppLinks {
   static const manifest = 'https://raw.githubusercontent.com/DharunAnandan/D-Connect/main/docs/latest.json';
   static const playStore = 'https://play.google.com/store/apps/details?id=com.dharun.dconnect';
   static const playMarket = 'market://details?id=com.dharun.dconnect';
-  // the PC app downloads (Ubuntu, Windows)
-  static const pcApp = 'https://github.com/DharunAnandan/D-Connect/releases/latest';
+  // the PC app in each PC store
+  static const pcUbuntu = 'https://snapcraft.io/d-connect';
+  static const pcWindows = 'https://apps.microsoft.com/detail/9N981DC1LCQ6';
 }
 
 int cmpVersion(String a, String b) {
@@ -101,6 +102,7 @@ class Updates extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Play installs update through Play; an APK install gets the new APK
-  void open() => Native.call('openUrl', {'url': fromPlay ? AppLinks.playMarket : (apk.startsWith('https://') ? apk : AppLinks.pcApp)});
+  // updates always come from Google Play (the Play app if it's there, else its web page)
+  void open() => openPlay();
+  static void openPlay() => Native.call('openUrl', {'url': AppLinks.playMarket, 'fallback': AppLinks.playStore});
 }

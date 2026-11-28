@@ -5,31 +5,38 @@ import { useApp } from '@/lib/store'
 
 export function TitleBar() {
   const conn = useApp((s) => s.conn)
+  const platform = useApp((s) => s.info?.platform)
   const [bt] = useLive<{ connected: boolean; callLink: boolean }>('btLink', 'btlink', { connected: false, callLink: false })
   return (
     <div className="drag flex h-11 shrink-0 items-center justify-between pl-5 pr-2">
       <div className="flex items-center gap-2.5">
         <Logo size={20} />
         <span className="text-[13px] font-semibold tracking-wide text-white/85">D-Connect</span>
-        <motion.span
-          key={String(conn.connected)}
+        {/* Online / Offline: click to switch this PC off (no phone connects) or back on */}
+        <motion.button
+          key={`${conn.connected}-${conn.pcOffline}`}
           initial={{ opacity: 0, x: -6 }}
           animate={{ opacity: 1, x: 0 }}
-          className={`ml-2 flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${conn.connected ? 'bg-mint/10 text-mint' : 'bg-white/5 text-white/45'}`}
+          onClick={() => call('setPcOffline', !conn.pcOffline)}
+          title={conn.pcOffline ? 'Offline: click to go online' : 'Online: click to go offline (disconnects the phone)'}
+          className={`no-drag ml-2 flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10.5px] font-semibold transition hover:brightness-125 ${conn.connected ? 'bg-mint/10 text-mint' : conn.pcOffline ? 'bg-white/5 text-white/45' : 'bg-amber/10 text-amber'}`}
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${conn.connected ? 'bg-mint shadow-[0_0_8px_rgb(var(--c-mint))]' : 'bg-white/30'}`} />
-          {conn.connected ? `${conn.via === 'usb' ? 'USB' : 'Wi-Fi'}${conn.rtt ? ` · ${conn.rtt} ms` : ''}` : 'Offline'}
-        </motion.span>
-        {conn.connected && bt.connected && (
-          <motion.span
+          <span className={`h-1.5 w-1.5 rounded-full ${conn.connected ? 'bg-mint shadow-[0_0_8px_rgb(var(--c-mint))]' : conn.pcOffline ? 'bg-white/30' : 'bg-amber'}`} />
+          {conn.connected ? `Online · ${conn.via === 'usb' ? 'USB' : 'Wi-Fi'}${conn.rtt ? ` · ${conn.rtt} ms` : ''}` : conn.pcOffline ? 'Offline' : conn.phoneOffline ? 'Online · phone off' : 'Online · searching'}
+        </motion.button>
+        {/* the phone's Bluetooth call link: "Calls" when calls can play here; click to connect it */}
+        {conn.connected && platform === 'linux' && (
+          <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            title={bt.callLink ? 'Bluetooth: calls can play on this PC' : 'Bluetooth connected'}
-            className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${bt.callLink ? 'bg-cyan/10 text-cyan-soft' : 'bg-white/5 text-white/45'}`}
+            disabled={bt.callLink}
+            onClick={() => call('btFixCallLink')}
+            title={bt.callLink ? 'Bluetooth call link is on: calls can play on this PC' : 'Bluetooth call link is off: click to connect it'}
+            className={`no-drag flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold ${bt.callLink ? 'bg-cyan/10 text-cyan-soft' : 'bg-white/5 text-white/45 hover:text-white/80'}`}
           >
             <Bluetooth size={11} />
-            {bt.callLink ? 'Calls' : 'BT'}
-          </motion.span>
+            {bt.callLink ? 'Calls' : 'Calls off'}
+          </motion.button>
         )}
       </div>
       <div className="no-drag flex items-center">

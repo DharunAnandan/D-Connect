@@ -27,6 +27,8 @@ export function lockPc(): void {
   else execFile('loginctl', ['lock-session'], (err) => err && execFile('xdg-screensaver', ['lock']))
 }
 
+let phoneRinging = false
+
 export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
   let status: PhoneStatus | null = null
   let lockTimer: NodeJS.Timeout | null = null
@@ -255,6 +257,10 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
       if (ctx.store.get('dndSync') && prev && prev.dnd !== data.dnd) ctx.emit('dnd', data.dnd)
     } else if (type === 'commands.run') run(data.id)
     else if (type === 'find.pc') findPc(data.on !== false)
+    else if (type === 'find.ring.state') {
+      phoneRinging = data.on === true
+      ctx.emit('findphone', phoneRinging)
+    }
     else if (type === 'share.url') {
       ctx.toast({ kind: 'link', title: 'Link from your phone', body: data.url, actions: [{ id: `open-url:${data.url}`, label: 'Open' }, { id: `copy:${data.url}`, label: 'Copy' }] })
       if (data.open) openUrlSafely(data.url) // web links only
@@ -265,6 +271,13 @@ export function system(ctx: Ctx, findPc: (on: boolean) => void): void {
 
   ctx.handle('status', () => status)
   ctx.handle('findPhone', (on: boolean) => ctx.hub.send('find.ring', { on }))
+  ctx.handle('phoneRinging', () => phoneRinging)
+  // "Found it" on this PC: tell the phone the PC stopped ringing
+  ctx.handle('findPcDone', () => ctx.hub.send('find.pc.state', { on: false }))
+  ctx.hub.on('disconnected', () => {
+    phoneRinging = false
+    ctx.emit('findphone', false)
+  })
   ctx.handle('shareUrl', (url: string) => ctx.hub.send('share.url', { url }))
   ctx.handle('shareText', (text: string) => ctx.hub.send('share.text', { text }))
   ctx.handle('setPhoneDnd', (on: boolean) => ctx.hub.send('dnd.set', { on }))

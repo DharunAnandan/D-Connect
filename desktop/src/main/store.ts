@@ -29,6 +29,8 @@ export const DEFAULTS = {
   downloadDir: '',
   // usb
   usbAuto: true,
+  pcOffline: false,
+  btAutoConnect: true, // open the phone's Bluetooth call link by itself // switched off: no phone connects until switched back on
   appsOverWifi: true, // when the phone is plugged in, also let app windows reach it over Wi-Fi
   // extras
   theme: 'auto', // colour theme: auto (blends through all) | aurora | sunset | ocean | forest | graphite

@@ -9,6 +9,7 @@ import '../../features/eye.dart';
 import '../../features/files.dart';
 import '../../theme/tokens.dart';
 import '../widgets/clip_sheet.dart';
+import '../widgets/link_sketch.dart';
 import '../widgets/connect_scene.dart';
 import '../widgets/glass.dart';
 import '../widgets/ring.dart';
@@ -28,7 +29,43 @@ class HomeTab extends StatelessWidget {
           header: _Header(),
           children: [
             _PcCard().animate().fadeIn(duration: 400.ms).slideY(begin: .08, curve: M.ease),
-            if (!link.connected && !link.standby) ...[
+            // ringing because the PC asked: stop it right here too
+            if (app.phoneRinging) ...[
+              const SizedBox(height: 12),
+              Glass(
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  const Icon(Icons.vibration_rounded, color: C.pink),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Text('Your PC is ringing this phone', style: TextStyle(fontWeight: FontWeight.w700))),
+                  FilledButton(onPressed: app.stopPhoneRinging, style: FilledButton.styleFrom(backgroundColor: C.pink), child: const Text('Found it')),
+                ]),
+              ),
+            ],
+            // switched off (here or with the tile): a still card, not the searching animation
+            if (link.offline) ...[
+              const SizedBox(height: 12),
+              Glass(
+                padding: const EdgeInsets.all(18),
+                child: Row(children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: .06), borderRadius: BorderRadius.circular(14)),
+                    child: const Icon(Icons.cloud_off_rounded, color: Colors.white54),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('D-Connect is offline', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                      SizedBox(height: 2),
+                      Text('Not connected to your PC, and not looking for it.', style: TextStyle(color: C.muted, fontSize: 12.5)),
+                    ]),
+                  ),
+                  TextButton(onPressed: link.goOnline, child: const Text('Go online', style: TextStyle(color: C.cyan, fontWeight: FontWeight.w700))),
+                ]),
+              ),
+            ] else if (!link.connected && !link.standby) ...[
               const SizedBox(height: 4),
               ConnectScene(state: SceneState.searching, phoneName: link.deviceName, pcName: link.pc?.name ?? 'PC', height: 220),
               Center(child: Text(link.error ?? 'Open D-Connect on ${link.pc?.name ?? 'your PC'}. Same Wi-Fi, or plug in USB.', textAlign: TextAlign.center, style: const TextStyle(color: C.muted))),
@@ -46,7 +83,9 @@ class HomeTab extends StatelessWidget {
                 _Tile(Icons.upload_file_rounded, 'Send files', [C.violet, C.cyan], link.connected ? () => _pickFiles(context) : null),
                 _Tile(Icons.content_paste_go_rounded, 'Clipboard', [C.cyan, C.mint], link.connected ? () => _clip(context) : null),
                 _Tile(Icons.touch_app_rounded, 'Touchpad', [C.pink, C.violet], link.connected ? () => onGo(1) : null),
-                _Tile(Icons.radar_rounded, 'Find PC', [C.amber, C.pink], link.connected ? () => Link.I.send('find.pc', {'on': true}) : null),
+                app.pcRinging
+                    ? _Tile(Icons.stop_circle_rounded, 'Stop PC ringing', [C.rose, C.pink], () => app.findPc(false))
+                    : _Tile(Icons.radar_rounded, 'Find PC', [C.amber, C.pink], link.connected ? () => app.findPc(true) : null),
                 _Tile(Icons.link_rounded, 'Send link', [C.violet, C.pink], link.connected ? () => _shareLink(context) : null),
                 _Tile(Icons.visibility_rounded, 'Eye break', [C.cyan, C.mint], link.connected ? Eye.I.takeNow : null),
               ].animate(interval: 40.ms).fadeIn(duration: 350.ms).scale(begin: const Offset(.92, .92), curve: M.spring),
@@ -224,7 +263,8 @@ class _PcCard extends StatelessWidget {
       strong: true,
       radius: 26,
       padding: const EdgeInsets.all(20),
-      child: Row(children: [
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Row(children: [
         Hero(
           tag: 'pc',
           child: AnimatedContainer(
@@ -264,6 +304,9 @@ class _PcCard extends StatelessWidget {
             ],
           ]),
         ),
+      ]),
+      // this phone and the PC, drawn in light, linked
+      if (on) ...[const SizedBox(height: 10), const LinkSketch(height: 64)],
       ]),
     );
   }

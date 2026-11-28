@@ -85,31 +85,47 @@ class _ForceUpdate extends StatelessWidget {
   }
 }
 
-// "Get D-Connect for your PC": shown while pairing, and in Settings
+// "Get D-Connect for your PC": shown while pairing, and in Settings. Opens the PC app's store
+// page (Snap Store for Ubuntu, Microsoft Store for Windows); the link can be copied to open it
+// on the PC.
 class GetPcApp extends StatelessWidget {
   const GetPcApp({super.key});
+
+  void _pick(BuildContext context, String url, String store) {
+    Clipboard.setData(ClipboardData(text: url));
+    Native.call('openUrl', {'url': url});
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$store link copied too: open it on your PC')));
+  }
+
   @override
   Widget build(BuildContext context) {
+    Widget btn(IconData icon, String label, VoidCallback onTap) => Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onTap,
+            icon: Icon(icon, size: 18),
+            label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: Colors.white.withValues(alpha: .18)),
+              padding: const EdgeInsets.symmetric(vertical: 11),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        );
     return Glass(
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-      child: Row(children: [
-        const Icon(Icons.laptop_rounded, color: C.violetSoft),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            const Text('No D-Connect on your PC yet?', style: TextStyle(fontWeight: FontWeight.w700)),
-            Text('Install it on Ubuntu or Windows from the download page', style: TextStyle(color: Colors.white.withValues(alpha: .6), fontSize: 12)),
-          ]),
-        ),
-        IconButton(
-          tooltip: 'Copy link',
-          icon: const Icon(Icons.copy_rounded, size: 20, color: C.muted),
-          onPressed: () {
-            Clipboard.setData(const ClipboardData(text: AppLinks.pcApp));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied: open it on your PC')));
-          },
-        ),
-        TextButton(onPressed: () => Native.call('openUrl', {'url': AppLinks.pcApp}), child: const Text('Get it', style: TextStyle(color: C.cyan, fontWeight: FontWeight.w700))),
+      padding: const EdgeInsets.all(14),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          const Icon(Icons.laptop_rounded, color: C.violetSoft, size: 20),
+          const SizedBox(width: 10),
+          const Expanded(child: Text('No D-Connect on your PC yet?', style: TextStyle(fontWeight: FontWeight.w700))),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          btn(Icons.window_rounded, 'Windows', () => _pick(context, AppLinks.pcWindows, 'Microsoft Store')),
+          const SizedBox(width: 10),
+          btn(Icons.terminal_rounded, 'Ubuntu', () => _pick(context, AppLinks.pcUbuntu, 'Snap Store')),
+        ]),
       ]),
     );
   }

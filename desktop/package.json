@@ -1,7 +1,7 @@
 {
   "name": "d-connect",
   "productName": "D-Connect",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Your phone, on your PC. Linux-first phone link with eye care.",
   "main": "out/main/index.js",
   "author": "Dharun",
@@ -52,6 +52,13 @@
     "zustand": "^5.1.0"
   },
   "overrides": {
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "usocket": "file:./stubs/usocket",
+    "@electron/universal": {
+      "minimatch": "^11.0.9"
+    },
+    "app-builder-lib": {
+      "minimatch": "^11.0.9"
+    }
   }
 }

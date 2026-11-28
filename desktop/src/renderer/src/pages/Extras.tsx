@@ -3,7 +3,7 @@ import { Camera, Clapperboard, Coffee, Crop, Link2, Lock, Moon, MoonStar, Music2
 import { useEffect, useState } from 'react'
 import type { QuickCommand } from '@shared/protocol'
 import { Button, Card, Empty, PageHeader, Row, Toggle } from '@/components/ui'
-import { call } from '@/lib/api'
+import { call, dc } from '@/lib/api'
 import { useApp } from '@/lib/store'
 import { list } from '@/theme/motion'
 
@@ -12,6 +12,11 @@ const ICONS: Record<string, any> = { lock: Lock, moon: Moon, 'volume-x': VolumeX
 export function Extras() {
   const { conn, settings, setSetting, pcMedia, status } = useApp()
   const [ringing, setRinging] = useState(false)
+  // follow the phone: stopped there ("Found it") or after 30 s
+  useEffect(() => {
+    call<boolean>('phoneRinging').then(setRinging)
+    return dc.on('findphone', (v: boolean) => setRinging(v))
+  }, [])
   const [link, setLink] = useState('')
   const [commands, setCommands] = useState<QuickCommand[]>([])
   const [adding, setAdding] = useState(false)

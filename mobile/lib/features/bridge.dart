@@ -119,10 +119,6 @@ class Bridge {
           // ask for "Nearby devices" first if needed, then bond with the PC
           var r = await Native.map('btPair', {'address': d['address']});
           if (r['reason'] == 'permission' && await Permission.bluetoothConnect.request().isGranted) {
-            link.send('bt.info', await Native.map('btInfo'));
-        // already on a call when the PC connected: show it there right away
-        final call = await Native.map('callCurrent');
-        if (call['state'] != null && call['state'] != 'idle') link.send('call.state', {...call, 'existing': true});
             r = await Native.map('btPair', {'address': d['address']});
           }
         case 'notif.open':

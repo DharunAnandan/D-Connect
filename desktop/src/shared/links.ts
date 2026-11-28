@@ -4,8 +4,9 @@ export const LINKS = {
   manifest: 'https://raw.githubusercontent.com/DharunAnandan/D-Connect/main/docs/latest.json',
   // the phone app (Play Store page once published)
   phoneApp: 'https://play.google.com/store/apps/details?id=com.dharun.dconnect',
-  // the PC app (downloads page: Ubuntu, Windows)
-  pcApp: 'https://github.com/DharunAnandan/D-Connect/releases/latest'
+  // the PC app in each PC store
+  pcWindows: 'https://apps.microsoft.com/detail/9N981DC1LCQ6',
+  pcUbuntu: 'https://snapcraft.io/d-connect'
 }
 
 // the oldest phone app this PC app works with (raise it when the protocol changes)

@@ -2,16 +2,38 @@ import { motion } from 'framer-motion'
 import { Bell, Clipboard, Laptop, Smartphone, Eye, FolderUp, Link2, MessageSquare, MonitorSmartphone, Music2, Pause, Play, Radar, SkipBack, SkipForward, Wifi } from 'lucide-react'
 import { ConnectScene } from '@/components/ConnectScene'
 import { Avatar, Button, Card, Pill, Ring } from '@/components/ui'
-import { call } from '@/lib/api'
+import { call, useLive } from '@/lib/api'
 import { ago, size } from '@/lib/format'
 import { Boost } from './Sound'
 import { Mark } from '@/components/TitleBar'
 import { ClipboardCard } from '@/components/ClipboardCard'
+import { LinkDrawing } from '@/components/LinkDrawing'
 import { useApp } from '@/lib/store'
 import { list } from '@/theme/motion'
 
 export function Home() {
   const { conn, status, notifs, eye, eyeStats, phoneMedia, info, go: nav, settings, setSetting } = useApp()
+  const [phoneRinging] = useLive<boolean>('phoneRinging', 'findphone', false)
+
+  // switched off here, or the phone switched itself off: a still card, not the search animation
+  if (!conn.connected && (conn.pcOffline || conn.phoneOffline)) {
+    return (
+      <motion.div variants={list} initial="initial" animate="animate" className="mx-auto max-w-xl pt-24 text-center">
+        <div className="mx-auto grid h-24 w-24 place-items-center rounded-3xl bg-white/5 ring-1 ring-white/10">
+          {conn.pcOffline ? <Laptop size={40} className="text-white/50" /> : <Smartphone size={40} className="text-white/50" />}
+        </div>
+        <h2 className="mt-6 text-2xl font-bold tracking-tight">{conn.pcOffline ? 'This PC is offline' : `${conn.device?.name || 'Your phone'} is offline`}</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+          {conn.pcOffline ? 'No phone can connect until you go online again.' : 'D-Connect was switched off on the phone. Turn it on there (the app or its quick-settings tile) to connect again.'}
+        </p>
+        {conn.pcOffline && (
+          <div className="mt-6 flex justify-center">
+            <Button variant="primary" icon={Wifi} onClick={() => call('setPcOffline', false)}>Go online</Button>
+          </div>
+        )}
+      </motion.div>
+    )
+  }
 
   if (!conn.connected) {
     return (
@@ -56,6 +78,8 @@ export function Home() {
             <h1 className="mt-2 truncate text-[30px] font-bold tracking-tight">{conn.device?.name}</h1>
             <p className="text-sm text-muted">{conn.device?.model}{conn.since ? ` · linked ${ago(conn.since)} ago` : ''}</p>
           </div>
+          {/* the phone and this PC, drawn in light, linked */}
+          <LinkDrawing className="hidden h-24 min-w-[180px] max-w-[560px] flex-[1.3] 2xl:block" />
           <div className="flex items-center gap-5">
             <Stat label="Battery" value={`${status?.battery ?? '–'}%`} pct={(status?.battery ?? 0) / 100} colors={status?.charging ? ['rgb(var(--c-mint))', '#8be9ff'] : (status?.battery ?? 100) <= 20 ? ['rgb(var(--c-pink))', '#f87171'] : ['rgb(var(--c-violet))', 'rgb(var(--c-cyan))']} sub={status?.charging ? 'Charging' : 'On battery'} />
             <Stat label="Storage" value={status?.storageFree ? size(status.storageFree) : '–'} pct={storagePct} colors={['#ffb547', 'rgb(var(--c-pink))']} sub="free" />
@@ -66,7 +90,9 @@ export function Home() {
       {/* quick actions */}
       <div className="mb-5 grid grid-cols-3 gap-3 lg:grid-cols-6">
         {[
-          { icon: Radar, label: 'Find phone', color: 'from-pink/30 to-violet/20', run: () => call('findPhone', true) },
+          phoneRinging
+            ? { icon: Radar, label: 'Stop ringing', color: 'from-pink/60 to-rose-500/40', run: () => call('findPhone', false) }
+            : { icon: Radar, label: 'Find phone', color: 'from-pink/30 to-violet/20', run: () => call('findPhone', true) },
           { icon: Clipboard, label: 'Send clipboard', color: 'from-cyan/30 to-violet/10', run: () => call('clipSendNow') },
           { icon: FolderUp, label: 'Send files', color: 'from-violet/30 to-cyan/10', run: () => nav('/files') },
           { icon: MonitorSmartphone, label: 'Mirror screen', color: 'from-mint/25 to-cyan/10', run: () => nav('/mirror') },

@@ -32,10 +32,12 @@ object FindPhone {
         Haptics.vibrate(ctx, longArrayOf(0, 600, 400), 0)
         ctx.getSystemService(NotificationManager::class.java).notify(Notifs.FIND_ID, Notifs.find(ctx))
         main.postDelayed({ stop() }, 30_000)
+        Bridge.emit("find.phone", true) // the app and the PC show "Stop ringing"
     }
 
     fun stop() {
         main.removeCallbacksAndMessages(null)
+        val was = player != null
         player?.let { try { it.stop(); it.release() } catch (_: Exception) {} }
         player = null
         if (!Bridge.isReady()) return
@@ -44,5 +46,6 @@ object FindPhone {
         if (savedVolume >= 0) ctx.getSystemService(AudioManager::class.java).setStreamVolume(AudioManager.STREAM_ALARM, savedVolume, 0)
         savedVolume = -1
         Notifs.cancel(ctx, Notifs.FIND_ID)
+        if (was) Bridge.emit("find.phone", false)
     }
 }

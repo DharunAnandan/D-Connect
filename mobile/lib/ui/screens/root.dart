@@ -12,6 +12,7 @@ import '../widgets/connect_scene.dart';
 import '../widgets/update_gate.dart';
 import 'home_shell.dart';
 import 'pair_screen.dart';
+import 'setup_screen.dart';
 
 class Root extends StatefulWidget {
   const Root({super.key});
@@ -84,7 +85,12 @@ class _RootState extends State<Root> with WidgetsBindingObserver {
         duration: M.slow,
         switchInCurve: M.ease,
         transitionBuilder: (c, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween(begin: .97, end: 1.0).animate(a), child: c)),
-        child: paired ? const HomeShell(key: ValueKey('home')) : const PairScreen(key: ValueKey('pair')),
+        child: paired
+            ? const HomeShell(key: ValueKey('home'))
+            : ValueListenableBuilder<bool>(
+                valueListenable: Setup.done,
+                builder: (_, done, _) => done ? const PairScreen(key: ValueKey('pair')) : const SetupScreen(key: ValueKey('setup')),
+              ),
       ),
       IgnorePointer(
         ignoring: _celebrate == null,

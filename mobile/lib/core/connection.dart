@@ -52,6 +52,7 @@ class Link extends ChangeNotifier {
   // linked and online, but the PC is using another paired phone right now
   bool get standby => state == LinkState.standby;
   String? activeElsewhere;
+  bool pcIsOffline = false;
 
   // ask the PC to use this phone instead of the other one
   void claim() => _ws?.add(Envelope('standby.claim', {}).encode());
@@ -80,6 +81,11 @@ class Link extends ChangeNotifier {
 
   // turn D-Connect off: disconnect from every PC and stop looking until it's turned on again
   Future<void> goOffline() async {
+    // tell the PC it's on purpose, so it shows "offline" there instead of looking for us
+    if (_ws != null) {
+      send('link.offline', {});
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
     offline = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('offline', true);
@@ -249,6 +255,12 @@ class Link extends ChangeNotifier {
         if (m == null) return;
         if (!welcome.isCompleted) {
           if (m.type == 'welcome') welcome.complete(Map<String, dynamic>.from(m.data));
+          if (m.type == 'pc.offline') {
+            pcIsOffline = true; // not "forgotten": keep the pairing, try again later
+            error = 'D-Connect on ${target.name} is set to offline. Turn it on there.';
+            welcome.complete(null);
+            return;
+          }
           if (m.type == 'denied') {
             error = m.data?['reason'] == 'not-paired' ? 'This PC doesn\'t know this phone anymore. Pair again.' : 'Pairing was refused.';
             welcome.complete(null);
@@ -281,7 +293,7 @@ class Link extends ChangeNotifier {
     if (w == null) {
       await sub.cancel();
       ws.close();
-      if (error != null && token == null) {
+      if (error != null && token == null && !pcIsOffline) {
         // the PC forgot us: stop trying with a dead key
         _running = false;
         state = LinkState.unpaired;
@@ -303,6 +315,7 @@ class Link extends ChangeNotifier {
     via = host == '127.0.0.1' ? 'usb' : 'wifi';
     state = w['standby'] == true ? LinkState.standby : LinkState.connected;
     error = null;
+    pcIsOffline = false;
     _attempt = 0;
     notifyListeners();
     Native.keepAlive(true, pc!.name);

@@ -10,6 +10,8 @@ export interface Conn {
   address?: string
   since?: number
   rtt?: number
+  pcOffline?: boolean // this PC is switched off
+  phoneOffline?: boolean // the phone switched itself off
 }
 
 interface State {

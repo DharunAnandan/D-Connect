@@ -1,0 +1,7 @@
+{
+  "name": "usocket",
+  "version": "0.3.0-dconnect.0",
+  "description": "Empty stand-in: dbus-next falls back to Node's own socket for the session bus. Replacing the native addon removes its old build tools (node-gyp, request, tar...) and their security alerts.",
+  "main": "index.js",
+  "license": "MIT"
+}

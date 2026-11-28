@@ -95,10 +95,13 @@ object Bridge {
                 "store" to fromPlayStore()
             ))
             "openUrl" -> {
-                val u = a("url") as String
-                if (u.startsWith("https://") || u.startsWith("market://")) {
-                    try { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(u)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+                // market:// opens the Play Store app; if there is none, the web page instead
+                val open = { u: String? ->
+                    u != null && (u.startsWith("https://") || u.startsWith("market://")) && try {
+                        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(u)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); true
+                    } catch (_: Exception) { false }
                 }
+                if (!open(a("url") as String?)) open(a("fallback") as String?)
                 result.success(null)
             }
             "status" -> result.success(status())

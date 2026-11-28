@@ -322,7 +322,12 @@ export function bluetooth(ctx: Ctx): void {
   ctx.handle('btSteps', () => PIPEWIRE_STEPS)
   ctx.hub.on('disconnected', () => (phoneBtName = ''))
   // Open the call link: the phone re-reads this PC's capabilities, then the PC connects.
-  ctx.handle('btFixCallLink', () => fixCallLink(ctx, names()))
+  ctx.handle('btFixCallLink', async () => {
+    const r = await fixCallLink(ctx, names())
+    void pollLink()
+    if (!r.ok) ctx.toast({ kind: 'info', title: 'Call link not connected', body: r.message, ttl: 12000 })
+    return r
+  })
   let link = { connected: false, callLink: false }
   const pollLink = async (): Promise<void> => {
     if (!ctx.hub.session) return
@@ -335,6 +340,7 @@ export function bluetooth(ctx: Ctx): void {
   }
   setInterval(pollLink, 12000)
   ctx.hub.on('connected', () => setTimeout(pollLink, 2000))
+
   ctx.hub.on('disconnected', () => {
     link = { connected: false, callLink: false }
     ctx.emit('btlink', link)

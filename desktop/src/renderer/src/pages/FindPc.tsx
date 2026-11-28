@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { MonitorSmartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui'
-import { dc } from '@/lib/api'
+import { call, dc } from '@/lib/api'
 import { sfx } from '@/lib/sfx'
 
 export function FindPcOverlay() {
@@ -14,9 +14,11 @@ export function FindPcOverlay() {
     sfx.ring()
     const t = setInterval(() => sfx.ring(), 1500)
     const stop = setTimeout(() => setOn(false), 30000)
+    const wasOn = true
     return () => {
       clearInterval(t)
       clearTimeout(stop)
+      if (wasOn) call('findPcDone') // the phone's "Stop PC ringing" turns back into "Find PC"
     }
   }, [on])
   return (

@@ -10,6 +10,7 @@
 // through a small PowerShell helper (resources/win/phone-audio.ps1).
 import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process'
+import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { CallState } from '@shared/protocol'
@@ -22,7 +23,9 @@ const resource = (...p: string[]): string => path.join(app.isPackaged ? path.joi
 // the hidden window that joins the call's sound devices to this PC's speaker and mic
 const BRIDGE = `<script>
 const { ipcRenderer } = require('electron')
-const isAG = (l) => /hands-?free|AG Audio/i.test(l || '')
+// the phone's call-audio devices: "Hands-Free AG Audio" on most PCs; some name them after the
+// phone ("Headset (OnePlus ...)"), so the phone's name also counts
+const isAG = (l, phone) => /hands-?free|AG Audio/i.test(l || '') || (!!phone && (l || '').toLowerCase().includes(phone))
 let streams = [], players = []
 async function unlock() { try { (await navigator.mediaDevices.getUserMedia({ audio: true })).getTracks().forEach((t) => t.stop()) } catch (e) {} }
 async function list() { await unlock(); return (await navigator.mediaDevices.enumerateDevices()).map((d) => ({ kind: d.kind, id: d.deviceId, label: d.label })) }
@@ -34,10 +37,10 @@ ipcRenderer.on('start', async (_e, o) => {
   stop()
   try {
     const d = await list()
-    const want = (kind) => d.filter((x) => x.kind === kind && isAG(x.label))
+    const want = (kind) => d.filter((x) => x.kind === kind && x.deviceId !== 'default' && x.id !== 'default' && x.id !== 'communications' && isAG(x.label, o.phone))
     const pick = (kind) => want(kind).find((x) => o.phone && x.label.toLowerCase().includes(o.phone)) || want(kind)[0]
     const agIn = pick('audioinput'), agOut = pick('audiooutput')
-    if (!agIn || !agOut) return ipcRenderer.send('cb-status', { ok: false, reason: 'no-link' })
+    if (!agIn || !agOut) return ipcRenderer.send('cb-status', { ok: false, reason: 'no-link', devices: d.map((x) => x.kind + ': ' + x.label) })
     const caller = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: agIn.id }, echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
     const a1 = new Audio(); a1.srcObject = caller; if (o.out) await a1.setSinkId(o.out); await a1.play()
     const mic = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: o.in ? { exact: o.in } : undefined, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
@@ -45,7 +48,7 @@ ipcRenderer.on('start', async (_e, o) => {
     const a2 = new Audio(); a2.srcObject = mic; await a2.setSinkId(agOut.id); await a2.play()
     streams = [caller, mic]; players = [a1, a2]
     ipcRenderer.send('cb-status', { ok: true })
-  } catch (e) { stop(); ipcRenderer.send('cb-status', { ok: false, reason: String(e) }) }
+  } catch (e) { stop(); ipcRenderer.send('cb-status', { ok: false, reason: String(e), devices: (await list().catch(() => [])).map((x) => x.kind + ': ' + x.label) }) }
 })
 </script>`
 
@@ -86,12 +89,23 @@ export function winCallAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m
   const phoneName = (): string => (ctx.hub.session?.device.name || '').toLowerCase().split(' ')[0]
   const emitRoute = (): void => ctx.emit('call.route', route)
 
+  // a small log for diagnosing call audio on Windows (%APPDATA%\D-Connect\call-route.log)
+  const routeLog = (line: string): void => {
+    try {
+      const f = path.join(app.getPath('userData'), 'call-route.log')
+      if (fs.existsSync(f) && fs.statSync(f).size > 200000) fs.rmSync(f)
+      fs.appendFileSync(f, `${new Date().toISOString()} ${line}\n`)
+    } catch {}
+  }
+  let lastReason = ''
   const startBridge = async (): Promise<boolean> => {
     const w = await getBridge()
-    const status = once<{ ok: boolean; reason?: string }>('cb-status', 12000)
+    const status = once<{ ok: boolean; reason?: string; devices?: string[] }>('cb-status', 12000)
     w.webContents.send('start', { phone: phoneName(), out: outDev, in: inDev, muted })
     const r = await status
     bridged = !!r?.ok
+    lastReason = r?.reason || (r ? '' : 'timeout')
+    routeLog(`bridge ${bridged ? 'started' : 'failed: ' + lastReason} phone="${phoneName()}"${r?.devices ? ' devices: ' + r.devices.join(' | ') : ''}`)
     return bridged
   }
   const stopBridge = (): void => {
@@ -108,7 +122,14 @@ export function winCallAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m
         const ok = await startBridge()
         route = ok ? 'pc' : phoneSaid || 'phone'
         if (!ok)
-          ctx.toast({ kind: 'info', title: 'Call audio stays on the phone', body: 'The phone\'s call link isn\'t connected to this PC. Pair the phone in Windows Bluetooth settings, and turn on "Phone calls" for this PC on the phone.', ttl: 15000 })
+          ctx.toast({
+            kind: 'info',
+            title: 'Call audio stays on the phone',
+            body: lastReason === 'no-link'
+              ? 'Windows has no call-audio device for the phone. In Windows Settings → Bluetooth & devices, check the phone shows "Connected", and on the phone turn on "Phone calls" for this PC in its Bluetooth settings.'
+              : `Windows couldn't open the phone's call audio (${lastReason || 'no answer'}). Details are in call-route.log in D-Connect's settings folder.`,
+            ttl: 20000
+          })
       } else if (r === 'phone' || r === 'speaker') {
         stopBridge()
         await ctx.hub.request('call.control', { action: r === 'speaker' ? 'audio-speaker' : 'audio-phone' }, 8000).catch(() => null)
@@ -154,7 +175,7 @@ export function winCallAudio(ctx: Ctx): { answeredHere: () => void; setMuted: (m
     const w = await getBridge()
     const got = once<{ kind: string; id: string; label: string }[]>('cb-devices', 8000)
     w.webContents.send('devices')
-    const all = ((await got) || []).filter((d) => d.id !== 'default' && d.id !== 'communications' && !/hands-?free|AG Audio/i.test(d.label))
+    const all = ((await got) || []).filter((d) => d.id !== 'default' && d.id !== 'communications' && !/hands-?free|AG Audio/i.test(d.label) && !(phoneName() && d.label.toLowerCase().includes(phoneName())))
     const outputs = all.filter((d) => d.kind === 'audiooutput').map((d) => ({ name: d.id, label: d.label || 'Speaker' }))
     const inputs = all.filter((d) => d.kind === 'audioinput').map((d) => ({ name: d.id, label: d.label || 'Microphone' }))
     return { outputs, inputs, out: outDev || outputs[0]?.name || null, in: inDev || inputs[0]?.name || null }

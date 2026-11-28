@@ -71,10 +71,8 @@ export function updates(ctx: Ctx): void {
   ctx.handle('updateCheck', () => check())
   // where the new version comes from, for how this copy was installed
   ctx.handle('updateOpen', () => {
-    const d = manifest?.desktop || {}
-    const k = kind()
-    const url = k === 'msstore' ? 'https://apps.microsoft.com/detail/9N981DC1LCQ6' : k === 'snap' ? d.snap || 'https://snapcraft.io/d-connect' : k === 'exe' ? d.exe : k === 'appimage' ? d.appimage : k === 'deb' ? d.deb : undefined
-    openUrlSafely(url || d.page || LINKS.pcApp)
+    // from the store for this system: Microsoft Store on Windows, Snap Store on Linux
+    openUrlSafely(process.platform === 'win32' ? LINKS.pcWindows : LINKS.pcUbuntu)
   })
   ctx.handle('phoneAppLink', async () => ({ url: LINKS.phoneApp, qr: await QRCode.toDataURL(LINKS.phoneApp, { margin: 1, width: 360, color: { dark: '#0b1020', light: '#ffffff' } }) }))
   ctx.handle('openPhoneAppLink', () => openUrlSafely(LINKS.phoneApp))

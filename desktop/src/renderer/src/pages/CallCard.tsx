@@ -113,6 +113,12 @@ export function CallCard() {
     call('lastCall').then(setC)
     return dc.on('call', setC)
   }, [])
+  // tell the PC the call is drawn: the window is shown only then (never an empty/black box)
+  const drawnFor = `${c.state}|${c.number || c.name || ''}`
+  useEffect(() => {
+    if (c.state === 'idle') return
+    requestAnimationFrame(() => requestAnimationFrame(() => call('callDrawn')))
+  }, [drawnFor])
   // Ringing on the PC: a full ring for a call when you're free; while you're on a call, only two
   // quiet beeps now and then. "Silence" stops the PC's sound (the call keeps ringing for them;
   // it isn't declined).

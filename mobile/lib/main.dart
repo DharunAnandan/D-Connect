@@ -10,6 +10,7 @@ import 'theme/theme.dart';
 import 'ui/screens/eye_break_screen.dart';
 import 'ui/screens/root.dart';
 import 'ui/screens/scanner_screen.dart';
+import 'ui/screens/setup_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,7 @@ Future<void> main() async {
   Bridge.init();
   Eye.I.init();
   await Link.I.init();
+  await Setup.load(Link.I.pc != null);
   runApp(const DConnectApp());
 }
 
